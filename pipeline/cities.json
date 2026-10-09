@@ -1,0 +1,35 @@
+{
+  "country": "IL",
+  "gtfsUrl": "https://gtfs.mot.gov.il/gtfsfiles/israel-public-transportation.zip",
+  "routeTypes": [3],
+  "cities": [
+    {
+      "id": "tel-aviv",
+      "name": "Tel Aviv – Gush Dan",
+      "nameHe": "תל אביב – גוש דן",
+      "bbox": [34.70, 31.86, 35.02, 32.22],
+      "center": [32.0853, 34.7818]
+    },
+    {
+      "id": "jerusalem",
+      "name": "Jerusalem",
+      "nameHe": "ירושלים",
+      "bbox": [35.08, 31.70, 35.30, 31.88],
+      "center": [31.7784, 35.2066]
+    },
+    {
+      "id": "haifa",
+      "name": "Haifa & Krayot",
+      "nameHe": "חיפה והקריות",
+      "bbox": [34.94, 32.73, 35.15, 32.90],
+      "center": [32.7940, 34.9896]
+    },
+    {
+      "id": "beer-sheva",
+      "name": "Be'er Sheva",
+      "nameHe": "באר שבע",
+      "bbox": [34.72, 31.20, 34.88, 31.31],
+      "center": [31.2520, 34.7915]
+    }
+  ]
+}

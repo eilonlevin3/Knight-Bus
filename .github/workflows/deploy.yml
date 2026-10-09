@@ -1,0 +1,59 @@
+# Builds the city data and publishes the app to GitHub Pages.
+# Runs on every push to main, every night (fresh timetables), and by hand.
+# Docs: docs/architecture.md#hosting-and-deployment, docs/data-pipeline.md
+# @req REQ-DATA-2
+name: Build data and deploy
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '30 1 * * *' # 04:30 Israel time (summer), after the ministry publishes the new GTFS
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci --no-audit --no-fund
+      - name: Check docs and code agree
+        run: npm run check:docs
+      - name: Unit tests
+        run: npm test
+      - name: Build city bundles from the national GTFS feed
+        run: npm run build:data
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp -r index.html manifest.webmanifest sw.js src icons data _site/
+          touch _site/.nojekyll
+          du -sh _site/data/cities/*
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

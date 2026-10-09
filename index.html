@@ -1,0 +1,31 @@
+<!doctype html>
+<!-- App shell. Docs: docs/architecture.md#the-app  @req REQ-PWA-1 -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Knight Bus</title>
+  <meta name="description" content="Live buses for your favorite commutes in Israel.">
+  <meta name="theme-color" content="#3c096c">
+
+  <!-- Home-screen install: Android/Chrome reads the manifest, iPhone/Safari reads the apple-* tags -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Knight Bus">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="src/styles.css">
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+</head>
+<body>
+  <div id="app">
+    <main class="screen center"><p class="muted">Starting Knight Bus…</p></main>
+  </div>
+  <noscript>Knight Bus needs JavaScript.</noscript>
+  <script type="module" src="src/app.js"></script>
+</body>
+</html>

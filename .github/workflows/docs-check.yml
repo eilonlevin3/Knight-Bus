@@ -1,0 +1,18 @@
+# Fails a pull request when docs and code disagree. Docs: docs/adr/0005-docs-as-code.md
+name: Docs check
+
+on:
+  pull_request:
+  push:
+    branches-ignore: [main] # main is checked by deploy.yml
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node scripts/check-docs.mjs --matrix
+      - run: npm test
