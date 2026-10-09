@@ -4,7 +4,7 @@
   "private": true,
   "description": "Live buses for your favorite commutes. Installable web app (PWA), Israel MVP.",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": { "node": ">=22" },
   "scripts": {
     "start": "npx --yes serve -l 8080 .",
     "build:data": "node pipeline/build-city-data.mjs",
