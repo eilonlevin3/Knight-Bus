@@ -106,7 +106,7 @@ Knight Bus/
 | Put it online | Make the repo public → *Settings → Pages → Source: GitHub Actions* → push. See [setup.md §1](docs/setup.md#1-hosting-on-github-pages) |
 | Turn on real accounts | Create a Firebase project, paste its config into `src/config.js`. See [setup.md §2](docs/setup.md#2-turn-on-accounts-firebase) |
 | Install on my phone | Open the site → Chrome ⋮ *Install app* / Safari Share → *Add to Home Screen* |
-| Run it on my computer | Install Node 20, then `npm install && CITIES=tel-aviv npm run build:data && npm start` |
+| Run it on my computer | Install Node 22+, then `npm install && CITIES=tel-aviv npm run build:data && npm start` |
 | Change a feature | Edit `docs/requirements.md` first, then the code with `@req` tags, then `npm run check:docs && npm test` |
 
 ## Status

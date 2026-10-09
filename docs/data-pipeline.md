@@ -53,7 +53,7 @@ box that contains the user. Push the change; the next deploy builds the new city
 
 ## Running it locally
 
-Needs Node 20 or newer.
+Needs Node 22 or newer.
 
 ```sh
 npm install

@@ -47,7 +47,7 @@ updates itself: new versions download in the background and apply on the next la
 
 ## 4. Developing on your computer
 
-Install [Node.js 20+](https://nodejs.org), then:
+Install [Node.js 22+](https://nodejs.org), then:
 
 ```sh
 npm install
