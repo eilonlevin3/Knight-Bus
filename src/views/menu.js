@@ -4,6 +4,7 @@
 import { h } from '../lib/dom.js';
 import { FAVORITE_SLOTS } from '../config.js';
 import { signOut } from '../auth.js';
+import { commuteName } from '../lib/names.js';
 
 export function render(root, ctx) {
   const slots = FAVORITE_SLOTS.map((slot) => {
@@ -18,9 +19,9 @@ export function render(root, ctx) {
       },
         h('span', { class: 'fav-num' }, slot),
         h('span', { class: 'fav-text' },
-          h('b', {}, fav?.name || `Favorite ${slot}`),
+          h('b', {}, commuteName(fav, slot)),
           h('small', {}, summary))),
-      h('button', { class: 'fav-edit', 'aria-label': `Edit favorite ${slot}`, onclick: () => ctx.go(`#/edit/${slot}`) }, '✎'));
+      h('button', { class: 'fav-edit', 'aria-label': `Edit commute ${slot}`, onclick: () => ctx.go(`#/edit/${slot}`) }, '✎'));
   });
 
   root.append(

@@ -9,6 +9,7 @@ import { searchPlaces, placeName } from '../geocode.js';
 import { LiveLines } from '../liveLines.js';
 import { saveFavorite, deleteFavorite } from '../store.js';
 import { liveSummary, lineBadge } from './liveInfo.js';
+import { commuteName } from '../lib/names.js';
 
 export async function render(root, ctx, { slot }) {
   const existing = ctx.favorites[slot];
@@ -17,7 +18,8 @@ export async function render(root, ctx, { slot }) {
   // Working copy; nothing is saved until "Save favorite".
   const draft = existing
     ? structuredClone(existing)
-    : { name: `Favorite ${slot}`, cityId: city.id, stops: [] };
+    : { name: `Commute ${slot}`, cityId: city.id, stops: [] };
+  draft.name = commuteName(draft, slot);
   // Optional start point and destination: { lat, lon, label } or null.
   draft.origin ??= null;
   draft.destination ??= null;
@@ -165,7 +167,7 @@ export async function render(root, ctx, { slot }) {
         lineBadge(r, on ? lines.colorOf(r.id) : null),
         h('span', { class: 'line-text' },
           h('span', {}, `→ ${r.dest}`),
-          h('small', { class: 'muted' }, r.agency + variant),
+          h('small', { class: 'muted' }, r.agency + (r.hours ? ` · ${r.hours}` : '') + variant),
           on ? liveSummary(live) : null));
     });
     return [
@@ -269,7 +271,7 @@ export async function render(root, ctx, { slot }) {
       }))));
 
     return [
-      h('h2', {}, `Favorite ${slot}`),
+      h('h2', {}, `Commute ${slot}`),
       h('label', { class: 'field' }, 'Name', name),
       placeCard('origin'),
       ...stopCards,
@@ -285,26 +287,26 @@ export async function render(root, ctx, { slot }) {
           onclick: async (e) => {
             e.target.disabled = true;
             try {
-              await saveFavorite(ctx.user, slot, { ...draft, name: draft.name.trim() || `Favorite ${slot}` });
+              await saveFavorite(ctx.user, slot, { ...draft, name: commuteName(draft, slot) });
               await ctx.reloadFavorites();
-              toast('Favorite saved');
+              toast('Commute saved');
               ctx.go('#/menu');
             } catch (err) {
               toast(`Could not save: ${err.message}`);
               e.target.disabled = false;
             }
           },
-        }, 'Save favorite')),
+        }, 'Save commute')),
       existing
         ? h('button', {
             class: 'link small danger',
             onclick: async () => {
               await deleteFavorite(ctx.user, slot);
               await ctx.reloadFavorites();
-              toast('Favorite cleared');
+              toast('Commute cleared');
               ctx.go('#/menu');
             },
-          }, 'Clear this favorite')
+          }, 'Clear this commute')
         : null,
     ];
   }

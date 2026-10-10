@@ -1,11 +1,14 @@
 // Text summary of live buses for one (stop, line) row. Shared by editor and commute screens.
-// @req REQ-RT-3
+// @req REQ-RT-3 @req REQ-RT-5
 
 import { h } from '../lib/dom.js';
 import { ageLabel } from '../realtime.js';
 
 export function liveSummary(row) {
   if (!row) return h('small', { class: 'muted' }, 'Loading live buses…');
+  if (row.noLive) {
+    return h('small', { class: 'muted' }, `No live tracking for this line${row.route.hours ? ` · runs ${row.route.hours}` : ''}`);
+  }
   if (row.error) return h('small', { class: 'error' }, 'Live data unavailable right now.');
   const parts = [];
   if (row.next.length) {

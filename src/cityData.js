@@ -68,6 +68,7 @@ export class CityData {
     this.meta = meta;
     this.version = meta.version;
     this.agencies = raw.agencies;
+    this.sources = raw.sources || {}; // lines from outside the government feed: { id: { name, hours, info } }
 
     this.stops = new Map();
     this.stopList = raw.stops.map(([id, code, name, lat, lon]) => {
@@ -77,10 +78,14 @@ export class CityData {
     });
 
     this.routes = new Map();
-    for (const [id, short, dest, agencyIdx, type, seq, shape, times = null] of raw.routes) {
+    for (const [id, short, dest, agencyIdx, type, seq, shape, times = null, source = null] of raw.routes) {
       const stops = seq.map((i) => this.stopList[i]);
       // times: scheduled minutes from the first stop (newer bundles only; may be missing).
-      const route = { id, short, dest, agency: this.agencies[agencyIdx], type, stops, times, encodedShape: shape, _shape: null };
+      // source: set for lines outside the government feed; those have no live buses (REQ-RT-5).
+      const route = {
+        id, short, dest, agency: this.agencies[agencyIdx], type, stops, times, encodedShape: shape, _shape: null,
+        source, live: !source, hours: source ? this.sources[source]?.hours || null : null,
+      };
       this.routes.set(id, route);
       for (const s of new Set(stops)) s.routeIds.push(id);
     }

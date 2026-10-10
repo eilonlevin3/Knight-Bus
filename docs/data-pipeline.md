@@ -48,13 +48,39 @@ has no calendar filter, so weekday, Friday, Saturday and Saturday-night lines ar
 the feed of 2026-10-09, the Tel Aviv bundle held 174 weekend-only lines, and 929 lines that
 run at some point on Saturday.
 
-**Lines outside the government feed are missing** (REQ-DATA-7, planned). Some weekend
-services are run by municipalities, for example Tel Aviv's Shabbat lines, and are not
-published in the ministry's GTFS or SIRI feeds. In the 2026-10-09 feed, the only `708`
-is a Kavim weekday line outside our four cities, and the Stride archive shows no other
-`708` in recent weeks. To add such lines we need a source: an official GTFS from the
-operator or municipality, or hand-entered routes. Without SIRI data they would also have
-no live buses.
+### Weekend lines outside the government feed
+
+*Naaim BeSofash* ([busofash.co.il](https://busofash.co.il/)) is a weekend service run by
+12 Gush Dan municipalities: 18 lines (705–718, 721–723, 729, e.g. 708 Ramat HaChayal ↔
+Fighters' Terminal), Fri 16:30–02:00 and Sat 09:00–17:30. It is **not** in the ministry's
+GTFS, and its buses are not in the SIRI live feed. On Saturday 2026-10-10, every live bus
+in the feed belonged to a GTFS line.
+
+The pipeline reads it from the **Tel Aviv municipality's public ArcGIS server** (REQ-DATA-7,
+[pipeline/sources/busofash.mjs](../pipeline/sources/busofash.mjs)). This is the server
+behind busofash.co.il's own map:
+
+| Layer | Content |
+|-------|---------|
+| `IView2/MapServer/992` | one path per line direction ("מכפר סבא אל תל אביב" = from Kfar Saba to Tel Aviv) |
+| `IView2/MapServer/993` | stops per line, with national stop codes (98% match GTFS stops) |
+
+How it becomes lines like the others:
+1. **Stops per direction.** The server lists a line's stops without direction. A stop goes
+   to a direction when it is within 35 m of that direction's path and on its **right-hand
+   side** (Israel drives on the right). A stop that fits neither direction goes to the
+   nearest one.
+2. **Order.** Stops are sorted by their position along the path.
+3. **Same stops.** Stop codes are matched to national stops, so 708 shows up in the line
+   list of Dizengoff/Sheinkin together with the government lines. The few unknown codes
+   (18) become extra stops.
+4. Marked with `source: "busofash"` in the bundle. The app shows **no live tracking**
+   for these lines, with their hours (REQ-RT-5).
+
+The source is set in `extraSources` in [pipeline/cities.json](../pipeline/cities.json). If
+the server is down or blocks GitHub's runners, the build logs a warning and continues
+without these lines. There is no timetable, so the "5 minutes before your stop" zoom uses
+the ~1.5 km fallback.
 
 ## Adding a city
 

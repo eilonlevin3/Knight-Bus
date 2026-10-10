@@ -54,13 +54,13 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | REQ-DATA-4 | Download the whole city base map ahead of time for full offline use (vector tiles, see ADR-0003). | Planned |
 | REQ-DATA-5 | Every bus line in the government feed is included, whatever days it runs: weekdays, Friday, Saturday, Saturday night. There is no filter by day. | Done |
 | REQ-DATA-6 | Each line in a city bundle carries its scheduled travel minutes from the first stop to each stop, so the app knows where a bus is "5 minutes before your stop". | Done |
-| REQ-DATA-7 | Include bus lines that are **not** in the government feed, such as municipal weekend/Shabbat services (e.g. a weekend-only line 708). Needs a data source for each; see data-pipeline.md. | Planned |
+| REQ-DATA-7 | Include bus lines that are **not** in the government feed: the municipal weekend service *Naaim BeSofash* (lines 705–729, e.g. 708), read from the Tel Aviv municipality's public map server. They appear at the same stops as other lines. | Done |
 
 ## Favorite commutes
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| REQ-FAV-1 | The main menu shows three favorite commute buttons (1, 2, 3). | Done |
+| REQ-FAV-1 | The main menu shows three saved-commute buttons, labeled **Commute 1, 2, 3** (or the name the user gave). Older saves named "Favorite N" show as "Commute N". | Done |
 | REQ-FAV-2 | Each favorite has an edit option. | Done |
 | REQ-FAV-3 | Favorites are saved to the user's account, so they follow the user to other devices. | Done |
 | REQ-FAV-4 | A favorite has a name the user can edit, and the user can clear it. | Done |
@@ -75,7 +75,7 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | REQ-EDIT-3 | Each line has a checkbox. **By default none are checked.** The user checks the lines they want. | Done |
 | REQ-EDIT-4 | A checked line is drawn on the map along its whole route, from its first stop to its last. | Done |
 | REQ-EDIT-5 | "Save stop" stores the stop and its checked lines. The user then adds the next stop or finishes. | Done |
-| REQ-EDIT-6 | "Save favorite" saves the commute and returns to the main menu. | Done |
+| REQ-EDIT-6 | "Save commute" saves the commute and returns to the main menu. | Done |
 
 ## Live buses
 
@@ -84,6 +84,7 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | REQ-RT-1 | For every line shown, the app shows up to three live buses relative to the chosen stop: **the next two approaching buses and the one that passed most recently**, when they exist. | Done |
 | REQ-RT-2 | Live positions come from the government SIRI real-time feed of the Ministry of Transport, read through the public Open Bus Stride mirror (ADR-0002). They refresh every 30 seconds while the screen is visible. | Done |
 | REQ-RT-3 | Each bus shows how old its position is, and how many stops it is from the chosen stop. | Done |
+| REQ-RT-5 | Lines without live data (from outside the government feed) say so, with their service hours, instead of "No bus on the way". | Done |
 | REQ-RT-4 | Read the Ministry of Transport SIRI SM service directly, through our own proxy, for lower latency and arrival predictions. | Planned |
 
 ## Using a favorite commute
@@ -93,8 +94,17 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | REQ-COMM-1 | Opening a favorite shows its stops and selected lines with live buses, the same as in the editor. | Done |
 | REQ-COMM-2 | The commute view opens zoomed so that the start point, destination and chosen stops are all visible, plus each chosen line's last **~5 minutes of travel before** its stop (by timetable, or ~1.5 km when the timetable is missing). | Done |
 | REQ-COMM-3 | The start point is marked with a **green flag**, the destination with a **checkered flag**, on the map and in the editor. | Done |
-| REQ-COMM-4 | Each line is drawn in two parts: before the chosen stop (incoming) **lighter and more transparent**, after the stop (outbound) solid. | Done |
-| REQ-COMM-5 | Where lines share a street, they are drawn **side by side**, so every line passing there is visible. | Done |
+| REQ-COMM-4 | Each line is drawn in two parts: before the chosen stop (incoming) **solid**; after the stop (outbound) lighter and partly transparent, but still clearly visible. | Done |
+| REQ-COMM-5 | Where lines share a street, they are drawn **side by side**, so every line passing there is visible. Shifting must not create loops or knots at corners at any zoom. | Done |
 | REQ-COMM-6 | A **map key** in the top-left corner lists each line's color, number and destination, the flags, and the bus symbols. It can be collapsed. | Done |
 | REQ-COMM-7 | The panel lists every line of every stop in the favorite with a **checkbox, all checked** when the view opens. Unchecking hides that line from the current view (map, buses, key) but does **not** change the favorite. | Done |
-| REQ-COMM-8 | Scrolling down the panel makes the map larger and the panel smaller (down to a quarter of the screen); scrolling back up restores it. | Done |
+| REQ-COMM-8 | The panel can be **dragged**: down (by its handle, or swiping down while the list is at its top) for more map, up for more list. It settles at small, half or large. | Done |
+| REQ-COMM-9 | On installed phone apps, nothing is drawn under the status bar (clock/battery): the map, its key and buttons start below it, so they are sharp and can be tapped. | Done |
+
+## Usage insights (proposal: see ADR-0008)
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| REQ-ANL-1 | Count users and how they use the app (active users per day/week, screens opened, time on each screen, which features are used), with **privacy-first** tracking: consent first, no names/emails/precise location in analytics. | Planned |
+| REQ-ANL-2 | Report what commutes people save: cities, lines, number of stops, start/destination set or not, as aggregate counts only. | Planned |
+| REQ-ANL-3 | A privacy notice in the app and the option to turn usage tracking off at any time. | Planned |

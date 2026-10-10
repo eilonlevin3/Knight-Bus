@@ -3,12 +3,14 @@
 
 import { h } from '../lib/dom.js';
 import {
-  firebaseConfigured, signInEmail, signUpEmail, signInGoogle, resetPassword, startLocalDemo, authErrorMessage,
+  firebaseConfigured, signInEmail, signUpEmail, signInGoogle, resetPassword, startLocalDemo, authErrorMessage, takeRedirectError,
 } from '../auth.js';
 
 export function render(root, ctx) {
   let mode = 'signin'; // or 'signup'
   const error = h('p', { class: 'error', role: 'alert' });
+  const redirectError = firebaseConfigured ? takeRedirectError() : null;
+  if (redirectError) error.textContent = authErrorMessage(redirectError);
   const email = h('input', { type: 'email', autocomplete: 'email', placeholder: 'Email', required: true });
   const password = h('input', { type: 'password', autocomplete: 'current-password', placeholder: 'Password', required: true, minLength: 6 });
   const submit = h('button', { class: 'primary', type: 'submit' });

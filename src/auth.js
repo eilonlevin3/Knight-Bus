@@ -29,6 +29,8 @@ export async function watchUser(onChange) {
   fa = await import(`${FIREBASE_SDK}firebase-auth.js`);
   auth = fa.getAuth(await getFirebaseApp());
   await fa.setPersistence(auth, fa.browserLocalPersistence);
+  // Finishes a Google sign-in that went through a full-page redirect (see signInGoogle).
+  fa.getRedirectResult(auth).catch((e) => { lastRedirectError = e; });
   fa.onAuthStateChanged(auth, (u) =>
     onChange(u ? { uid: u.uid, email: u.email, displayName: u.displayName, local: false } : null),
   );
@@ -46,9 +48,26 @@ export async function resetPassword(email) {
   await fa.sendPasswordResetEmail(auth, email);
 }
 
+// A pop-up first: it works in browsers and in installed iPhone/Android apps. Where pop-ups are
+// blocked or unsupported, fall back to a full-page redirect to Google and back.
 export async function signInGoogle() {
   const provider = new fa.GoogleAuthProvider();
-  await fa.signInWithPopup(auth, provider);
+  provider.setCustomParameters({ prompt: 'select_account' });
+  try {
+    await fa.signInWithPopup(auth, provider);
+  } catch (e) {
+    const usePageRedirect = ['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/web-storage-unsupported'];
+    if (!usePageRedirect.includes(e?.code)) throw e;
+    await fa.signInWithRedirect(auth, provider);
+  }
+}
+
+let lastRedirectError = null;
+// An error from a redirect sign-in, shown once on the sign-in screen.
+export function takeRedirectError() {
+  const e = lastRedirectError;
+  lastRedirectError = null;
+  return e;
 }
 
 export function startLocalDemo() {

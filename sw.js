@@ -33,6 +33,9 @@ const SHELL = [
   'src/lib/dom.js',
   'src/lib/polyline.js',
   'src/lib/routeGeometry.js',
+  'src/lib/offsetLine.js',
+  'src/lib/sheetDrag.js',
+  'src/lib/names.js',
   'src/geocode.js',
   'src/views/login.js',
   'src/views/city.js',
@@ -45,7 +48,6 @@ const SHELL = [
   'icons/apple-touch-icon.png',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-  'https://unpkg.com/leaflet-polylineoffset@1.1.1/leaflet.polylineoffset.js',
 ];
 
 // Download the complete new version. It waits until the app says "update now"

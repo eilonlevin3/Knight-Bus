@@ -15,7 +15,7 @@ flowchart TD
   M -- tap empty favorite / ✎ --> E[Editor]
   M -- tap saved favorite --> V[Commute view]
   V -- ✎ Edit --> E
-  E -- Save favorite --> M
+  E -- Save commute --> M
 ```
 
 ## 1. First launch
@@ -34,7 +34,7 @@ Code: [views/login.js](../src/views/login.js), [views/city.js](../src/views/city
 
 ## 2. Main menu
 
-- Three large buttons, **Favorite 1, 2, 3** (REQ-FAV-1). A saved favorite shows its name and
+- Three large buttons, **Commute 1, 2, 3** (REQ-FAV-1). A saved favorite shows its name and
   stops. An empty one says *Tap to set up*.
 - A **✎** button next to each opens the editor (REQ-FAV-2).
 - Top right: the current city. Tap it to change city.
@@ -57,7 +57,7 @@ stateDiagram-v2
   Summary --> Lines: Edit a stop
   Summary --> Place: Set start / destination
   Place --> Summary: tap map / pick address / my location
-  Summary --> [*]: Save favorite → menu
+  Summary --> [*]: Save commute → menu
 ```
 
 **Pick a stop** (REQ-EDIT-1). Zoom in to see stops as white dots, then tap one. You can also
@@ -78,7 +78,7 @@ Unchecking removes the line and its buses.
 From there, *+ Add stop 2* repeats the steps for a second stop (up to 2 per favorite).
 
 **Summary** (REQ-FAV-4, REQ-EDIT-6). Rename the favorite. Edit or remove each stop.
-*Save favorite* saves it to your account and returns to the menu. *Clear this favorite*
+*Save commute* saves it to your account and returns to the menu. *Clear this commute*
 empties the slot.
 
 **Start point and destination** (REQ-FAV-5, optional). The summary shows *Start point*
@@ -108,9 +108,9 @@ name to zoom to it.
 **How lines are drawn** (REQ-COMM-4, REQ-COMM-5):
 
 ```
-   incoming (lighter, see-through)        outbound (solid)
-  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 🚏 ███████████████████████  line 5
-  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 🚏 ███████████████████████  line 408   ← side by side
+   incoming: where your bus comes from (solid)    outbound (lighter, see-through)
+  ███████████████████████████████████ 🚏 ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  line 5
+  ███████████████████████████████████ 🚏 ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  line 408   ← side by side
 ```
 
 Each line is split at its chosen stop. Where several lines share a street, each is drawn
@@ -122,9 +122,21 @@ flags, and the bus symbols. Tap *Key* to fold it away.
 
 **Panel** (REQ-COMM-7, REQ-COMM-8). Each stop lists its lines with a checkbox, all checked.
 Uncheck a line to hide it, its buses and its key entry. This is only for this visit; the
-favorite is unchanged, and the line is back next time. Scroll the panel down and the map
-grows (the panel shrinks to a quarter of the screen); scroll back up to return.
+saved commute is unchanged, and the line is back next time.
+
+To see more map, **drag the panel down**: either by the grey handle at its top, or by
+swiping down on the list while it's scrolled to the top. Swipe up for more list. The panel
+settles at small (about a fifth of the screen), half, or large.
+
+Lines from outside the government feed, such as the weekend *Naaim BeSofash* lines, have
+no live buses. They show "No live tracking for this line · runs Fri 16:30–02:00 · Sat
+09:00–17:30" (REQ-RT-5).
+
+**Top of the screen** (REQ-COMM-9). In the installed iPhone app, the status bar (clock,
+battery) gets a solid strip, and the map starts below it. That way the map key and zoom
+buttons are never hidden or blurred under the status bar.
 
 Code: [views/commute.js](../src/views/commute.js), [liveLines.js](../src/liveLines.js),
-[lib/routeGeometry.js](../src/lib/routeGeometry.js), [map.js](../src/map.js).
+[lib/routeGeometry.js](../src/lib/routeGeometry.js), [lib/offsetLine.js](../src/lib/offsetLine.js),
+[lib/sheetDrag.js](../src/lib/sheetDrag.js), [map.js](../src/map.js).
 

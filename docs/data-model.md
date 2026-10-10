@@ -58,18 +58,22 @@ downloads small. It is read by [src/cityData.js](../src/cityData.js).
   "generatedAt": "…",
   "agencies": ["Dan", "Egged", "…"],
   "stops":  [[ "12345", "21471", "Dizengoff Center", 32.075, 34.775 ], …],
-  "routes": [[ "10931", "5", "Bat Yam", 0, 3, [17, 4, 88, …], "encodedPolyline", [0, 2, 4, …] ], …]
+  "routes": [[ "10931", "5", "Bat Yam", 0, 3, [17, 4, 88, …], "encodedPolyline", [0, 2, 4, …] ],
+             [ "busofash-708-1", "708", "רמת החייל", 6, 3, [ … ], "encodedPolyline", null, "busofash" ], …],
+  "sources": { "busofash": { "name": "נעים בסופ\"ש", "hours": "Fri 16:30–02:00 · Sat 09:00–17:30", "info": "https://busofash.co.il/" } }
 }
 ```
 
 | Field | Row layout |
 |-------|------------|
 | `stops[i]` | `[stopId, stopCode, name, lat, lon]` |
-| `routes[j]` | `[routeId, lineNumber, destination, agencyIndex, routeType, stopIndexes[], shape, minutes[]]` |
+| `routes[j]` | `[routeId, lineNumber, destination, agencyIndex, routeType, stopIndexes[], shape, minutes[], source?]` |
 
 - `stopIndexes` are positions in `stops[]`, in travel order, from first stop to last.
 - `minutes[]` (REQ-DATA-6) has one entry per stop: scheduled minutes from the first stop,
   from the line's representative trip. It may be `null`. Older apps ignore it.
+- `source` (optional, 9th entry) marks a line from outside the government feed (REQ-DATA-7).
+  Its details are in `sources`. These lines have no live buses.
 - `shape` is a Google encoded polyline, precision 5. The encoder and decoder are shared in
   [src/lib/polyline.js](../src/lib/polyline.js).
 

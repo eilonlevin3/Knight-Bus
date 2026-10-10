@@ -1,5 +1,5 @@
 // Builds one transit bundle per city from the national GTFS feed.
-// @req REQ-DATA-2 @req REQ-SCOPE-1 @req REQ-DATA-5 @req REQ-DATA-6
+// @req REQ-DATA-2 @req REQ-SCOPE-1 @req REQ-DATA-5 @req REQ-DATA-6 @req REQ-DATA-7
 // Docs: docs/data-pipeline.md (how it works), docs/data-model.md (output format).
 //
 // Usage:  npm run build:data
@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url';
 import yauzl from 'yauzl';
 import { parse } from 'csv-parse';
 import { encode } from '../src/lib/polyline.js';
+import { loadBusofash } from './sources/busofash.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'pipeline/cities.json'), 'utf8'));
@@ -218,6 +219,36 @@ async function main() {
   }
   z.zip.close();
 
+  // Lines that are not in the government feed (REQ-DATA-7), e.g. municipal weekend buses.
+  // They reuse the national stops (matched by stop code) so they show up at the same stops.
+  // If a source is down, the build carries on without it.
+  const sourceInfo = {};
+  const stopIdByCode = new Map();
+  for (const s of stops.values()) if (s.code && !stopIdByCode.has(s.code)) stopIdByCode.set(s.code, s.id);
+  for (const src of config.extraSources || []) {
+    try {
+      log(`Reading extra lines: ${src.name}`);
+      const extra = await loadBusofash(src, log);
+      agencies.set(`src:${src.id}`, src.name);
+      for (const x of extra) {
+        const ids = x.stops.map((s) => {
+          const known = stopIdByCode.get(s.code);
+          if (known) return known;
+          const id = `${src.id}-${s.code}`;
+          if (!stops.has(id)) stops.set(id, { id, code: s.code, name: s.name, lat: s.lat, lon: s.lon });
+          return id;
+        });
+        routes.set(x.id, {
+          id: x.id, short: x.short, longName: '', headsign: x.dest, agency: `src:${src.id}`, type: 3,
+          stops: ids, times: ids.map(() => null), encoded: encode(simplify(x.path, SHAPE_TOLERANCE_DEG)), source: src.id,
+        });
+      }
+      sourceInfo[src.id] = { name: src.name, hours: src.hours, info: src.info };
+    } catch (e) {
+      log(`WARNING: skipped ${src.id}: ${e.message}`);
+    }
+  }
+
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const generatedAt = new Date().toISOString();
   const index = { v: 1, country: config.country, generatedAt, gtfsLastModified: lastModified, cities: [] };
@@ -250,7 +281,7 @@ async function main() {
           const s = stops.get(sid);
           return idxOf(stopIdx, stopRows, sid, [s.id, s.code, s.name, +s.lat.toFixed(6), +s.lon.toFixed(6)]);
         });
-      const shape = (r.shapeId && encodedShapes.get(r.shapeId)) ||
+      const shape = r.encoded || (r.shapeId && encodedShapes.get(r.shapeId)) ||
         encode(seq.map((i) => [stopRows[i][3], stopRows[i][4]]));
       return [
         r.id,
@@ -261,10 +292,12 @@ async function main() {
         seq,
         shape,
         times,
+        ...(r.source ? [r.source] : []), // not from the government feed: no live buses
       ];
     });
+    const usedSources = Object.fromEntries([...new Set(cityRoutes.map((r) => r.source).filter(Boolean))].map((id) => [id, sourceInfo[id]]));
 
-    const bundle = { v: 1, cityId: city.id, generatedAt, agencies: agencyRows, stops: stopRows, routes: routeRows };
+    const bundle = { v: 1, cityId: city.id, generatedAt, agencies: agencyRows, stops: stopRows, routes: routeRows, sources: usedSources };
     const json = JSON.stringify(bundle);
     const version = crypto.createHash('sha1').update(json).digest('hex').slice(0, 12);
     const fileName = `${city.id}.json`;

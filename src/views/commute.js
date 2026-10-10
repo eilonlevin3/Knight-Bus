@@ -6,10 +6,9 @@ import { createMap, stopLayer, userMarker, flagMarker, flagHtml, legendControl, 
 import { watchPosition } from '../location.js';
 import { LiveLines } from '../liveLines.js';
 import { approachPath } from '../lib/routeGeometry.js';
+import { draggableSheet } from '../lib/sheetDrag.js';
+import { commuteName } from '../lib/names.js';
 import { liveSummary, lineBadge } from './liveInfo.js';
-
-const SHEET_MAX = 0.5; // panel height at the top of the list, share of the screen
-const SHEET_MIN = 0.25; // ...after scrolling down
 
 export async function render(root, ctx, { slot }) {
   const fav = ctx.favorites[slot];
@@ -50,7 +49,7 @@ export async function render(root, ctx, { slot }) {
 
   function paintLegend() {
     const items = lines.legendItems().map(({ route, color }) =>
-      `<div class="legend-row"><span class="legend-swatch" style="--in:${lighten(color, 0.45)};--out:${color}"></span>` +
+      `<div class="legend-row"><span class="legend-swatch" style="--in:${color};--out:${lighten(color, 0.3)}"></span>` +
       `<b>${escapeHtml(route.short)}</b> <span class="legend-dest">${escapeHtml(route.dest)}</span></div>`);
     const placeRows = ['origin', 'destination'].filter((k) => fav[k]).map((k) =>
       `<div class="legend-row"><span class="legend-flag">${flagHtml(k)}</span>${k === 'origin' ? 'Start' : 'Destination'}</div>`);
@@ -118,39 +117,25 @@ export async function render(root, ctx, { slot }) {
     sheet.replaceChildren(
       h('div', { class: 'row between' },
         h('button', { class: 'link', onclick: () => ctx.go('#/menu') }, '← Menu'),
-        h('h2', {}, fav.name),
+        h('h2', {}, commuteName(fav, slot)),
         h('button', { class: 'link', onclick: () => ctx.go(`#/edit/${slot}`) }, '✎ Edit')),
-      h('p', { class: 'muted small' }, 'Uncheck a line to hide it here. Your favorite stays the same.'),
+      h('p', { class: 'muted small' }, 'Uncheck a line to hide it here. Your saved commute stays the same.'),
       ...sections,
       h('div', { class: 'row between' },
         h('small', { class: 'muted' }, updatedAt ? `Updated ${updatedAt.toLocaleTimeString()} · refreshes every 30 s` : 'Loading…'),
         h('button', { class: 'link small', onclick: () => lines.refresh() }, '↻ Refresh')),
-      h('div', { class: 'sheet-spacer' }),
     );
     sheet.scrollTop = scroll;
   }
 
-  // Scrolling the list down gives the map more of the screen; scrolling back up returns it.
-  let frame = 0;
-  const onScroll = () => {
-    if (frame) return;
-    frame = requestAnimationFrame(() => {
-      frame = 0;
-      const vh = screen.clientHeight;
-      const height = Math.max(SHEET_MIN * vh, SHEET_MAX * vh - sheet.scrollTop);
-      if (Math.abs(height - sheet.offsetHeight) < 2) return;
-      screen.style.setProperty('--sheet-h', `${Math.round(height)}px`);
-      map.invalidateSize({ pan: false });
-    });
-  };
-  sheet.addEventListener('scroll', onScroll, { passive: true });
+  // Drag the panel down for more map, up for more list.
+  const panel = draggableSheet(screen, sheet, { onResize: () => map.invalidateSize({ pan: false }) });
 
   show();
   setTimeout(() => { map.invalidateSize(); fitCommute(); }, 0);
 
   return () => {
-    sheet.removeEventListener('scroll', onScroll);
-    cancelAnimationFrame(frame);
+    panel.destroy();
     stopWatch();
     lines.destroy();
     legend.remove();

@@ -1,11 +1,14 @@
 // Draws the chosen lines and their live buses on a map, and keeps the buses fresh.
 // Used by both the editor and the commute screen, so they behave the same (REQ-COMM-1).
-// @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-COMM-1
+// @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-COMM-1
 
 import { realtime } from './config.js';
 import { fetchLiveBuses, classifyBuses, ageLabel } from './realtime.js';
 import { LINE_COLORS, busIcon, escapeHtml, lighten } from './map.js';
 import { stopPositions, splitPath } from './lib/routeGeometry.js';
+import { makeOffsetPolyline } from './lib/offsetLine.js';
+
+let OffsetPolyline = null; // created on first use, once Leaflet (global L) is loaded
 
 export class LiveLines {
   // onUpdate(rows): rows = [{ stop, route, color, next: [bus], passed: [bus], error }]
@@ -37,13 +40,14 @@ export class LiveLines {
   }
 
   // Each line is split at its chosen stop: the part where the bus is still coming to you
-  // ("incoming") is lighter and more see-through than the part after the stop ("outbound").
+  // ("incoming") is solid; the part after the stop ("outbound") is lighter and see-through.
   // Lines sit side by side, each shifted sideways by its own amount, so where several share a
   // street you can see all of them.
   // @req REQ-COMM-4 @req REQ-COMM-5
   drawLines() {
     for (const layers of this.lineLayers.values()) layers.forEach((l) => l.remove());
     this.lineLayers.clear();
+    OffsetPolyline ||= makeOffsetPolyline(L);
     const routeIds = [...new Set(this.entries.map((e) => e.routeId))];
     const n = routeIds.length;
     const weight = n > 4 ? 4 : 5;
@@ -59,11 +63,11 @@ export class LiveLines {
       // (If the stop is somehow not on the line, draw it all as outbound.)
       const [incoming, outbound] = idx.length ? splitPath(path, pos[Math.min(...idx)]) : [[], path];
       const color = this.colorOf(id);
-      const offset = (i - (n - 1) / 2) * (weight + 1); // pixels, needs leaflet.polylineoffset
+      const offset = (i - (n - 1) / 2) * (weight + 1); // pixels (src/lib/offsetLine.js)
       const tip = `Line ${route.short} → ${route.dest}`;
       const layers = [
-        L.polyline(incoming, { color: lighten(color, 0.45), weight, opacity: 0.45, offset, lineCap: 'butt' }),
-        L.polyline(outbound, { color, weight, opacity: 0.95, offset, lineCap: 'butt' }),
+        new OffsetPolyline(outbound, { color: lighten(color, 0.3), weight, opacity: 0.6, offset, lineCap: 'butt' }),
+        new OffsetPolyline(incoming, { color, weight, opacity: 0.95, offset, lineCap: 'butt' }),
       ];
       layers.filter((l) => l.getLatLngs().length > 1).forEach((l) => l.bindTooltip(tip, { sticky: true }).addTo(this.map));
       this.lineLayers.set(id, layers);
@@ -91,17 +95,18 @@ export class LiveLines {
       return;
     }
     const routeIds = [...new Set(this.entries.map((e) => e.routeId))];
-    const results = await Promise.all(
-      routeIds.map((id) => fetchLiveBuses(id).then((buses) => [id, { buses }], (error) => [id, { error }])),
-    );
+    // Lines outside the government feed have no live positions: don't ask for them.
+    const results = await Promise.all(routeIds.map((id) => (this.city.routes.get(id).live
+      ? fetchLiveBuses(id).then((buses) => [id, { buses }], (error) => [id, { error }])
+      : [id, { buses: [], noLive: true }])));
     if (gen !== this.generation || this.destroyed) return;
     const byRoute = new Map(results);
     const rows = this.entries.map(({ stopId, routeId }) => {
       const route = this.city.routes.get(routeId);
       const stop = this.city.stops.get(stopId);
-      const { buses, error } = byRoute.get(routeId);
-      const { next, passed } = error ? { next: [], passed: [] } : classifyBuses(buses, route.stops, stopId, this.city.shapeOf(route));
-      return { stop, route, color: this.colorOf(routeId), next, passed, error };
+      const { buses, error, noLive = false } = byRoute.get(routeId);
+      const { next, passed } = error || noLive ? { next: [], passed: [] } : classifyBuses(buses, route.stops, stopId, this.city.shapeOf(route));
+      return { stop, route, color: this.colorOf(routeId), next, passed, error, noLive };
     });
     this.drawBuses(rows);
     this.onUpdate(rows);
