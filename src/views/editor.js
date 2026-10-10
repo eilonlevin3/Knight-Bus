@@ -1,4 +1,4 @@
-// Edit a favorite commute: pick up to 2 stops, check lines, save. Docs: docs/user-flows.md#3-editing-a-favorite
+// Edit a favorite commute: pick up to 2 stops, check lines, save. Docs: docs/user-flows.md#3-editing-a-favorite-commute
 // @req REQ-EDIT-1 @req REQ-EDIT-2 @req REQ-EDIT-3 @req REQ-EDIT-5 @req REQ-EDIT-6 @req REQ-FAV-2 @req REQ-FAV-4 @req REQ-FAV-5
 
 import { h, toast } from '../lib/dom.js';
@@ -23,7 +23,7 @@ export async function render(root, ctx, { slot }) {
     ? structuredClone(existing)
     : { name: '', cityId: city.id, stops: [] };
   // A default name ("Commute 2", or the older "Favorite 2") shows as an empty box with a hint.
-  if (/^(Commute|Favorite) \d$/.test(draft.name || '')) draft.name = '';
+  if (/^(Commute|Favorite|Favorite Commute) \d$/.test(draft.name || '')) draft.name = '';
   // Optional start point and destination: { lat, lon, label } or null.
   draft.origin ??= null;
   draft.destination ??= null;
@@ -264,7 +264,7 @@ export async function render(root, ctx, { slot }) {
 
   function paintSummary() {
     const name = h('input', {
-      type: 'text', value: draft.name, maxLength: 40, placeholder: `e.g. To work (otherwise: Commute ${slot})`,
+      type: 'text', value: draft.name, maxLength: 40, placeholder: `e.g. To work (otherwise: Favorite Commute ${slot})`,
       oninput: (e) => (draft.name = e.target.value),
     });
     const stopCards = draft.stops.map((st, i) => h('div', { class: 'card' },
@@ -282,7 +282,7 @@ export async function render(root, ctx, { slot }) {
       }))));
 
     return [
-      h('h2', {}, `Commute ${slot}`),
+      h('h2', {}, `Favorite Commute ${slot}`),
       h('label', { class: 'field' }, 'Name (shown on its home-screen button)', name),
       placeCard('origin'),
       ...stopCards,
@@ -307,14 +307,14 @@ export async function render(root, ctx, { slot }) {
               });
               trackDetail('commute_saved', { slot, commute: draft });
               await ctx.reloadFavorites();
-              toast('Commute saved');
+              toast('Favorite Commute saved');
               ctx.go('#/home');
             } catch (err) {
               toast(`Could not save: ${err.message}`);
               e.target.disabled = false;
             }
           },
-        }, 'Save commute')),
+        }, 'Save Favorite Commute')),
       existing
         ? h('button', {
             class: 'link small danger',
@@ -322,10 +322,10 @@ export async function render(root, ctx, { slot }) {
               await deleteFavorite(ctx.user, slot);
               track('commute_cleared', { slot });
               await ctx.reloadFavorites();
-              toast('Commute cleared');
+              toast('Favorite Commute cleared');
               ctx.go('#/home');
             },
-          }, 'Clear this commute')
+          }, 'Clear this Favorite Commute')
         : null,
     ];
   }

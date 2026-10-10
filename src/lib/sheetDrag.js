@@ -1,4 +1,4 @@
-// Bottom panel you can drag: down for more map, up for more list. Docs: docs/user-flows.md#4-using-a-favorite
+// Bottom panel you can drag: down for more map, up for more list. Docs: docs/user-flows.md#4-using-a-favorite-commute
 // @req REQ-COMM-8
 //
 // - Drag the handle bar at the top of the panel, or

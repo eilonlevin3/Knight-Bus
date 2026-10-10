@@ -27,7 +27,7 @@ flowchart LR
   CI -- "one JSON per city" --> Pages
   Pages -- "HTTPS" --> UI
   UI <--> SW <--> Cache
-  UI -- "sign-in, favorites" --> FB
+  UI -- "sign-in, Favorite Commutes" --> FB
   UI -- "live bus positions every 30 s" --> SIRI
   UI -- "map images" --> OSM
 ```
@@ -39,13 +39,13 @@ flowchart LR
 | App shell | The page, the screen router, start-up | [index.html](../index.html), [src/app.js](../src/app.js) | [user-flows.md](user-flows.md) |
 | Screens | Sign-in, choose city, home, editor, commute, privacy, report | [src/views/](../src/views/) | [user-flows.md](user-flows.md) |
 | Accounts | Email and Google sign-in through Firebase Auth | [src/auth.js](../src/auth.js) | [ADR-0004](adr/0004-firebase.md) |
-| Favorites storage | Saves favorites per user in Firestore | [src/store.js](../src/store.js), [firestore.rules](../firestore.rules) | [data-model.md](data-model.md#favorite) |
+| Favorite Commutes storage | Saves Favorite Commutes per user in Firestore | [src/store.js](../src/store.js), [firestore.rules](../firestore.rules) | [data-model.md](data-model.md#favorite-commute) |
 | Location | GPS and choosing the city | [src/location.js](../src/location.js) | [user-flows.md](user-flows.md#1-first-launch) |
 | City data | Downloads and caches one city's bundle | [src/cityData.js](../src/cityData.js) | [data-model.md](data-model.md#city-bundle) |
 | Map | Leaflet map, stops, user dot, bus icons, flags, map key | [src/map.js](../src/map.js) | this file |
-| Route geometry | Positions along a route's path, incoming/outbound split, "5 min before the stop" | [src/lib/routeGeometry.js](../src/lib/routeGeometry.js) | [user-flows.md](user-flows.md#4-using-a-favorite) |
+| Route geometry | Positions along a route's path, incoming/outbound split, "5 min before the stop" | [src/lib/routeGeometry.js](../src/lib/routeGeometry.js) | [user-flows.md](user-flows.md#4-using-a-favorite-commute) |
 | Side-by-side lines | Shifted lines without knots, recomputed per zoom | [src/lib/offsetLine.js](../src/lib/offsetLine.js) | [ADR-0007](adr/0007-address-search.md) |
-| Draggable panel | Bottom panel you drag for more map or more list | [src/lib/sheetDrag.js](../src/lib/sheetDrag.js) | [user-flows.md](user-flows.md#4-using-a-favorite) |
+| Draggable panel | Bottom panel you drag for more map or more list | [src/lib/sheetDrag.js](../src/lib/sheetDrag.js) | [user-flows.md](user-flows.md#4-using-a-favorite-commute) |
 | Usage insights | Consent, safe events, debug-only details | [src/analytics.js](../src/analytics.js), [src/views/privacy.js](../src/views/privacy.js) | [privacy.md](privacy.md) |
 | Stops sharing a number | Platform labels, the stop ⚠ pop-up | [src/views/stopInfo.js](../src/views/stopInfo.js) | [user-flows.md](user-flows.md#stops-that-share-a-number) |
 | Stop patterns of a route | The ⚠ pop-up, the full-route screen, schedules | [src/views/lineInfo.js](../src/views/lineInfo.js), [src/views/line.js](../src/views/line.js), [src/lib/schedule.js](../src/lib/schedule.js) | [user-flows.md](user-flows.md#routes-with-more-than-one-stop-pattern) |
@@ -71,12 +71,12 @@ The URL hash picks the screen:
 |------|--------|------|
 | `#/login` | Sign in / create account | [views/login.js](../src/views/login.js) |
 | `#/city` | Choose metropolitan area | [views/city.js](../src/views/city.js) |
-| `#/home` (old name `#/menu` still works) | Home screen: map around you, stop explorer, saved commutes | [views/home.js](../src/views/home.js) |
+| `#/home` (old name `#/menu` still works) | Home screen: map around you, stop explorer, Favorite Commutes | [views/home.js](../src/views/home.js) |
 | `#/privacy` | Privacy notice, usage-sharing switch | [views/privacy.js](../src/views/privacy.js) |
-| `#/report` | Commute report (admins only) | [views/report.js](../src/views/report.js) |
+| `#/report` | Favorite Commutes report (admins only) | [views/report.js](../src/views/report.js) |
 | `#/line/<city>/<route>/<stop>` | A route in full: all its stop patterns, stops, schedule per stop | [views/line.js](../src/views/line.js) |
-| `#/edit/1` … `#/edit/3` | Edit a favorite | [views/editor.js](../src/views/editor.js) |
-| `#/commute/1` … `#/commute/3` | Use a favorite | [views/commute.js](../src/views/commute.js) |
+| `#/edit/1` … `#/edit/3` | Edit a Favorite Commute | [views/editor.js](../src/views/editor.js) |
+| `#/commute/1` … `#/commute/3` | Use a Favorite Commute | [views/commute.js](../src/views/commute.js) |
 
 `app.js` checks the guards first: no user → login; no city → city picker. Each screen's
 `render()` function returns a cleanup function, which stops timers and removes the map
@@ -86,7 +86,7 @@ when you leave the screen.
 
 Firebase Auth handles passwords, Google sign-in, password reset and keeping the user signed
 in. When `src/config.js` still has placeholder values, the app runs in **local demo mode**:
-there are no accounts, and favorites go to the device's `localStorage`. This lets you try the
+there are no accounts, and Favorite Commutes go to the device's `localStorage`. This lets you try the
 app before Firebase is set up.
 
 ## Offline
@@ -126,7 +126,7 @@ The reasons behind these choices are in [adr/](adr/):
 - [ADR-0001](adr/0001-pwa.md) An installable web app (PWA) instead of a store app
 - [ADR-0002](adr/0002-realtime-source.md) Live data through the Open Bus Stride mirror of the government SIRI feed
 - [ADR-0003](adr/0003-maps.md) OpenStreetMap raster tiles cached on view, with offline vector maps later
-- [ADR-0004](adr/0004-firebase.md) Firebase for accounts and favorites
+- [ADR-0004](adr/0004-firebase.md) Firebase for accounts and Favorite Commutes
 - [ADR-0005](adr/0005-docs-as-code.md) Docs as code, with requirement IDs checked in CI
 - [ADR-0006](adr/0006-release-channels.md) A debug version in a sub-folder of the same site
 - [ADR-0007](adr/0007-address-search.md) Address search with OpenStreetMap Nominatim; side-by-side lines

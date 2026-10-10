@@ -72,8 +72,8 @@ Everything that matters is kept apart (REQ-REL-2):
 
 | What | Main | Debug |
 |------|------|-------|
-| Favorites in your account | `users/{uid}/favorites` | `users/{uid}/favoritesDebug` |
-| Device settings, demo-mode favorites | `kb.*` | `kb.debug.*` |
+| Favorite Commutes in your account | `users/{uid}/favorites` | `users/{uid}/favoritesDebug` |
+| Device settings, demo-mode Favorite Commutes | `kb.*` | `kb.debug.*` |
 | App files | cache `kb-main-shell-<commit>` | cache `kb-debug-shell-<commit>` |
 | City data | `/data/cities/` | `/debug/data/cities/` (built by debug's own pipeline) |
 
@@ -95,7 +95,7 @@ They notice nothing. Their app runs entirely from the copy on their phone, which
 service worker serves, so they keep using the old version.
 
 - Live buses keep working: they come from the Stride API, not from our site.
-- Favorites keep working: they live in Firebase.
+- Favorite Commutes keep working: they live in Firebase.
 - If the nightly data changed, the city bundle has a new version number. The old app
   downloads the new bundle the next time it loads city data. The bundle format is
   backwards compatible: a new field is ignored by older apps.
@@ -129,7 +129,7 @@ sequenceDiagram
 - **No mixed versions.** The new files go into a separate cache and switch over all at once.
 - **The nightly data rebuild does not show the banner.** Only code changes create a new
   commit id. New timetables arrive as a new city bundle, quietly.
-- **Saved data survives updates.** Favorites, the selected city and sign-in are untouched.
+- **Saved data survives updates.** Favorite Commutes, the selected city and sign-in are untouched.
   If a change ever alters the saved data's format, the new code must still read the old
   format. List the change in `docs/data-model.md`.
 
@@ -148,6 +148,6 @@ git push
 ## Firebase rules
 
 [firestore.rules](../firestore.rules) covers both collections. If a debug feature adds a
-field to favorites, the rules must allow it before debug can save it with Firebase. Publish
+field to Favorite Commutes, the rules must allow it before debug can save it with Firebase. Publish
 the rules from the `debug` branch while you test. After the release, `main` has the same
 rules.

@@ -1,4 +1,4 @@
-// Favorite commutes, saved per user. Docs: docs/data-model.md#favorite
+// Favorite commutes, saved per user. Docs: docs/data-model.md#favorite-commute
 // @req REQ-FAV-3
 //
 // Firestore path: users/{uid}/favorites/{slot}   (slot = "1" | "2" | "3")

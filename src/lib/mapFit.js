@@ -1,6 +1,6 @@
 // Which points a map should fit to show "where my bus is now": for every (stop, line) pair,
 // the stretch the line drives in the last minutes before that stop.
-// Shared by the home screen and the commute view. @req REQ-COMM-2 @req REQ-HOME-2
+// Shared by the home screen and the commute view. @req REQ-COMM-2 @req REQ-HOME-2 @req REQ-LINE-1a
 
 import { approachPath } from './routeGeometry.js';
 

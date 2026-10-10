@@ -9,7 +9,7 @@ For what the app does and how it is built, start at [README.md](README.md) (docs
 changed open item, update the matching section and the "Last updated" line. Remove things
 that stop being true. Do not copy what the docs already say; link to them.
 
-Last updated: 2026-10-10 (stops sharing a number, Sababus follows Moovit; `debug` is ahead of main, which is still `34aad5a`).
+Last updated: 2026-10-10 (Favorite Commute wording, REQ-LINE-1a–d, live buses not tied to a pattern; `debug` is ahead of main, which is still `34aad5a`).
 
 ## The owner and how to work with them
 
@@ -67,7 +67,7 @@ Claude could not do these in this setup; ask the owner, with exact steps:
   *Open as of 2026-10-10:* the rules for `debugEvents` and the admin report may not be
   published yet. Until they are, debug detail events are silently dropped and the report
   shows an error.
-- **Admin for the commute report:** a hand-made Firestore document `admins/{their uid}`
+- **Admin for the Favorite Commutes report:** a hand-made Firestore document `admins/{their uid}`
   (steps in [docs/setup.md](docs/setup.md)). *Open: not confirmed done.*
 - `gh auth refresh -s workflow` (needed once to push workflow files; done).
 - Making the repo public, and anything else that publishes content, was blocked for
@@ -189,18 +189,21 @@ Claude could not do these in this setup; ask the owner, with exact steps:
 - Live data from the Open Bus Stride mirror, because the ministry's own SIRI needs a
   registered server address (ADR-0002).
 - Map tiles cached as viewed; bulk download is against OpenStreetMap's rules (ADR-0003).
-- Firebase for sign-in and saved commutes (ADR-0004). Docs as code (ADR-0005).
+- Firebase for sign-in and Favorite Commutes (ADR-0004). Docs as code (ADR-0005).
 - Debug version in a sub-folder, versioned all-at-once updates (ADR-0006).
 - Address search by OpenStreetMap Nominatim: only on pressing Search, 1 request per second (ADR-0007).
 - Usage insights: opt-in; safe anonymous events for everyone; detail only in debug; an
   admin report with counts only, stops listed from 3 people up (ADR-0008, docs/privacy.md).
 - The first screen is the **home screen** (the owner renamed it from "main menu"): map
-  around the user on top, tap any stop to explore its routes, saved commutes below. Address
+  around the user on top, tap any stop to explore its routes, Favorite Commutes below. Address
   `#/home`; `#/menu` is kept as an alias for apps installed earlier.
-- Only saved commutes get a button, labeled with the user's own name for it; new ones are
-  made with the small ＋ New commute button (bottom right).
-- UI wording: saved items are "Commute 1/2/3" on screen. The code and data still say
-  `favorite` (collections `favorites`, `favoritesDebug`): do not rename stored data.
+- Only Favorite Commutes get a button, labeled with the user's own name for it; new ones are
+  made with the small ＋ New Favorite Commute button (bottom right).
+- **"Favorite Commute"** (the owner's term, 2026-10-10) is what a person saves, in the app
+  and in every doc: "＋ New Favorite Commute", "My Favorite Commutes", default name
+  "Favorite Commute N". (Earlier the same day it was "Commute N", before that "Favorite N";
+  both still display correctly.) The code and data still say `favorite` (collections
+  `favorites`, `favoritesDebug`): do not rename stored data.
 - "Routes show up when a stop is picked" was read as: listed with checkboxes, none checked,
   drawn only when checked. The owner has not objected.
 
@@ -211,7 +214,7 @@ Claude could not do these in this setup; ask the owner, with exact steps:
 - Owner to confirm on the iPhone: the ⚠ pop-up, the full-route screen and schedules, Sababus
   routes, and that the first visit no longer reloads by itself.
 - Owner to confirm on the iPhone: the new home screen (map around them, tapping a stop,
-  named commute buttons, ＋ New commute). And from the round of 2026-10-10: top of screen not blurred, map key
+  named Favorite Commute buttons, ＋ New Favorite Commute). And from the round of 2026-10-10: top of screen not blurred, map key
   tappable, panel drags, incoming lines solid, no circles, 708 listed at their stop, the
   usage question card, the privacy screen.
 - Owner to publish the latest Firestore rules and create their `admins` document (above).

@@ -1,5 +1,5 @@
 // Live bus positions and "next two + last passed" logic. Docs: docs/realtime.md
-// @req REQ-RT-1 @req REQ-RT-2
+// @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-8
 
 import { realtime } from './config.js';
 import { stopPositions, projectOnPath } from './lib/routeGeometry.js';
@@ -39,8 +39,9 @@ export async function fetchLiveBuses(routeId) {
 //   next   = the two closest buses that have not reached the chosen stop yet
 //   passed = the one bus that passed the chosen stop most recently
 // routeStops: ordered stops of the line; shape: the line's path as [[lat, lon], ...].
+// otherPaths: the paths of the route's other stop patterns.
 // stopsAway: 0 = the chosen stop is the bus's next stop; -1 = it passed it at its last stop.
-export function classifyBuses(buses, routeStops, stopId, shape) {
+export function classifyBuses(buses, routeStops, stopId, shape, otherPaths = []) {
   const target = routeStops.findIndex((s) => s.id === stopId);
   if (target < 0) return { next: [], passed: [] };
   const path = shape && shape.length > 1 ? shape : routeStops.map((s) => [s.lat, s.lon]);
@@ -49,7 +50,11 @@ export function classifyBuses(buses, routeStops, stopId, shape) {
   const placed = [];
   for (const bus of buses) {
     const { pos, meters } = projectOnPath(bus, path);
-    if (meters > realtime.maxOffRouteMeters) continue; // not on this line (depot, detour, bad GPS)
+    // A bus is dropped only when it is on none of the route's paths (depot, bad GPS). A bus
+    // driving another stop pattern of the same route stays: it is shown where it really is,
+    // and counted from the nearest point of this path (REQ-RT-8).
+    if (meters > realtime.maxOffRouteMeters &&
+        !otherPaths.some((p) => projectOnPath(bus, p).meters <= realtime.maxOffRouteMeters)) continue;
     // The next stop the bus will reach: the first stop at or after its position.
     let nextStop = stopPos.findIndex((p) => p >= pos - 1e-6);
     if (nextStop < 0) nextStop = routeStops.length; // past the last stop

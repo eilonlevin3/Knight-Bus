@@ -1,6 +1,6 @@
 // One line in full: every route it takes, all its stops, and the schedule at any stop.
 // Docs: docs/user-flows.md#5-a-route-in-full
-// @req REQ-LINE-3 @req REQ-LINE-4
+// @req REQ-LINE-3 @req REQ-LINE-4 @req REQ-LINE-1c
 
 import { h } from '../lib/dom.js';
 import { createMap, userMarker } from '../map.js';
@@ -8,9 +8,10 @@ import { loadSchedule } from '../cityData.js';
 import { draggableSheet } from '../lib/sheetDrag.js';
 import { track, trackDetail } from '../analytics.js';
 import { lineBadge, weekendTag } from './liveInfo.js';
-import { patternName, patternDifference } from './lineInfo.js';
+import { patternName, differenceLines } from './lineInfo.js';
 import { stopSuffix, stopHazard } from './stopInfo.js';
 import { timesAtStop } from '../lib/schedule.js';
+import { samePath } from '../lib/routeGeometry.js';
 
 const PATTERN_COLORS = ['#7b2cbf', '#e85d04', '#0077b6', '#2a9d8f'];
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -38,10 +39,13 @@ export async function render(root, ctx, { cityId, routeId, stopId }) {
   userMarker(map)(ctx.position);
 
   // Every route of the line: the usual one solid, the others dotted, each in its own color.
-  const lines = route.patterns.map((p, i) => L.polyline(city.shapeOf(p), {
+  // A pattern that takes the same path as an earlier one gets no line of its own (REQ-LINE-1c).
+  const sameAsEarlier = route.patterns.map((p, i) =>
+    route.patterns.slice(0, i).some((q) => samePath(city.shapeOf(p), city.shapeOf(q))));
+  const lines = route.patterns.map((p, i) => (sameAsEarlier[i] ? null : L.polyline(city.shapeOf(p), {
     color: PATTERN_COLORS[i % PATTERN_COLORS.length], weight: i ? 4 : 6, opacity: 0.9,
     dashArray: i ? '1 9' : null, lineCap: 'round',
-  }).bindTooltip(`${patternName(i)} (${p.share}% of trips)`, { sticky: true }));
+  }).bindTooltip(`${patternName(i)} (${p.share}% of trips)`, { sticky: true }))).filter(Boolean);
   [...lines].reverse().forEach((l) => l.addTo(map)); // usual route on top
 
   // Every stop of every route. A stop only some routes serve takes that route's color.
@@ -107,10 +111,11 @@ export async function render(root, ctx, { cityId, routeId, stopId }) {
     return h('div', { class: 'stack' },
       h('p', {}, h('span', { class: 'hazard-mark' }, '⚠'), ' This line does not always take the same route:'),
       ...route.patterns.map((p, i) => h('div', { class: 'pattern-row' },
-        h('span', { class: `pattern-swatch${i ? ' dotted' : ''}`, style: `--c:${PATTERN_COLORS[i % PATTERN_COLORS.length]}` }),
+        h('span', { class: `pattern-swatch${i && !sameAsEarlier[i] ? ' dotted' : ''}`, style: `--c:${PATTERN_COLORS[(sameAsEarlier[i] ? 0 : i) % PATTERN_COLORS.length]}` }),
         h('span', { class: 'line-text' },
           h('span', {}, h('b', {}, patternName(i)), ` · ${p.share}% of trips · ${p.stops.length} stops`),
-          ...(i > 0 ? patternDifference(route.patterns[0], p, 6).map((t) => h('small', { class: 'muted' }, t)) : [])))));
+          ...(i > 0 ? differenceLines(route.patterns[0], p, city, 6).map((t) => h('small', { class: 'muted' }, t)) : []),
+          sameAsEarlier[i] ? h('small', { class: 'muted' }, 'Same path as the usual route, so it has no line of its own.') : null))));
   }
 
   function scheduleBlock() {

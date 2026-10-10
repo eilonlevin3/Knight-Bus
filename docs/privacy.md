@@ -22,7 +22,7 @@ you change what is collected, change this file, the screen text and the code tog
 | Data | Where | Who can read it |
 |------|-------|-----------------|
 | Sign-in: email or Google account | Firebase Authentication | The account owner; project admins |
-| Saved commutes: stops, routes, start/destination | Firestore `users/{uid}/favorites` | The account owner; project admins |
+| Favorite Commutes: stops, routes, start/destination | Firestore `users/{uid}/favorites` | The account owner; project admins |
 | Location | Used on the phone to pick the city, center the home map and draw "you are here". The last position is remembered **on the phone only** (`kb.lastPosition`), for a quick start | Never sent |
 
 ## Safe usage data: everyone who agreed (user and debug versions)
@@ -63,8 +63,8 @@ Google Analytics. Google's rules forbid precise locations there.
 |-------|--------------|
 | `city_chosen` | exact location, if GPS was used |
 | `stop_explored` | which stop was opened on the home map |
-| `commute_saved` | the whole commute: stop ids and names, route ids, start and destination coordinates |
-| `commute_opened` | the whole commute, plus the phone's exact location at that moment |
+| `commute_saved` | the whole Favorite Commute: stop ids and names, route ids, start and destination coordinates |
+| `commute_opened` | the whole Favorite Commute, plus the phone's exact location at that moment |
 | `live_seen` | per stop and route: how many stops away each bus was |
 | `line_toggled` | which stop and route |
 | `line_map_opened`, `schedule_opened` | which route and stop |
@@ -87,16 +87,16 @@ them, and refuse any event that claims to come from the user version.
 | How many users, how often, which screens, how long | Firebase console → **Analytics** (Dashboard, Events, Realtime). New data takes up to a day to reach the reports. |
 | Debug testing as it happens | Firebase console → **Analytics → DebugView** |
 | Detailed debug events | Firebase console → **Firestore → users → (your id) → debugEvents** |
-| What commutes people save | In the app: **Menu → 📊 Commute report** (admins only, below) |
+| What Favorite Commutes people save | In the app: **Menu → 📊 Favorite Commutes report** (admins only, below) |
 
-## The commute report (admin only)
+## The Favorite Commutes report (admin only)
 
-*Menu → 📊 Commute report* (REQ-ANL-2, REQ-ANL-5). Code: [src/views/report.js](../src/views/report.js),
+*Menu → 📊 Favorite Commutes report* (REQ-ANL-2, REQ-ANL-5). Code: [src/views/report.js](../src/views/report.js),
 [src/lib/report.js](../src/lib/report.js), tests in [tests/report.test.mjs](../tests/report.test.mjs).
 
-It reads every saved commute and shows **counts only**: people with a saved commute,
-commutes per person, by city, one or two stops, with start/destination, the most saved
-routes, and commutes by month. It has two tabs: *Real users* and *Debug testers*.
+It reads every Favorite Commute and shows **counts only**: people with a Favorite Commute,
+Favorite Commutes per person, by city, one or two stops, with start/destination, the most saved
+routes, and Favorite Commutes by month. It has two tabs: *Real users* and *Debug testers*.
 
 - **No person is shown.** Account ids are used only to count "different people" and never
   leave the counting function. A unit test checks this.

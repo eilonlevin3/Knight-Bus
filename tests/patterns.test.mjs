@@ -87,3 +87,60 @@ test('each platform keeps only its own lines', () => {
   assert.deepEqual(terminal.routesAtStop('p3').map((r) => r.short), ['1']);
   assert.deepEqual(terminal.routesAtStop('p1').map((r) => r.short), ['2']);
 });
+
+// ---- Live buses are not tied to a stop pattern (REQ-RT-8) ----
+import { classifyBuses } from '../src/realtime.js';
+import { samePath } from '../src/lib/routeGeometry.js';
+import { patternSummary, patternDifference } from '../src/lib/patterns.js';
+
+// Usual path: straight north along lon 34.8. Detour path: leaves it 600 m to the east in the middle.
+const usualStops = Array.from({ length: 9 }, (_, i) => ({ id: `u${i}`, name: `U${i}`, lat: 32 + i * 0.002, lon: 34.8 }));
+const usualPath = usualStops.map((s) => [s.lat, s.lon]);
+const detourPath = [[32, 34.8], [32.004, 34.8], [32.004, 34.8065], [32.012, 34.8065], [32.012, 34.8], [32.016, 34.8]];
+const busOnDetour = { rideId: 'd', lat: 32.008, lon: 34.8065, recordedAt: new Date() }; // ~610 m off the usual path
+
+test('a bus driving another stop pattern of the route is kept, not dropped (REQ-RT-8)', () => {
+  const alone = classifyBuses([busOnDetour], usualStops, 'u8', usualPath);
+  assert.equal(alone.next.length + alone.passed.length, 0, 'without the other path it looks off-route');
+  const withOther = classifyBuses([busOnDetour], usualStops, 'u8', usualPath, [detourPath]);
+  assert.deepEqual(withOther.next.map((b) => b.rideId), ['d']);
+  assert.deepEqual([withOther.next[0].lat, withOther.next[0].lon], [32.008, 34.8065], 'its real position is untouched');
+});
+
+test('a bus on none of the route\'s paths is still left out', () => {
+  const lost = { rideId: 'x', lat: 32.008, lon: 34.83, recordedAt: new Date() };
+  const r = classifyBuses([lost], usualStops, 'u8', usualPath, [detourPath]);
+  assert.equal(r.next.length + r.passed.length, 0);
+});
+
+// ---- Identical paths (REQ-LINE-1c) ----
+test('two patterns along the same streets count as the same path, however their points are spaced', () => {
+  const sparse = [[32, 34.8], [32.016, 34.8]];
+  assert.equal(samePath(usualPath, sparse), true);
+  assert.equal(samePath(sparse, usualPath), true);
+});
+
+test('a detour or a shorter trip is not the same path', () => {
+  assert.equal(samePath(usualPath, detourPath), false);
+  assert.equal(samePath(usualPath, usualPath.slice(0, 5)), false);
+});
+
+// ---- The summary in the hazard pop-up (REQ-LINE-1d) ----
+const mk = (ids, share, path) => ({ stops: ids.map((id) => ({ id, name: `Stop ${id}` })), share, path });
+const shapeOf = (p) => p.path;
+
+test('summary: skipped stops on the same streets, and what it means at a skipped stop', () => {
+  const route = { patterns: [mk(['A', 'B', 'C', 'D'], 60, usualPath), mk(['A', 'B', 'D'], 40, usualPath)] };
+  const text = patternSummary(route, { id: 'C', name: 'Stop C' }, shapeOf);
+  assert.equal(text[0], 'Most trips (60%) follow the usual pattern: 4 stops.');
+  assert.equal(text[1], '40% of trips skip 1 stop (Stop C). They drive along the same streets.');
+  assert.equal(text[2], 'At Stop C: only about 60% of trips stop here. The others pass without stopping or take another way.');
+});
+
+test('summary: a detour that adds stops, at a stop every trip serves', () => {
+  const route = { patterns: [mk(['A', 'B', 'D'], 70, usualPath), mk(['A', 'X', 'Y', 'D'], 30, detourPath)] };
+  const text = patternSummary(route, { id: 'A', name: 'Stop A' }, shapeOf);
+  assert.equal(text[1], '30% of trips skip 1 stop (Stop B) and stop at 2 other stops (Stop X, Stop Y). They leave the usual path for part of the way.');
+  assert.equal(text[2], 'At Stop A: every trip stops here.');
+  assert.deepEqual(patternDifference(route.patterns[0], route.patterns[1], shapeOf).samePath, false);
+});

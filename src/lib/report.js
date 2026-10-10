@@ -1,5 +1,5 @@
 // Turns everyone's saved commutes into counts. No names, emails or account ids come out.
-// Docs: docs/privacy.md#the-commute-report-admin-only
+// Docs: docs/privacy.md#the-favorite-commutes-report-admin-only
 // @req REQ-ANL-2
 //
 // Stops are places, so a stop is listed only when at least MIN_PEOPLE_PER_STOP different

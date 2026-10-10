@@ -19,7 +19,7 @@ For each bus route (GTFS `route_id`; in Israel this is one direction and one alt
 - the **ordered list of stops** from first to last, for **every stop pattern** the route has
   (see below);
 - the **scheduled minutes** from the first stop to each stop, from the same trip
-  (REQ-DATA-6). It is used to zoom the commute view to the last 5 minutes before your stop;
+  (REQ-DATA-6). It is used to zoom the Favorite Commute view to the last 5 minutes before your stop;
 - the **shape** of each stop pattern (the road path), simplified to about 4 m accuracy and stored as an
   encoded polyline.
 

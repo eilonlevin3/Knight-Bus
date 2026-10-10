@@ -37,6 +37,7 @@ const SHELL = [
   'src/lib/offsetLine.js',
   'src/lib/mapFit.js',
   'src/lib/schedule.js',
+  'src/lib/patterns.js',
   'src/lib/sheetDrag.js',
   'src/lib/names.js',
   'src/geocode.js',

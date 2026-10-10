@@ -1,6 +1,6 @@
 # 🚌 Knight Bus
 
-**Live buses for your favorite commutes.** You save up to three commutes, each with up to two
+**Live buses for your Favorite Commutes.** You save up to three Favorite Commutes, each with up to two
 bus stops and the routes you care about. Open one, and the map shows those routes with the
 **next two buses coming to your stop and the last one that passed it**, live from the
 Ministry of Transport feed.
@@ -22,7 +22,7 @@ Knight Bus is a **Progressive Web App (PWA)**: a website that a phone can instal
    A **service worker** (`sw.js`) keeps the app files on the phone, so it opens instantly
    and works offline.
 4. **When the app runs**, it:
-   - signs you in through **Firebase** (email or Google) and loads your favorites;
+   - signs you in through **Firebase** (email or Google) and loads your Favorite Commutes;
    - uses **GPS** to find your city, downloads only that city's file (0.6–3 MB) once, and keeps it;
    - draws the map with **OpenStreetMap** and fetches **live bus positions** every 30 s
      from the government SIRI feed, through the open **Open Bus Stride** API.
@@ -30,7 +30,7 @@ Knight Bus is a **Progressive Web App (PWA)**: a website that a phone can instal
 ```
  GitHub repo ──► GitHub Actions (nightly) ──► GitHub Pages ──HTTPS──► 📱 your phone
    code + docs     GTFS → city files            app + data              │
-                                                                         ├─► Firebase (login, favorites)
+                                                                         ├─► Firebase (login, Favorite Commutes)
                                                                          ├─► Stride API (live buses)
                                                                          └─► OpenStreetMap (map tiles)
 ```
@@ -58,7 +58,7 @@ a broken doc link. Why and how: [ADR-0005](docs/adr/0005-docs-as-code.md).
 | [user-flows.md](docs/user-flows.md) | Every screen and what the user does on it, with diagrams | [src/views/](src/views/) |
 | [realtime.md](docs/realtime.md) | Where live bus data comes from, and the "next two + last passed" rule | [src/realtime.js](src/realtime.js), [src/liveLines.js](src/liveLines.js) |
 | [data-pipeline.md](docs/data-pipeline.md) | How the national GTFS feed becomes small per-city files, and how to add a city | [pipeline/build-city-data.mjs](pipeline/build-city-data.mjs), [pipeline/cities.json](pipeline/cities.json) |
-| [data-model.md](docs/data-model.md) | The shape of a favorite, a city bundle, and what is stored on the device | [src/store.js](src/store.js), [src/cityData.js](src/cityData.js), [firestore.rules](firestore.rules) |
+| [data-model.md](docs/data-model.md) | The shape of a Favorite Commute, a city bundle, and what is stored on the device | [src/store.js](src/store.js), [src/cityData.js](src/cityData.js), [firestore.rules](firestore.rules) |
 | [setup.md](docs/setup.md) | Deploying, turning on Firebase, installing on a phone, local development | [.github/workflows/](.github/workflows/), [src/config.js](src/config.js), [firebase.json](firebase.json) |
 | [privacy.md](docs/privacy.md) | **What is recorded about use, and what never is:** consent, the safe event list, debug-only details, where to see the numbers | [src/analytics.js](src/analytics.js), [src/views/privacy.js](src/views/privacy.js), [firestore.rules](firestore.rules) |
 | [release-process.md](docs/release-process.md) | **Test on your phone first:** the debug version, releasing to users, how updates reach phones, rollback | [deploy.yml](.github/workflows/deploy.yml), [scripts/build-site.sh](scripts/build-site.sh), [sw.js](sw.js), [src/updates.js](src/updates.js) |
@@ -79,7 +79,7 @@ Knight Bus/
 │   ├── updates.js           Notices new versions, shows the Update banner
 │   ├── config.js            Firebase keys, live-data settings  ← you edit this
 │   ├── auth.js              Email + Google sign-in (Firebase Auth), local demo mode
-│   ├── store.js             Save/load favorites (Firestore)
+│   ├── store.js             Save/load Favorite Commutes (Firestore)
 │   ├── location.js          GPS, which city am I in
 │   ├── cityData.js          Download + cache the city bundle; stop/route lookups
 │   ├── realtime.js          Live bus positions; next two + last passed
@@ -101,7 +101,7 @@ Knight Bus/
 ├── tests/                   Unit tests for the bus logic (npm test)
 ├── docs/                    ← everything described in the docs map above
 ├── CLAUDE.md                Working memory for AI chat sessions: how we work, traps, open items
-├── firestore.rules          Who can read/write favorites
+├── firestore.rules          Who can read/write Favorite Commutes
 └── .github/workflows/       deploy.yml (main + debug, nightly data, Pages), docs-check.yml (PRs)
 ```
 

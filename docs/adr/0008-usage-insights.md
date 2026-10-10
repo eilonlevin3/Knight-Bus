@@ -38,9 +38,9 @@ question with a plain warning about the details before anything is recorded.
    - *Physical places*: a location history of real people. It is the most sensitive data
      an app can hold, and a commute app can reveal home and work. Recommendation: do
      **not** record it. If needed, record only the **city/area** and **hour of day** when
-     a commute is opened. That still answers "when and where is the app used?".
-4. **Aggregate what's already there.** Saved commutes are already in Firestore. A small
-   report script (admin only, run on demand) can count routes, cities and stops per commute
+     a Favorite Commute is opened. That still answers "when and where is the app used?".
+4. **Aggregate what's already there.** Favorite Commutes are already in Firestore. A small
+   report script (admin only, run on demand) can count routes, cities and stops per Favorite Commute
    without new tracking.
 5. **Keep it short.** Raw events for 14 months at most, then aggregates only.
 6. **Say it.** A one-page privacy notice linked from the menu.

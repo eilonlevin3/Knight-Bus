@@ -27,7 +27,7 @@ manual "bump SHELL_VERSION" step.
 ## Consequences
 
 - No new accounts or services. The test version is a real installed app on the phone.
-- Both versions share one origin, so storage must be namespaced. That covers favorites,
+- Both versions share one origin, so storage must be namespaced. That covers Favorite Commutes,
   settings and caches; see [release-process.md](../release-process.md). Sign-in is shared.
 - Every run builds two sites (about 4–5 minutes instead of 2).
 - Pushing to `debug` also redeploys `main`, with no change to main's content.

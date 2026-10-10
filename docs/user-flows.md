@@ -11,12 +11,12 @@ flowchart TD
   C -- no --> G[Ask for GPS → find city<br/>or pick from list]
   G --> D[Download city data]
   D --> M
-  C -- yes --> M[Home screen<br/>map around you · saved commutes]
-  M -- ＋ New commute / ✎ --> E[Editor]
-  M -- tap a saved commute --> V[Commute view]
+  C -- yes --> M[Home screen<br/>map around you · Favorite Commutes]
+  M -- ＋ New Favorite Commute / ✎ --> E[Editor]
+  M -- tap a Favorite Commute --> V[Favorite Commute view]
   M -- tap a bus stop --> M
   V -- ✎ Edit --> E
-  E -- Save commute --> M
+  E -- Save Favorite Commute --> M
 ```
 
 ## 1. First launch
@@ -44,11 +44,11 @@ The first screen after sign-in (REQ-HOME-1). It used to be called the main menu.
 │        ◉ you                 │
 ├───────────── ▬ ──────────────┤  drag the handle: more map / more list
 │ Knight Bus        📍 city    │
-│ My commutes                  │
-│ [ To work            ] [✎]   │  one button per SAVED commute, with your name for it
+│ My Favorite Commutes         │
+│ [ To work            ] [✎]   │  one button per Favorite Commute, with your name for it
 │ [ Home               ] [✎]   │
 │ Tap a bus stop on the map…   │
-│               (＋ New commute)│  small, bottom right, while a slot is free
+│      (＋ New Favorite Commute)│  small, bottom right, while a slot is free
 └──────────────────────────────┘
 ```
 
@@ -58,35 +58,35 @@ position remembered on this phone, or the city center. The **◎** button brings
 **Tap a bus stop** (REQ-HOME-2). Zoom in if no stops show. The stop is highlighted, the map
 zooms to it and to where its buses are in their last ~5 minutes, and **every route through
 the stop is drawn**: solid where it comes to the stop, lighter after it, side by side where
-routes share a street. Live buses appear as in a commute: the next two and the last that
+routes share a street. Live buses appear as in a Favorite Commute: the next two and the last that
 passed, per route. The panel shows the stop first, with one row per route and its live status.
 
 **Route checkboxes** (REQ-HOME-3). All routes start checked; at a very busy stop, the first
 30. Uncheck a route to hide it and its buses. **✕ Close** returns to the plain map.
 
-**My commutes** (REQ-FAV-1, REQ-FAV-2, REQ-FAV-4). Only commutes you saved are shown, each
-as a button with the **name you gave it** ("Commute N" if you gave none), its stops and
-number of routes. Tap it to open the commute; **✎** opens the editor.
+**My Favorite Commutes** (REQ-FAV-1, REQ-FAV-2, REQ-FAV-4). Only Favorite Commutes you saved are shown, each
+as a button with the **name you gave it** ("Favorite Commute N" if you gave none), its stops and
+number of routes. Tap it to open the Favorite Commute; **✎** opens the editor.
 
-**＋ New commute**, bottom right, appears while fewer than three are saved. If a stop is
-open on the map, the new commute starts at that stop.
+**＋ New Favorite Commute**, bottom right, appears while fewer than three are saved. If a stop is
+open on the map, the new Favorite Commute starts at that stop.
 
 Also in the panel: the city (tap to change), the signed-in email, *Sign out* (REQ-AUTH-3),
-*Privacy & usage data*, and for admins *📊 Commute report*. The first time, a card asks
+*Privacy & usage data*, and for admins *📊 Favorite Commutes report*. The first time, a card asks
 **Help improve Knight Bus?** (REQ-ANL-3): *Share usage* or *No thanks*. Until answered,
 nothing is recorded. What is recorded: [privacy.md](privacy.md).
 
 Code: [views/home.js](../src/views/home.js), [liveLines.js](../src/liveLines.js),
 [lib/mapFit.js](../src/lib/mapFit.js), [lib/sheetDrag.js](../src/lib/sheetDrag.js).
 
-## 3. Editing a favorite
+## 3. Editing a Favorite Commute
 
 The map fills the top half. A panel below guides you through three steps.
 
 ```mermaid
 stateDiagram-v2
-  [*] --> Pick: new favorite
-  [*] --> Summary: existing favorite
+  [*] --> Pick: new Favorite Commute
+  [*] --> Summary: existing Favorite Commute
   Pick --> Routes: tap a stop / search result
   Routes --> Pick: Change stop
   Routes --> Summary: Save stop
@@ -94,7 +94,7 @@ stateDiagram-v2
   Summary --> Routes: Edit a stop
   Summary --> Place: Set start / destination
   Place --> Summary: tap map / pick address / my location
-  Summary --> [*]: Save commute → home
+  Summary --> [*]: Save Favorite Commute → home
 ```
 
 **Pick a stop** (REQ-EDIT-1). Zoom in to see stops as white dots, then tap one. You can also
@@ -112,11 +112,11 @@ stop**, each with a checkbox. **None is checked at first.** Checking a route:
 Unchecking removes the route and its buses.
 
 **Save stop** (REQ-EDIT-5) stores the stop with its checked routes and opens the summary.
-From there, *+ Add stop 2* repeats the steps for a second stop (up to 2 per favorite).
+From there, *+ Add stop 2* repeats the steps for a second stop (up to 2 per Favorite Commute).
 
-**Summary** (REQ-FAV-4, REQ-EDIT-6). **Name the commute**: the name becomes the text of its
-home-screen button (leave it empty for "Commute N"). Edit or remove each stop.
-*Save commute* saves it to your account and returns to the home screen. *Clear this commute*
+**Summary** (REQ-FAV-4, REQ-EDIT-6). **Name the Favorite Commute**: the name becomes the text of its
+home-screen button (leave it empty for "Favorite Commute N"). Edit or remove each stop.
+*Save Favorite Commute* saves it to your account and returns to the home screen. *Clear this Favorite Commute*
 empties the slot.
 
 **Start point and destination** (REQ-FAV-5, optional). The summary shows *Start point*
@@ -128,9 +128,9 @@ place shows on the map as a flag: green for start, checkered for destination (RE
 
 Code: [views/editor.js](../src/views/editor.js), [liveLines.js](../src/liveLines.js), [geocode.js](../src/geocode.js).
 
-## 4. Using a favorite
+## 4. Using a Favorite Commute
 
-Tapping a saved favorite opens the **commute view** (REQ-COMM-1). It shows the same map and
+Tapping a Favorite Commute opens the **Favorite Commute view** (REQ-COMM-1). It shows the same map and
 bus markers as the editor, for all saved stops and routes together. Buses refresh every
 30 seconds while the screen is visible (REQ-RT-2). Tap a bus for its details, or tap a stop
 name to zoom to it.
@@ -160,7 +160,7 @@ flags, and the bus symbols. Tap *Key* to fold it away.
 
 **Panel** (REQ-COMM-7, REQ-COMM-8). Each stop lists its routes with a checkbox, all checked.
 Uncheck a route to hide it, its buses and its key entry. This is only for this visit; the
-saved commute is unchanged, and the route is back next time.
+Favorite Commute is unchanged, and the route is back next time.
 
 To see more map, **drag the panel down**: either by the grey handle at its top, or by
 swiping down on the list while it's scrolled to the top. Swipe up for more list. The panel
@@ -197,7 +197,7 @@ with three). Each has its own routes.
   *"3 bus stops share the number 20277. Make sure you are at the right one."* and a list:
   each platform with the routes that stop there, the current one marked.
 - On the home screen and in the editor each other platform has **Show this one**, which
-  switches to it. In a saved commute the pop-up only informs.
+  switches to it. In a Favorite Commute the pop-up only informs.
 - When the data gives no platform for some of them, the pop-up says so and tells you to
   compare the route numbers with the sign at the stop.
 
@@ -208,7 +208,7 @@ Code: [views/stopInfo.js](../src/views/stopInfo.js), [cityData.js](../src/cityDa
 About 1–2% of routes do not always drive the same way: some trips skip a street, take a
 detour or continue further in the evening. Each way is a *stop pattern* (REQ-DATA-8).
 
-**What is drawn** (REQ-LINE-1). It depends on the stop the route is opened from:
+**What is drawn** (REQ-LINE-1a, REQ-LINE-1b). It depends on the stop the route is opened from:
 
 ```
 only ONE pattern passes your stop          SEVERAL patterns pass your stop
@@ -217,9 +217,27 @@ only ONE pattern passes your stop          SEVERAL patterns pass your stop
  not the most common one)                                                       visible where it leaves
 ```
 
+**Identical paths** (REQ-LINE-1c). Two stop patterns can drive along exactly the same
+streets and differ only in which stops they serve. Then there is nothing to dot: only the
+full (solid) line is shown, here and on the full-route screen.
+
+**Live buses** (REQ-RT-8) are shown where they really are, whichever stop pattern they are
+driving. A bus on a less common pattern is still shown; "stops away" is counted along the
+most common pattern that passes your stop.
+
 **The ⚠ sign** (REQ-LINE-2). Every such route has a small ⚠ next to its destination, in the
-home stop list, the editor and the commute. Pressing it opens a pop-up. On screen, the most
-common pattern is called "Usual route" and each other pattern "Variant":
+home stop list, the editor and the Favorite Commute. Pressing it opens a pop-up. On screen, the most
+common pattern is called "Usual route" and each other pattern "Variant".
+
+It starts with **In short**, a summary of how the patterns differ (REQ-LINE-1d), for example:
+
+- *Most trips (51%) follow the usual pattern: 36 stops.*
+- *49% of trips skip 3 stops (…) and stop at 2 other stops (…). They leave the usual path
+  for part of the way.* (or: *They drive along the same streets.*)
+- *At Dizengoff/Sheinkin: only about 51% of trips stop here. The others pass without
+  stopping or take another way.*
+
+Then the patterns one by one:
 
 - *Usual route: 51% of trips · 36 stops · stops here*
 - *Variant: 49% of trips · 35 stops · does not stop here*, with *Skips: …* and *Also stops at: …*
@@ -233,7 +251,8 @@ Pressing ⚠ inside a checkbox row does not tick the box.
 Opened from the ⚠ pop-up (REQ-LINE-3). Address: `#/line/<city>/<route>/<stop>`.
 
 - **Map:** the whole route. Its most common stop pattern is drawn as a solid purple line;
-  each other pattern as a dotted line in its own color. All stops are shown; a stop that
+  each other pattern as a dotted line in its own color, unless it takes the same path as one
+  already drawn (REQ-LINE-1c). All stops are shown; a stop that
   only one pattern serves has that pattern's color. The stop you came from is highlighted.
 - **Panel:** the route, its operator, and the list of patterns with their share of trips and
   differences.

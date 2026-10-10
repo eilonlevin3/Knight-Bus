@@ -1,5 +1,5 @@
 // Geometry along a bus line's path. Shared by live buses, line drawing and map zoom.
-// Docs: docs/realtime.md, docs/user-flows.md#4-using-a-favorite
+// Docs: docs/realtime.md, docs/user-flows.md#4-using-a-favorite-commute
 // A position on a path is in "segment units": segment index + fraction (2.5 = halfway along segment 2).
 
 // Position of each stop along the path.
@@ -65,6 +65,20 @@ export function slicePath(path, from, to) {
 // Splits the path at a position: [before, after]. Both include the split point.
 export function splitPath(path, pos) {
   return [slicePath(path, 0, pos), slicePath(path, pos, path.length - 1)];
+}
+
+// Do two paths run along the same streets? True when every corner of each lies on the other.
+// @req REQ-LINE-1c
+const samePathCache = new WeakMap();
+export function samePath(a, b, toleranceMeters = 20) {
+  if (a === b) return true;
+  const cached = samePathCache.get(a)?.get(b);
+  if (cached !== undefined) return cached;
+  const near = (p, q) => p.every(([lat, lon]) => projectOnPath({ lat, lon }, q).meters <= toleranceMeters);
+  const same = near(a, b) && near(b, a);
+  if (!samePathCache.has(a)) samePathCache.set(a, new WeakMap());
+  samePathCache.get(a).set(b, same);
+  return same;
 }
 
 export function metersBetween(a, b) {

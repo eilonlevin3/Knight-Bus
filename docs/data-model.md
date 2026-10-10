@@ -1,11 +1,11 @@
 # Data model
 
-## Favorite
+## Favorite Commute
 
 Stored in Firestore at `users/{uid}/favorites/{slot}`, where `slot` is `"1"`, `"2"` or `"3"`.
 The debug version uses `users/{uid}/favoritesDebug/{slot}` ([release-process.md](release-process.md)).
 Written by [src/store.js](../src/store.js). Protected by [firestore.rules](../firestore.rules):
-a user can read and write only their own favorites, and a favorite has 1–2 stops.
+a user can read and write only their own Favorite Commutes, and a Favorite Commute has 1–2 stops.
 
 ```json
 {
@@ -22,18 +22,18 @@ a user can read and write only their own favorites, and a favorite has 1–2 sto
 ```
 
 - `origin` and `destination` are optional (REQ-FAV-5): missing or `null` means not set.
-  Older versions of the app ignore them, so favorites saved by a newer version still open
+  Older versions of the app ignore them, so Favorite Commutes saved by a newer version still open
   in an older one.
 
 - `stopId` and `routeIds` are GTFS IDs, and they match the city bundle.
 - `stopName` and `stopCode` are copies, so the home screen can show them without loading the bundle.
-- `cityId` lets a favorite from another city still open; the app loads that city's bundle.
+- `cityId` lets a Favorite Commute from another city still open; the app loads that city's bundle.
 
 In local demo mode the same objects are stored in `localStorage` under `kb.favorites.local`.
 
 ## Admins
 
-`admins/{uid}`: any document here makes that account an admin (may open the commute
+`admins/{uid}`: any document here makes that account an admin (may open the Favorite Commute
 report). Created by hand in the Firebase console; the rules allow the app only to read
 your own entry.
 
@@ -126,4 +126,4 @@ answers "which routes serve this stop" (REQ-EDIT-2).
 | Cache `kb-city-data-v1` | `<file>?v=<version>` | City index and bundles (cityData.js) |
 | localStorage `kb.cityId` | | Selected city |
 | localStorage `kb.localUser`, `kb.favorites.*` | | Local demo mode only |
-| Firestore offline cache | | Favorites, readable offline (store.js) |
+| Firestore offline cache | | Favorite Commutes, readable offline (store.js) |

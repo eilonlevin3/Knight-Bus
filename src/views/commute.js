@@ -1,4 +1,4 @@
-// Open a favorite commute: its stops, chosen lines and live buses. Docs: docs/user-flows.md#4-using-a-favorite
+// Open a favorite commute: its stops, chosen lines and live buses. Docs: docs/user-flows.md#4-using-a-favorite-commute
 // @req REQ-COMM-1 @req REQ-COMM-2 @req REQ-COMM-3 @req REQ-COMM-6 @req REQ-COMM-7 @req REQ-COMM-8
 
 import { h } from '../lib/dom.js';
@@ -143,7 +143,7 @@ export async function render(root, ctx, { slot }) {
         h('button', { class: 'link', onclick: () => ctx.go('#/home') }, '← Home'),
         h('h2', {}, commuteName(fav, slot)),
         h('button', { class: 'link', onclick: () => ctx.go(`#/edit/${slot}`) }, '✎ Edit')),
-      h('p', { class: 'muted small' }, 'Uncheck a line to hide it here. Your saved commute stays the same.'),
+      h('p', { class: 'muted small' }, 'Uncheck a line to hide it here. Your Favorite Commute stays the same.'),
       ...sections,
       h('div', { class: 'row between' },
         h('small', { class: 'muted' }, updatedAt ? `Updated ${updatedAt.toLocaleTimeString()} · refreshes every 30 s` : 'Loading…'),

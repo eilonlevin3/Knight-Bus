@@ -6,7 +6,7 @@ import { consent, setConsent, detailed } from '../analytics.js';
 
 // The same wording is used on the home-screen card and here, so people always see what they agree to.
 export const SAFE_SUMMARY = 'Anonymous usage only: which screens you open and for how long, which features you use, your city and the hour. Never your name, email, stops, lines, addresses or location.';
-export const DEBUG_SUMMARY = 'This is the DEBUG test version. If you agree, it ALSO records details to help fix problems: the stops and lines of your commutes, your start and destination points, and your exact location while a commute is open. These are saved under your account, apart from real users.';
+export const DEBUG_SUMMARY = 'This is the DEBUG test version. If you agree, it ALSO records details to help fix problems: the stops and lines of your Favorite Commutes, your start and destination points, and your exact location while a Favorite Commute is open. These are saved under your account, apart from real users.';
 
 export function render(root, ctx) {
   const state = h('p', { role: 'status' });
@@ -30,7 +30,7 @@ export function render(root, ctx) {
         h('h2', {}, 'What Knight Bus keeps to work'),
         h('ul', { class: 'plain' },
           h('li', {}, 'Your sign-in (email or Google account), kept by Google Firebase.'),
-          h('li', {}, 'Your saved commutes: stops, lines, and start/destination if you set them. Only you can read them.'),
+          h('li', {}, 'Your Favorite Commutes: stops, lines, and start/destination if you set them. Only you can read them.'),
           h('li', {}, 'Your location is used on your phone to pick your city, center the map and show you on it. Your last position is remembered on this phone only, for a quick start. It is never sent to us.'))),
       h('div', { class: 'card stack' },
         h('h2', {}, 'Optional: help improve Knight Bus'),

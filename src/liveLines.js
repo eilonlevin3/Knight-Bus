@@ -1,11 +1,11 @@
 // Draws the chosen lines and their live buses on a map, and keeps the buses fresh.
 // Used by both the editor and the commute screen, so they behave the same (REQ-COMM-1).
-// @req REQ-LINE-1 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
+// @req REQ-LINE-1a @req REQ-LINE-1b @req REQ-LINE-1c @req REQ-RT-8 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
 
 import { realtime } from './config.js';
 import { fetchLiveBuses, classifyBuses, ageLabel } from './realtime.js';
 import { LINE_COLORS, busIcon, escapeHtml, lighten } from './map.js';
-import { stopPositions, splitPath } from './lib/routeGeometry.js';
+import { stopPositions, splitPath, samePath } from './lib/routeGeometry.js';
 import { makeOffsetPolyline } from './lib/offsetLine.js';
 
 let OffsetPolyline = null; // created on first use, once Leaflet (global L) is loaded
@@ -56,8 +56,9 @@ export class LiveLines {
     routeIds.forEach((id, i) => {
       const route = this.city.routes.get(id);
       const stopIds = this.entries.filter((e) => e.routeId === id).map((e) => e.stopId);
-      // A line can take more than one route. Only the routes that pass the chosen stop are
-      // drawn: the most common of them as the normal line, any others dotted (REQ-LINE-1).
+      // A route can have more than one stop pattern. Only the patterns that pass the chosen
+      // stop are drawn: one -> just that one (REQ-LINE-1a); several -> the most common as the
+      // normal line and the others dotted (REQ-LINE-1b).
       const through = this.city.patternsAt(route, stopIds[0]);
       const main = through[0] || route.patterns[0];
       const path = this.city.shapeOf(main);
@@ -72,7 +73,16 @@ export class LiveLines {
       // for a line that simply has no bus on the way.
       const dashArray = route.live ? null : `${weight * 2} ${weight * 1.6}`;
       const tip = `Line ${route.short} → ${route.dest}${route.live ? '' : ` · ${route.agency} (weekend line, no live tracking)`}`;
-      const variants = through.slice(1).map((p) => new OffsetPolyline(this.city.shapeOf(p), {
+      // A pattern that takes the same path as one already drawn gets no line of its own:
+      // only the full line shows (REQ-LINE-1c).
+      const drawn = [path];
+      const dotted = through.slice(1).filter((p) => {
+        const shape = this.city.shapeOf(p);
+        if (drawn.some((d) => samePath(shape, d))) return false;
+        drawn.push(shape);
+        return true;
+      });
+      const variants = dotted.map((p) => new OffsetPolyline(this.city.shapeOf(p), {
         color, weight: Math.max(3, weight - 1), opacity: 0.9, offset, dashArray: `1 ${weight * 1.8}`, lineCap: 'round',
       }).bindTooltip(`${tip} · less common route (${p.share}% of trips)`, { sticky: true }));
       const layers = [
@@ -116,9 +126,12 @@ export class LiveLines {
       const route = this.city.routes.get(routeId);
       const stop = this.city.stops.get(stopId);
       const { buses, error, noLive = false } = byRoute.get(routeId);
-      // Place buses on the route that passes this stop (the most common one, if several do).
+      // Buses are shown where they really are, whichever stop pattern they drive (REQ-RT-8).
+      // "Stops away" is counted along the most common pattern that passes this stop.
       const pattern = this.city.patternsAt(route, stopId)[0] || route.patterns[0];
-      const { next, passed } = error || noLive ? { next: [], passed: [] } : classifyBuses(buses, pattern.stops, stopId, this.city.shapeOf(pattern));
+      const otherPaths = route.patterns.filter((p) => p !== pattern).map((p) => this.city.shapeOf(p));
+      const { next, passed } = error || noLive ? { next: [], passed: [] }
+        : classifyBuses(buses, pattern.stops, stopId, this.city.shapeOf(pattern), otherPaths);
       return { stop, route, color: this.colorOf(routeId), next, passed, error, noLive };
     });
     this.drawBuses(rows);

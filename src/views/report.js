@@ -1,4 +1,4 @@
-// Admin-only report: what commutes people save, as counts. Docs: docs/privacy.md#the-commute-report-admin-only
+// Admin-only report: what commutes people save, as counts. Docs: docs/privacy.md#the-favorite-commutes-report-admin-only
 // @req REQ-ANL-2 @req REQ-ANL-5
 
 import { h } from '../lib/dom.js';
@@ -36,7 +36,7 @@ export async function render(root, ctx) {
       return;
     }
     if (!r.commutes) {
-      body.replaceChildren(h('p', { class: 'muted' }, 'No saved commutes here yet.'));
+      body.replaceChildren(h('p', { class: 'muted' }, 'No Favorite Commutes here yet.'));
       return;
     }
 
@@ -56,20 +56,20 @@ export async function render(root, ctx) {
     body.replaceChildren(
       card('Overview',
         h('div', { class: 'stat-grid' },
-          h('div', {}, h('b', {}, String(r.people)), h('small', {}, 'people with a saved commute')),
-          h('div', {}, h('b', {}, String(r.commutes)), h('small', {}, 'saved commutes')),
-          h('div', {}, h('b', {}, String(r.averageLines)), h('small', {}, 'lines per commute, average')),
+          h('div', {}, h('b', {}, String(r.people)), h('small', {}, 'people with a Favorite Commute')),
+          h('div', {}, h('b', {}, String(r.commutes)), h('small', {}, 'Favorite Commutes')),
+          h('div', {}, h('b', {}, String(r.averageLines)), h('small', {}, 'lines per Favorite Commute, average')),
           h('div', {}, h('b', {}, String(weekend)), h('small', {}, 'uses of weekend-only lines')))),
-      card('Commutes per person', ...[1, 2, 3].map((n) => bar(`${n} saved`, r.commutesPerPerson[n], r.people))),
+      card('Favorite Commutes per person', ...[1, 2, 3].map((n) => bar(`${n} saved`, r.commutesPerPerson[n], r.people))),
       card('By city', ...r.byCity.map((c) => bar(cityName(c.cityId), c.count, r.commutes))),
-      card('Shape of a commute',
+      card('Shape of a Favorite Commute',
         bar('1 stop', r.stopsPerCommute[1], r.commutes, pct(r.stopsPerCommute[1], r.commutes)),
         bar('2 stops', r.stopsPerCommute[2], r.commutes, pct(r.stopsPerCommute[2], r.commutes)),
         bar('With a start point', r.withStart, r.commutes, pct(r.withStart, r.commutes)),
         bar('With a destination', r.withDestination, r.commutes, pct(r.withDestination, r.commutes)),
         bar('With both', r.withBoth, r.commutes, pct(r.withBoth, r.commutes))),
       card(`Most saved lines${r.topLines.length > 20 ? ' (top 20)' : ''}`,
-        h('p', { class: 'muted small' }, 'Bar = different people who saved the line. Number in brackets = commutes.'),
+        h('p', { class: 'muted small' }, 'Bar = different people who saved the line. Number in brackets = Favorite Commutes.'),
         ...topLines.map((l) => bar(lineLabel(l), l.people, topLines[0].people, `(${l.commutes}) · ${cityName(l.cityId)}`))),
       card('Most saved stops',
         h('p', { class: 'muted small' },
@@ -85,7 +85,7 @@ export async function render(root, ctx) {
     h('main', { class: 'screen report' },
       h('header', { class: 'topbar' },
         h('button', { class: 'link', onclick: () => ctx.go('#/home') }, '← Home'),
-        h('h1', {}, 'Commute report')),
+        h('h1', {}, 'Favorite Commutes report')),
       h('p', { class: 'muted small' }, 'Counts only. No names, emails or locations of people. For how the app is used (screens, time, active users), see Analytics in the Firebase console.'),
       tabs,
       body),

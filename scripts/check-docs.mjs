@@ -24,7 +24,7 @@ const rel = (p) => path.relative(ROOT, p).replaceAll('\\', '/');
 // --- Requirements table ---
 const reqText = fs.readFileSync(path.join(ROOT, 'docs/requirements.md'), 'utf8');
 const reqs = new Map();
-for (const m of reqText.matchAll(/^\|\s*(REQ-[A-Z]+-\d+)\s*\|.*\|\s*(Done|Planned)\s*\|\s*$/gm)) {
+for (const m of reqText.matchAll(/^\|\s*(REQ-[A-Z]+-\d+[a-z]?)\s*\|.*\|\s*(Done|Planned)\s*\|\s*$/gm)) {
   if (reqs.has(m[1])) errors.push(`Duplicate requirement ID ${m[1]}`);
   reqs.set(m[1], { status: m[2], refs: [] });
 }
@@ -38,7 +38,7 @@ const codeFiles = [
 for (const file of codeFiles) {
   if (rel(file) === 'scripts/check-docs.mjs') continue;
   const text = fs.readFileSync(file, 'utf8');
-  for (const m of text.matchAll(/@req\s+(REQ-[A-Z]+-\d+)/g)) {
+  for (const m of text.matchAll(/@req\s+(REQ-[A-Z]+-\d+[a-z]?)/g)) {
     const r = reqs.get(m[1]);
     if (!r) errors.push(`${rel(file)} references ${m[1]}, which is not in docs/requirements.md`);
     else r.refs.push(rel(file));

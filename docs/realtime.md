@@ -36,8 +36,10 @@ For one route and one chosen stop:
 2. **Place every stop on the route's path** (its shape), walking forward from the
    first stop. This keeps the stops in order even where a route comes back along the same
    street. The result is cached per route.
-3. **Place each bus on the path:** take the nearest point on the path. Buses more than
-   250 m from the path are dropped (depot, detour or bad GPS). In a test on 2026-10-09,
+3. **Place each bus on the path:** take the nearest point on the path. The path is the most
+   common stop pattern that passes the chosen stop. A bus is dropped only when it is more
+   than 250 m from **every** stop pattern of the route (depot, bad GPS). A bus driving
+   another pattern of the route stays, shown where it really is (REQ-RT-8). In a test on 2026-10-09,
    most live buses were within 30 m.
 4. `nextStop` = the first stop at or after the bus's position.
    `stopsAway = index of chosen stop − nextStop`. Here 0 means "your stop is its next stop"
@@ -50,7 +52,7 @@ Unit tests: [tests/core.test.mjs](../tests/core.test.mjs) (`npm test`).
 On the map, approaching buses are solid and pulse; the passed bus is faded and dashed. Each
 popup and panel row shows how old the position is.
 
-When a favorite has two stops on the same route, one bus can be "passed" for stop 1 and
+When a Favorite Commute has two stops on the same route, one bus can be "passed" for stop 1 and
 "next" for stop 2. It gets one marker that shows both facts.
 
 ## Refresh

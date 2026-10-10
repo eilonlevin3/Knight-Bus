@@ -123,7 +123,7 @@ export async function render(root, ctx) {
 
   function commuteButtons() {
     if (!saved().length) {
-      return h('p', { class: 'muted small' }, 'No saved commutes yet. Use ＋ New commute to save the stops and lines you ride often.');
+      return h('p', { class: 'muted small' }, 'No Favorite Commutes yet. Use ＋ New Favorite Commute to save the stops and lines you ride often.');
     }
     return h('div', { class: 'commute-list' }, ...saved().map((slot) => {
       const fav = ctx.favorites[slot];
@@ -200,7 +200,7 @@ export async function render(root, ctx) {
         h('button', { class: 'link small', onclick: () => ctx.go('#/city') }, `📍 ${city.meta.name}`)),
       // While a stop is open it comes first; the commutes stay one scroll away.
       state.stop ? stopSection() : null,
-      h('h2', {}, 'My commutes'),
+      h('h2', {}, 'My Favorite Commutes'),
       commuteButtons(),
       state.stop ? null : stopSection(),
       consentCard(),
@@ -208,7 +208,7 @@ export async function render(root, ctx) {
         h('span', { class: 'muted small' }, ctx.user.email || ctx.user.displayName),
         h('button', { class: 'link small', onclick: async () => { await signOut(); ctx.setUser(null); } }, 'Sign out'),
         h('button', { class: 'link small', onclick: () => ctx.go('#/privacy') }, 'Privacy & usage data'),
-        ctx.isAdmin ? h('button', { class: 'link small', onclick: () => ctx.go('#/report') }, '📊 Commute report') : null,
+        ctx.isAdmin ? h('button', { class: 'link small', onclick: () => ctx.go('#/report') }, '📊 Favorite Commutes report') : null,
         h('span', { class: 'muted small' },
           `Bus data ${new Date(ctx.cityIndex.generatedAt).toLocaleDateString()} · Live: Ministry of Transport SIRI via Open Bus`)),
       h('div', { class: 'fab-space' }),
@@ -217,7 +217,7 @@ export async function render(root, ctx) {
     sheet.scrollTop = scroll;
   }
 
-  // Small "new commute" button, bottom right, while a slot is free.
+  // Small "New Favorite Commute" button, bottom right, while a slot is free.
   // With a stop open, the new commute starts at that stop.
   if (freeSlot()) {
     screen.append(h('button', {
@@ -226,7 +226,7 @@ export async function render(root, ctx) {
         ctx.newCommuteStopId = state.stop?.id || null;
         ctx.go(`#/edit/${freeSlot()}`);
       },
-    }, '＋ New commute'));
+    }, '＋ New Favorite Commute'));
   }
 
   const panel = draggableSheet(screen, sheet, { onResize: () => map.invalidateSize({ pan: false }) });

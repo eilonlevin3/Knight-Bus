@@ -4,7 +4,7 @@
 
 ## Address search (REQ-FAV-5)
 
-A favorite's start point and destination can be found by address. We use
+A Favorite Commute's start point and destination can be found by address. We use
 **OpenStreetMap Nominatim** ([src/geocode.js](../../src/geocode.js)). It is free, needs no
 key, and is called straight from the phone.
 

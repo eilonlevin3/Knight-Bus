@@ -21,11 +21,11 @@ These words mean one thing each, in every doc.
 | **Stop pattern** | One exact list of stops that a route's trips serve. Most routes have one. Some have several, because some trips skip or add stops. The **most common pattern** is the one most trips use. |
 | **Line** | Something **drawn on the map** to show a route: a solid, dashed or dotted line. A line is never the bus service itself. |
 | **Stop** | A place where buses stop, with a stop number. A terminal can have several stops that share one number (its platforms). |
-| **Commute** | A saved set of up to two stops and the routes chosen at each. Stored as a "favorite". |
+| **Favorite Commute** | What a person saves: up to two stops and the routes chosen at each, with an optional start point and destination. Up to three per person. Always written with both words; "commute" alone means the trip in general. |
 
 Three places still say "line" for a route, on purpose:
 
-- **Requirement IDs** `REQ-LINE-1` to `REQ-LINE-4` keep their names, because IDs never change. They are about routes with more than one stop pattern.
+- **Requirement IDs** `REQ-LINE-1a` to `REQ-LINE-4` keep the word LINE, because IDs never change. They are about routes with more than one stop pattern.
 - **On-screen text** in the app ("Line 62", "Show the full line on the map", "Usual route", "Variant"). Where a doc quotes the screen, the quote is exact.
 - **File and address names** (`views/line.js`, `lineInfo.js`, `#/line/…`). `liveLines.js` and `offsetLine.js` really are about drawn lines.
 
@@ -48,7 +48,7 @@ Three places still say "line" for a route, on purpose:
 | ID | Requirement | Status |
 |----|-------------|--------|
 | REQ-REL-1 | There are two versions of the site, built from two branches: **main** at `/Knight-Bus/` (what users get) and **debug** at `/Knight-Bus/debug/` (for testing on a phone before release). Both deploy on every push to either branch, and every night. | Done |
-| REQ-REL-2 | The debug version installs as a separate app (name *KB Debug*, orange icon), shows a badge with its commit, and keeps its favorites and settings separate from the main version. | Done |
+| REQ-REL-2 | The debug version installs as a separate app (name *KB Debug*, orange icon), shows a badge with its commit, and keeps its Favorite Commutes and settings separate from the main version. | Done |
 | REQ-REL-3 | A broken debug build never stops or breaks the main site from deploying. | Done |
 
 ## Accounts
@@ -58,7 +58,7 @@ Three places still say "line" for a route, on purpose:
 | REQ-AUTH-1 | A user can create an account and sign in with email and password. | Done |
 | REQ-AUTH-2 | A user can sign in with a Google account. | Done |
 | REQ-AUTH-3 | All screens except sign-in need a signed-in user. The user can sign out. | Done |
-| REQ-AUTH-5 | On the first sign-in on a device, commutes saved there in demo mode are copied into the account (empty slots only), then removed from the device. | Done |
+| REQ-AUTH-5 | On the first sign-in on a device, Favorite Commutes saved there in demo mode are copied into the account (empty slots only), then removed from the device. | Done |
 | REQ-AUTH-4 | If Firebase is not configured yet, the app offers a *local demo mode*, which stores data only on the device. This is for development. | Done |
 
 ## Location and city data
@@ -82,29 +82,29 @@ Three places still say "line" for a route, on purpose:
 | ID | Requirement | Status |
 |----|-------------|--------|
 | REQ-HOME-1 | The first screen after sign-in is the **home screen** (formerly "main menu"). Its upper half is a map centered on the user's location, with a button to return to it. | Done |
-| REQ-HOME-2 | Tapping a bus stop on the home map selects it: the map zooms to the stop and the last ~5 minutes of every route before it, **all routes through the stop are drawn** (each as a line: solid where it comes to the stop, lighter after it) with their **live buses**, and the panel lists them with live status, the same as in a commute. | Done |
-| REQ-HOME-3 | In the stop's route list every route has a checkbox, all checked (for very busy stops, the first 30). Unchecking hides a route. Closing the stop returns to the plain map. **＋ New commute** with a stop selected starts the new commute at that stop. | Done |
+| REQ-HOME-2 | Tapping a bus stop on the home map selects it: the map zooms to the stop and the last ~5 minutes of every route before it, **all routes through the stop are drawn** (each as a line: solid where it comes to the stop, lighter after it) with their **live buses**, and the panel lists them with live status, the same as in a Favorite Commute. | Done |
+| REQ-HOME-3 | In the stop's route list every route has a checkbox, all checked (for very busy stops, the first 30). Unchecking hides a route. Closing the stop returns to the plain map. **＋ New Favorite Commute** with a stop selected starts the new Favorite Commute at that stop. | Done |
 
-## Favorite commutes
-
-| ID | Requirement | Status |
-|----|-------------|--------|
-| REQ-FAV-1 | The home screen shows a button for each **saved** commute (up to three), labeled with the name the user gave it. Empty slots are not shown. A small **＋ New commute** button sits at the bottom right while a slot is free. | Done |
-| REQ-FAV-2 | Each favorite has an edit option. | Done |
-| REQ-FAV-3 | Favorites are saved to the user's account, so they follow the user to other devices. | Done |
-| REQ-FAV-4 | The user names each commute in the editor; that name is the text of its home-screen button. Without a name it is called "Commute N". The user can rename or clear a commute. | Done |
-| REQ-FAV-5 | A favorite can have an optional **start point** and **destination**. The user sets each by tapping the map or searching an address; the start point can also be the current location. | Done |
-
-## Editing a favorite commute
+## Favorite Commutes
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| REQ-EDIT-1 | A favorite has up to **2** bus stops. The user picks a stop by tapping it on the map or by searching its name or code. | Done |
+| REQ-FAV-1 | The home screen shows a button for each **saved** Favorite Commute (up to three), labeled with the name the user gave it. Empty slots are not shown. A small **＋ New Favorite Commute** button sits at the bottom right while a slot is free. | Done |
+| REQ-FAV-2 | Each Favorite Commute has an edit option. | Done |
+| REQ-FAV-3 | Favorite Commutes are saved to the user's account, so they follow the user to other devices. | Done |
+| REQ-FAV-4 | The user names each Favorite Commute in the editor; that name is the text of its home-screen button. Without a name it is called "Favorite Commute N". The user can rename or clear a Favorite Commute. | Done |
+| REQ-FAV-5 | A Favorite Commute can have an optional **start point** and **destination**. The user sets each by tapping the map or searching an address; the start point can also be the current location. | Done |
+
+## Editing a Favorite Commute
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| REQ-EDIT-1 | A Favorite Commute has up to **2** bus stops. The user picks a stop by tapping it on the map or by searching its name or code. | Done |
 | REQ-EDIT-2 | When a stop is picked, the app lists all bus routes that serve it. | Done |
 | REQ-EDIT-3 | Each route has a checkbox. **By default none are checked.** The user checks the routes they want. | Done |
 | REQ-EDIT-4 | A checked route is drawn on the map as a line along its whole path, from its first stop to its last. | Done |
 | REQ-EDIT-5 | "Save stop" stores the stop and its checked routes. The user then adds the next stop or finishes. | Done |
-| REQ-EDIT-6 | "Save commute" saves the commute and returns to the home screen. | Done |
+| REQ-EDIT-6 | "Save Favorite Commute" saves the Favorite Commute and returns to the home screen. | Done |
 
 ## Live buses
 
@@ -115,20 +115,21 @@ Three places still say "line" for a route, on purpose:
 | REQ-RT-3 | Each bus shows how old its position is, and how many stops it is from the chosen stop. | Done |
 | REQ-RT-5 | Routes without live data (from outside the government feed) say so, with their service hours, instead of "No bus on the way". | Done |
 | REQ-RT-6 | Routes without live data are **marked clearly wherever they appear**: a *Weekend · no live tracking* tag and a dashed ring on the route number in every list (home stop list, editor, commute, summary), a **dashed line on the map**, a dashed entry in the map key, and the note in the report. | Done |
+| REQ-RT-8 | A live bus is shown **where it really is**, whichever stop pattern of its route it is driving. A bus is never hidden or moved because it is on a less common pattern; it is left out only when it is on none of the route's paths. | Done |
 | REQ-RT-7 | Live positions for the weekend *Naaim BeSofash* routes. Blocked: no public source exists (see data-pipeline.md). Needs an agreement with the operator, or a feed they publish. | Planned |
 | REQ-RT-4 | Read the Ministry of Transport SIRI SM service directly, through our own proxy, for lower latency and arrival predictions. | Planned |
 
-## Using a favorite commute
+## Using a Favorite Commute
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| REQ-COMM-1 | Opening a favorite shows its stops and selected routes with live buses, the same as in the editor. | Done |
-| REQ-COMM-2 | The commute view opens zoomed so that the start point, destination and chosen stops are all visible, plus each chosen route's last **~5 minutes of travel before** its stop (by timetable, or ~1.5 km when the timetable is missing). | Done |
+| REQ-COMM-1 | Opening a Favorite Commute shows its stops and selected routes with live buses, the same as in the editor. | Done |
+| REQ-COMM-2 | The Favorite Commute view opens zoomed so that the start point, destination and chosen stops are all visible, plus each chosen route's last **~5 minutes of travel before** its stop (by timetable, or ~1.5 km when the timetable is missing). | Done |
 | REQ-COMM-3 | The start point is marked with a **green flag**, the destination with a **checkered flag**, on the map and in the editor. | Done |
 | REQ-COMM-4 | Each route's line is drawn in two parts: before the chosen stop (incoming) **solid**; after the stop (outbound) lighter and partly transparent, but still clearly visible. | Done |
 | REQ-COMM-5 | Where routes share a street, their lines are drawn **side by side**, so every route passing there is visible. Shifting the lines must not create loops or knots at corners at any zoom. | Done |
 | REQ-COMM-6 | A **map key** in the top-left corner lists each route's color, number and destination, the flags, and the bus symbols. It can be collapsed. | Done |
-| REQ-COMM-7 | The panel lists every route of every stop in the favorite with a **checkbox, all checked** when the view opens. Unchecking hides that route from the current view (map, buses, key) but does **not** change the favorite. | Done |
+| REQ-COMM-7 | The panel lists every route of every stop in the Favorite Commute with a **checkbox, all checked** when the view opens. Unchecking hides that route from the current view (map, buses, key) but does **not** change the Favorite Commute. | Done |
 | REQ-COMM-8 | The panel can be **dragged**: down (by its handle, or swiping down while the list is at its top) for more map, up for more list. It settles at small, half or large. | Done |
 | REQ-COMM-9 | On installed phone apps, nothing is drawn under the status bar (clock/battery): the map, its key and buttons start below it, so they are sharp and can be tapped. | Done |
 
@@ -143,8 +144,11 @@ Three places still say "line" for a route, on purpose:
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| REQ-LINE-1 | When a route is shown from a stop: (a) if only **one** of its stop patterns passes that stop, only that pattern is drawn; (b) if **several** pass it, the most common is drawn as the normal line and the others as **dotted** lines. Live buses are placed on the pattern that passes the stop. | Done |
-| REQ-LINE-2 | A route with more than one stop pattern shows a small **⚠ hazard sign** next to it in every list. Pressing it opens a pop-up about the route: each pattern's share of trips, how it differs (stops skipped or added), whether it stops at this stop, and what is drawn. | Done |
+| REQ-LINE-1a | When a route is shown from a stop and only **one** of its stop patterns passes that stop, only that pattern is drawn. | Done |
+| REQ-LINE-1b | When **several** of its stop patterns pass that stop, the most common is drawn as the normal line and the others as **dotted** lines. | Done |
+| REQ-LINE-1c | Where two stop patterns are identical on the map (they take the same path), only the full (solid) line is shown; the other gets no dotted line. | Done |
+| REQ-LINE-1d | For a route with more than one stop pattern, pressing the hazard sign shows a **summary that explains the difference** between the patterns: what share of trips each takes, which stops each skips or adds, whether they take the same path, and what that means at this stop. | Done |
+| REQ-LINE-2 | A route with more than one stop pattern shows a small **⚠ hazard sign** next to it in every list. Pressing it opens a pop-up about the route: the summary of REQ-LINE-1d first, then each pattern's share of trips, how it differs (stops skipped or added), whether it stops at this stop, and what is drawn. | Done |
 | REQ-LINE-3 | The pop-up links to a **full-route screen**: the route on the map with all its stop patterns (the most common as a solid line, the others as dotted lines, each in its own color) and all their stops. | Done |
 | REQ-LINE-4 | On the full-route screen, pressing a stop shows a link to that stop's **full schedule**: every scheduled time of the route at the stop, by weekday, with trips of the less common patterns marked. Routes without a published timetable say so. | Done |
 
@@ -153,7 +157,7 @@ Three places still say "line" for a route, on purpose:
 | ID | Requirement | Status |
 |----|-------------|--------|
 | REQ-ANL-1 | With the person's agreement, record **safe, anonymous** usage: app opens, sign-in method, screens and time on each, features used, city and hour. Never names, emails, account ids, stop or route ids, addresses or coordinates. The exact list is in privacy.md. | Done |
-| REQ-ANL-2 | A report of what commutes people save, as **counts only**: people and commutes, commutes per person, by city, 1 or 2 stops, start/destination set or not, most saved routes, by month. A stop is listed only when at least 3 different people saved it. Real users and debug testers are shown separately. | Done |
+| REQ-ANL-2 | A report of what Favorite Commutes people save, as **counts only**: people and Favorite Commutes, Favorite Commutes per person, by city, 1 or 2 stops, start/destination set or not, most saved routes, by month. A stop is listed only when at least 3 different people saved it. Real users and debug testers are shown separately. | Done |
 | REQ-ANL-3 | Nothing is recorded until the person agrees. The home screen asks once; a *Privacy & usage data* screen explains what is kept and lets them turn sharing on or off at any time. | Done |
 | REQ-ANL-5 | The report is open only to **admins**. Admins are listed by hand in the database (`admins/{uid}`); the app cannot add one. The database rules refuse the report's query to anyone else. | Done |
-| REQ-ANL-4 | The **debug** version is counted apart from real users (kept out of the normal reports), and, with agreement to its own clearer notice, also records details: the stops and routes of commutes, start/destination points, and exact location when a commute is opened. Details are stored in our own database under the tester's account, never in Google Analytics. | Done |
+| REQ-ANL-4 | The **debug** version is counted apart from real users (kept out of the normal reports), and, with agreement to its own clearer notice, also records details: the stops and routes of Favorite Commutes, start/destination points, and exact location when a Favorite Commute is opened. Details are stored in our own database under the tester's account, never in Google Analytics. | Done |

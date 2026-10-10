@@ -1,5 +1,5 @@
 rules_version = '2';
-// Each user can read and write only their own favorites. Docs: docs/data-model.md#favorite
+// Each user can read and write only their own favorites. Docs: docs/data-model.md#favorite-commute
 // "favorites" is used by the main app, "favoritesDebug" by the debug app (docs/release-process.md),
 // so testing never touches real favorites.
 // Deploy with:  npx firebase-tools deploy --only firestore:rules

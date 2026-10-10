@@ -93,7 +93,7 @@ input[type="email"], input[type="password"], input[type="text"], input[type="sea
 .commute-edit { width: 50px; font-size: 1.2rem; border-radius: var(--radius); }
 .fab {
   position: absolute; right: 12px; bottom: calc(12px + var(--safe-bottom)); z-index: 600;
-  min-height: 40px; padding: 8px 14px; border-radius: 999px; border: none; font-weight: 700; font-size: 0.9rem;
+  min-height: 40px; padding: 8px 14px; border-radius: 999px; border: none; font-weight: 700; font-size: 0.85rem; white-space: nowrap;
   background: var(--accent); color: var(--purple); box-shadow: 0 4px 12px rgb(0 0 0 / 0.3);
 }
 .fab-space { flex: none; height: 56px; } /* so the last lines of the panel are not under the button */
@@ -284,3 +284,6 @@ ul.plain { margin: 0; padding-inline-start: 18px; display: flex; flex-direction:
 .stop-head { display: flex; align-items: center; gap: 2px; min-width: 0; }
 .same-code li { padding: 8px 0; border-bottom: 1px solid var(--line); }
 .same-code li.current { font-weight: 600; }
+
+/* The summary at the top of the route pop-up (REQ-LINE-1d) */
+.summary-box { background: color-mix(in srgb, var(--accent) 22%, var(--card)); border-radius: 10px; padding: 10px 12px; gap: 6px; unicode-bidi: plaintext; }
