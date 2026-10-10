@@ -42,7 +42,9 @@ flowchart LR
 | Favorites storage | Saves favorites per user in Firestore | [src/store.js](../src/store.js), [firestore.rules](../firestore.rules) | [data-model.md](data-model.md#favorite) |
 | Location | GPS and choosing the city | [src/location.js](../src/location.js) | [user-flows.md](user-flows.md#1-first-launch) |
 | City data | Downloads and caches one city's bundle | [src/cityData.js](../src/cityData.js) | [data-model.md](data-model.md#city-bundle) |
-| Map | Leaflet map, stops, user dot, bus icons | [src/map.js](../src/map.js) | this file |
+| Map | Leaflet map, stops, user dot, bus icons, flags, map key | [src/map.js](../src/map.js) | this file |
+| Line geometry | Positions along a line, incoming/outbound split, "5 min before the stop" | [src/lib/routeGeometry.js](../src/lib/routeGeometry.js) | [user-flows.md](user-flows.md#4-using-a-favorite) |
+| Address search | Start point / destination search, street names for tapped points | [src/geocode.js](../src/geocode.js) | [ADR-0007](adr/0007-address-search.md) |
 | Live lines | Draws chosen lines and their live buses | [src/liveLines.js](../src/liveLines.js), [src/realtime.js](../src/realtime.js) | [realtime.md](realtime.md) |
 | Offline | Caches app files and map tiles | [sw.js](../sw.js) | [#offline](#offline) |
 | Install | Name, icon, full-screen mode | [manifest.webmanifest](../manifest.webmanifest), [icons/](../icons/) | [ADR-0001](adr/0001-pwa.md) |
@@ -118,3 +120,4 @@ The reasons behind these choices are in [adr/](adr/):
 - [ADR-0004](adr/0004-firebase.md) Firebase for accounts and favorites
 - [ADR-0005](adr/0005-docs-as-code.md) Docs as code, with requirement IDs checked in CI
 - [ADR-0006](adr/0006-release-channels.md) A debug version in a sub-folder of the same site
+- [ADR-0007](adr/0007-address-search.md) Address search with OpenStreetMap Nominatim; side-by-side lines with Leaflet.PolylineOffset

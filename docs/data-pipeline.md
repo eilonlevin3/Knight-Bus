@@ -17,6 +17,8 @@ For each bus line (GTFS `route_id`; in Israel this is one direction and one vari
 
 - line number, destination, operator;
 - the **ordered list of stops** from first to last (taken from one representative trip);
+- the **scheduled minutes** from the first stop to each stop, from the same trip
+  (REQ-DATA-6). It is used to zoom the commute view to the last 5 minutes before your stop;
 - the **route shape** (the road path), simplified to about 4 m accuracy and stored as an
   encoded polyline.
 
@@ -38,6 +40,21 @@ It drops timetables, calendars and fares. Live data covers "when is my bus", and
    the city still draws from end to end. Keep the stops those lines use.
 5. **Write** `data/cities/<city>.json` and `data/cities/index.json`. Each bundle gets a
    content hash as its version, and the app re-downloads only when the version changes.
+
+## Which lines are included
+
+**All bus lines in the government feed, on every day they run** (REQ-DATA-5). The pipeline
+has no calendar filter, so weekday, Friday, Saturday and Saturday-night lines are all in. In
+the feed of 2026-10-09, the Tel Aviv bundle held 174 weekend-only lines, and 929 lines that
+run at some point on Saturday.
+
+**Lines outside the government feed are missing** (REQ-DATA-7, planned). Some weekend
+services are run by municipalities, for example Tel Aviv's Shabbat lines, and are not
+published in the ministry's GTFS or SIRI feeds. In the 2026-10-09 feed, the only `708`
+is a Kavim weekday line outside our four cities, and the Stride archive shows no other
+`708` in recent weeks. To add such lines we need a source: an official GTFS from the
+operator or municipality, or hand-entered routes. Without SIRI data they would also have
+no live buses.
 
 ## Adding a city
 

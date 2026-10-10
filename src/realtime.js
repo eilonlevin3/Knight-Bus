@@ -2,6 +2,7 @@
 // @req REQ-RT-1 @req REQ-RT-2
 
 import { realtime } from './config.js';
+import { stopPositions, projectOnPath } from './lib/routeGeometry.js';
 
 // Latest position of every bus currently running on a line (GTFS route_id == SIRI LineRef).
 // Returns [{ rideId, vehicle, lat, lon, recordedAt: Date }]
@@ -65,48 +66,6 @@ export function classifyBuses(buses, routeStops, stopId, shape) {
     .sort((a, b) => b.stopsAway - a.stopsAway)
     .slice(0, 1);
   return { next, passed };
-}
-
-// Position of each stop along the path, in "segment units" (segment index + fraction).
-// Walks forward so stops stay in order even where a line comes back along the same street.
-const stopPosCache = new WeakMap();
-function stopPositions(routeStops, path) {
-  const cached = stopPosCache.get(routeStops);
-  if (cached && cached.path === path) return cached.pos;
-  const pos = [];
-  let from = 0;
-  for (const s of routeStops) {
-    const { pos: p } = projectOnPath(s, path, Math.floor(from), true);
-    pos.push(p);
-    from = p;
-  }
-  stopPosCache.set(routeStops, { path, pos });
-  return pos;
-}
-
-// Nearest point on the path to a {lat, lon}. Returns { pos, meters }.
-// With preferEarliest, takes the first segment within 30 m of the best match, so a stop
-// on the way out does not jump to the same street on the way back.
-function projectOnPath(pt, path, startSeg = 0, preferEarliest = false) {
-  const k = Math.cos(pt.lat * (Math.PI / 180));
-  const candidates = [];
-  let best = Infinity;
-  for (let i = Math.max(0, startSeg); i < path.length - 1; i++) {
-    const ax = path[i][1] * k, ay = path[i][0];
-    const bx = path[i + 1][1] * k, by = path[i + 1][0];
-    const px = pt.lon * k, py = pt.lat;
-    const dx = bx - ax, dy = by - ay;
-    const len2 = dx * dx + dy * dy;
-    const t = len2 ? Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / len2)) : 0;
-    const meters = Math.hypot(ax + t * dx - px, ay + t * dy - py) * 111320;
-    candidates.push([i + t, meters]);
-    if (meters < best) best = meters;
-  }
-  if (!candidates.length) return { pos: 0, meters: Infinity };
-  const [pos, meters] = preferEarliest
-    ? candidates.find(([, m]) => m <= best + 30)
-    : candidates.find(([, m]) => m === best);
-  return { pos, meters };
 }
 
 export function ageLabel(date) {

@@ -77,9 +77,10 @@ export class CityData {
     });
 
     this.routes = new Map();
-    for (const [id, short, dest, agencyIdx, type, seq, shape] of raw.routes) {
+    for (const [id, short, dest, agencyIdx, type, seq, shape, times = null] of raw.routes) {
       const stops = seq.map((i) => this.stopList[i]);
-      const route = { id, short, dest, agency: this.agencies[agencyIdx], type, stops, encodedShape: shape, _shape: null };
+      // times: scheduled minutes from the first stop (newer bundles only; may be missing).
+      const route = { id, short, dest, agency: this.agencies[agencyIdx], type, stops, times, encodedShape: shape, _shape: null };
       this.routes.set(id, route);
       for (const s of new Set(stops)) s.routeIds.push(id);
     }

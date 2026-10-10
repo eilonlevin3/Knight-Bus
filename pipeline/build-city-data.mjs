@@ -1,5 +1,5 @@
 // Builds one transit bundle per city from the national GTFS feed.
-// @req REQ-DATA-2 @req REQ-SCOPE-1
+// @req REQ-DATA-2 @req REQ-SCOPE-1 @req REQ-DATA-5 @req REQ-DATA-6
 // Docs: docs/data-pipeline.md (how it works), docs/data-model.md (output format).
 //
 // Usage:  npm run build:data
@@ -126,6 +126,12 @@ function segDist2([py, px], [ay, ax], [by, bx]) {
 const inBbox = ([minLon, minLat, maxLon, maxLat], lat, lon) =>
   lon >= minLon && lon <= maxLon && lat >= minLat && lat <= maxLat;
 
+// GTFS times are "HH:MM:SS" and may pass 24:00 for trips after midnight.
+function toSeconds(hms) {
+  const [h, m, sec] = hms.split(':').map(Number);
+  return h * 3600 + m * 60 + (sec || 0);
+}
+
 // Israeli route_long_name looks like "Origin-City<->Destination-City-1#".
 function destinationFromLongName(longName) {
   const to = longName.split('<->')[1] || longName;
@@ -158,6 +164,8 @@ async function main() {
     });
   });
 
+  // Every bus line in the feed is kept, whatever days it runs (weekdays, Friday, Saturday,
+  // Saturday night): there is deliberately no calendar filter here (REQ-DATA-5).
   // One representative trip per route. In the Israeli feed every route_id is already one
   // direction + one variant of a line, so all of its trips share the same stop pattern.
   log('Picking one trip per route');
@@ -174,9 +182,15 @@ async function main() {
   log('Reading stop order (stop_times.txt is large, this takes a few minutes)');
   await readCsv(z, 'stop_times.txt', (g) => {
     const r = repTrips.get(g('trip_id'));
-    if (r) r.stops.push([Number(g('stop_sequence')), g('stop_id')]);
+    if (r) r.stops.push([Number(g('stop_sequence')), g('stop_id'), toSeconds(g('arrival_time'))]);
   });
-  for (const r of routes.values()) r.stops = r.stops.sort((a, b) => a[0] - b[0]).map((s) => s[1]);
+  for (const r of routes.values()) {
+    r.stops.sort((a, b) => a[0] - b[0]);
+    // Scheduled minutes from the first stop, used to find "5 minutes before your stop" (REQ-DATA-6).
+    const t0 = r.stops[0]?.[2];
+    r.times = r.stops.map((s) => (Number.isFinite(s[2]) && Number.isFinite(t0) ? Math.round((s[2] - t0) / 60) : null));
+    r.stops = r.stops.map((s) => s[1]);
+  }
 
   log('Reading stops');
   const stops = new Map();
@@ -228,8 +242,10 @@ async function main() {
     };
 
     const routeRows = cityRoutes.map((r) => {
-      const seq = r.stops
-        .filter((sid) => stops.has(sid))
+      const kept = r.stops.map((sid, i) => [sid, r.times[i]]).filter(([sid]) => stops.has(sid));
+      const times = kept.every(([, t]) => t != null) ? kept.map(([, t]) => t) : null;
+      const seq = kept
+        .map(([sid]) => sid)
         .map((sid) => {
           const s = stops.get(sid);
           return idxOf(stopIdx, stopRows, sid, [s.id, s.code, s.name, +s.lat.toFixed(6), +s.lon.toFixed(6)]);
@@ -244,6 +260,7 @@ async function main() {
         r.type,
         seq,
         shape,
+        times,
       ];
     });
 

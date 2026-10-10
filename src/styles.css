@@ -163,3 +163,42 @@ input[type="email"], input[type="password"], input[type="text"], input[type="sea
   background: #e85d04; color: #fff; pointer-events: none; opacity: 0.92;
 }
 .channel-badge.local { background: #495057; }
+
+/* Commute view: the panel shrinks as you scroll it, the map grows (REQ-COMM-8) */
+.map-screen.dynamic .map { flex: 1 1 auto; }
+.map-screen.dynamic .sheet { flex: 0 0 var(--sheet-h, 50%); }
+.sheet-spacer { flex: none; height: 25vh; }
+.line-row.off { opacity: 0.6; border-style: dashed; }
+
+/* Start point / destination flags */
+.flag-marker { filter: drop-shadow(0 2px 2px rgb(0 0 0 / 0.35)); }
+.flag-inline svg { vertical-align: -4px; }
+.place-card .place-label { display: block; margin-top: 4px; unicode-bidi: plaintext; }
+
+/* Map key, top-left (REQ-COMM-6) */
+.map-legend {
+  background: color-mix(in srgb, var(--card) 92%, transparent); color: var(--text);
+  border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+  max-width: min(46vw, 180px); max-height: 34vh; overflow-y: auto; font-size: 11px; line-height: 1.25;
+}
+.legend-head {
+  min-height: 0; padding: 4px 10px; width: 100%; text-align: start; border: none; background: none;
+  font-weight: 800; font-size: 12px;
+}
+.legend-head::after { content: ' ▾'; }
+.map-legend.closed .legend-head::after { content: ' ▸'; }
+.map-legend.closed .legend-body { display: none; }
+.legend-body { padding: 0 8px 6px; display: flex; flex-direction: column; gap: 3px; }
+.legend-row { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.legend-dest { overflow: hidden; text-overflow: ellipsis; unicode-bidi: plaintext; min-width: 0; max-width: 100px; color: var(--muted); }
+.legend-swatch {
+  flex: none; width: 22px; height: 5px; border-radius: 3px;
+  background: linear-gradient(90deg, var(--in) 0 50%, var(--out) 50% 100%);
+  opacity: 0.95;
+}
+.legend-swatch.demo { --in: #c9b3e6; --out: #7b2cbf; }
+.legend-flag svg { display: block; }
+.legend-help { color: var(--muted); display: flex; align-items: center; gap: 4px; white-space: nowrap; border-top: 1px solid var(--line); padding-top: 4px; }
+.legend-help + .legend-help { border-top: none; padding-top: 0; }
+.legend-bus { width: 12px; height: 12px; border-radius: 50%; background: #7b2cbf; border: 2px solid #fff; box-shadow: 0 0 0 1px #0003; }
+.legend-bus.passed { opacity: 0.55; border-style: dashed; }

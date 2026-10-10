@@ -61,7 +61,7 @@ a broken doc link. Why and how: [ADR-0005](docs/adr/0005-docs-as-code.md).
 | [data-model.md](docs/data-model.md) | The shape of a favorite, a city bundle, and what is stored on the device | [src/store.js](src/store.js), [src/cityData.js](src/cityData.js), [firestore.rules](firestore.rules) |
 | [setup.md](docs/setup.md) | Deploying, turning on Firebase, installing on a phone, local development | [.github/workflows/](.github/workflows/), [src/config.js](src/config.js), [firebase.json](firebase.json) |
 | [release-process.md](docs/release-process.md) | **Test on your phone first:** the debug version, releasing to users, how updates reach phones, rollback | [deploy.yml](.github/workflows/deploy.yml), [scripts/build-site.sh](scripts/build-site.sh), [sw.js](sw.js), [src/updates.js](src/updates.js) |
-| [adr/](docs/adr/) | Why we chose what we chose ([PWA](docs/adr/0001-pwa.md), [live data](docs/adr/0002-realtime-source.md), [maps](docs/adr/0003-maps.md), [Firebase](docs/adr/0004-firebase.md), [docs as code](docs/adr/0005-docs-as-code.md), [debug version](docs/adr/0006-release-channels.md)) | — |
+| [adr/](docs/adr/) | Why we chose what we chose ([PWA](docs/adr/0001-pwa.md), [live data](docs/adr/0002-realtime-source.md), [maps](docs/adr/0003-maps.md), [Firebase](docs/adr/0004-firebase.md), [docs as code](docs/adr/0005-docs-as-code.md), [debug version](docs/adr/0006-release-channels.md), [address search](docs/adr/0007-address-search.md)) | — |
 
 ### Where the code sits
 
@@ -83,9 +83,10 @@ Knight Bus/
 │   ├── cityData.js          Download + cache the city bundle; stop/line lookups
 │   ├── realtime.js          Live bus positions; next two + last passed
 │   ├── liveLines.js         Draw chosen lines + live buses; refresh every 30 s
-│   ├── map.js               Leaflet map, stop dots, bus icons
+│   ├── map.js               Leaflet map, stop dots, bus icons, flags, map key
+│   ├── geocode.js           Address search (start point / destination)
 │   ├── styles.css
-│   ├── lib/                 dom.js (tiny UI helper), polyline.js (shape encoding)
+│   ├── lib/                 dom.js (UI helper), polyline.js (shape encoding), routeGeometry.js (positions along a line)
 │   └── views/               One file per screen: login, city, menu, editor, commute
 ├── pipeline/
 │   ├── cities.json          Which cities exist and their boundaries

@@ -55,13 +55,15 @@ stateDiagram-v2
   Lines --> Summary: Save stop
   Summary --> Pick: + Add stop 2
   Summary --> Lines: Edit a stop
+  Summary --> Place: Set start / destination
+  Place --> Summary: tap map / pick address / my location
   Summary --> [*]: Save favorite → menu
 ```
 
 **Pick a stop** (REQ-EDIT-1). Zoom in to see stops as white dots, then tap one. You can also
 search by stop name or by the stop code printed on the sign.
 
-**Choose lines** (REQ-EDIT-2 to REQ-EDIT-4). The panel lists **every line that serves the
+**Choose lines** (REQ-EDIT-2 to REQ-EDIT-4, REQ-COMM-4, REQ-COMM-5). The panel lists **every line that serves the
 stop**, each with a checkbox. **None is checked at first.** Checking a line:
 
 - draws the whole line on the map in its own color, from its first stop to its last;
@@ -79,13 +81,50 @@ From there, *+ Add stop 2* repeats the steps for a second stop (up to 2 per favo
 *Save favorite* saves it to your account and returns to the menu. *Clear this favorite*
 empties the slot.
 
-Code: [views/editor.js](../src/views/editor.js), [liveLines.js](../src/liveLines.js).
+**Start point and destination** (REQ-FAV-5, optional). The summary shows *Start point*
+above the stops and *Destination* below them. *Set* opens a step where you either tap the
+map, or search an address and pick a result. For the start point, *Use my current
+location* is also offered. A tapped point gets a street name looked up automatically. Each
+place shows on the map as a flag: green for start, checkered for destination (REQ-COMM-3).
+*Remove* clears it.
+
+Code: [views/editor.js](../src/views/editor.js), [liveLines.js](../src/liveLines.js), [geocode.js](../src/geocode.js).
 
 ## 4. Using a favorite
 
 Tapping a saved favorite opens the **commute view** (REQ-COMM-1). It shows the same map and
-bus markers as the editor, for all saved stops and lines together. The panel lists each
-stop, its lines, and their live status. Buses refresh every 30 seconds while the screen is
-visible (REQ-RT-2). Tap a bus for its details, or tap a stop name to zoom to it.
+bus markers as the editor, for all saved stops and lines together. Buses refresh every
+30 seconds while the screen is visible (REQ-RT-2). Tap a bus for its details, or tap a stop
+name to zoom to it.
 
-Code: [views/commute.js](../src/views/commute.js).
+**Where the map starts** (REQ-COMM-2). It zooms to fit:
+- the start point and destination flags, if set;
+- the chosen stops;
+- for each chosen line, the stretch it drives in the **5 minutes before reaching your
+  stop**. That is where the bus you are waiting for is now. The stretch uses the timetable
+  ([data-pipeline.md](data-pipeline.md)), so it is short in traffic-heavy centers and longer
+  on fast roads.
+
+**How lines are drawn** (REQ-COMM-4, REQ-COMM-5):
+
+```
+   incoming (lighter, see-through)        outbound (solid)
+  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 🚏 ███████████████████████  line 5
+  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ 🚏 ███████████████████████  line 408   ← side by side
+```
+
+Each line is split at its chosen stop. Where several lines share a street, each is drawn
+slightly shifted, so all of them stay visible. A line chosen at both stops is split at the
+first one.
+
+**Map key** (REQ-COMM-6), top-left: the color, number and destination of each line, the
+flags, and the bus symbols. Tap *Key* to fold it away.
+
+**Panel** (REQ-COMM-7, REQ-COMM-8). Each stop lists its lines with a checkbox, all checked.
+Uncheck a line to hide it, its buses and its key entry. This is only for this visit; the
+favorite is unchanged, and the line is back next time. Scroll the panel down and the map
+grows (the panel shrinks to a quarter of the screen); scroll back up to return.
+
+Code: [views/commute.js](../src/views/commute.js), [liveLines.js](../src/liveLines.js),
+[lib/routeGeometry.js](../src/lib/routeGeometry.js), [map.js](../src/map.js).
+

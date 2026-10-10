@@ -4,7 +4,8 @@
 
 import { realtime } from './config.js';
 import { fetchLiveBuses, classifyBuses, ageLabel } from './realtime.js';
-import { LINE_COLORS, busIcon, escapeHtml } from './map.js';
+import { LINE_COLORS, busIcon, escapeHtml, lighten } from './map.js';
+import { stopPositions, splitPath } from './lib/routeGeometry.js';
 
 export class LiveLines {
   // onUpdate(rows): rows = [{ stop, route, color, next: [bus], passed: [bus], error }]
@@ -13,7 +14,7 @@ export class LiveLines {
     this.city = city;
     this.onUpdate = onUpdate;
     this.entries = []; // [{ stopId, routeId }]
-    this.lineLayers = new Map(); // routeId -> polyline
+    this.lineLayers = new Map(); // routeId -> [incoming polyline, outbound polyline]
     this.colors = new Map(); // routeId -> color
     this.busLayer = L.layerGroup().addTo(map);
     this.timer = null;
@@ -31,24 +32,52 @@ export class LiveLines {
   // Replace what is shown. Each entry is a (stop, line) pair.
   set(entries) {
     this.entries = entries.filter((e) => this.city.routes.has(e.routeId) && this.city.stops.has(e.stopId));
-    const wanted = new Set(this.entries.map((e) => e.routeId));
-    for (const [id, layer] of this.lineLayers) {
-      if (!wanted.has(id)) { layer.remove(); this.lineLayers.delete(id); }
-    }
-    for (const id of wanted) {
-      if (this.lineLayers.has(id)) continue;
-      const route = this.city.routes.get(id);
-      const line = L.polyline(this.city.shapeOf(route), { color: this.colorOf(id), weight: 5, opacity: 0.8 })
-        .bindTooltip(`Line ${route.short} → ${route.dest}`, { sticky: true })
-        .addTo(this.map);
-      this.lineLayers.set(id, line);
-    }
+    this.drawLines();
     this.refresh();
+  }
+
+  // Each line is split at its chosen stop: the part where the bus is still coming to you
+  // ("incoming") is lighter and more see-through than the part after the stop ("outbound").
+  // Lines sit side by side, each shifted sideways by its own amount, so where several share a
+  // street you can see all of them.
+  // @req REQ-COMM-4 @req REQ-COMM-5
+  drawLines() {
+    for (const layers of this.lineLayers.values()) layers.forEach((l) => l.remove());
+    this.lineLayers.clear();
+    const routeIds = [...new Set(this.entries.map((e) => e.routeId))];
+    const n = routeIds.length;
+    const weight = n > 4 ? 4 : 5;
+    routeIds.forEach((id, i) => {
+      const route = this.city.routes.get(id);
+      const path = this.city.shapeOf(route);
+      const pos = stopPositions(route.stops, path);
+      // Split at the first chosen stop along the line (a line may be chosen at both stops).
+      const idx = this.entries
+        .filter((e) => e.routeId === id)
+        .map((e) => route.stops.findIndex((s) => s.id === e.stopId))
+        .filter((k) => k >= 0);
+      // (If the stop is somehow not on the line, draw it all as outbound.)
+      const [incoming, outbound] = idx.length ? splitPath(path, pos[Math.min(...idx)]) : [[], path];
+      const color = this.colorOf(id);
+      const offset = (i - (n - 1) / 2) * (weight + 1); // pixels, needs leaflet.polylineoffset
+      const tip = `Line ${route.short} → ${route.dest}`;
+      const layers = [
+        L.polyline(incoming, { color: lighten(color, 0.45), weight, opacity: 0.45, offset, lineCap: 'butt' }),
+        L.polyline(outbound, { color, weight, opacity: 0.95, offset, lineCap: 'butt' }),
+      ];
+      layers.filter((l) => l.getLatLngs().length > 1).forEach((l) => l.bindTooltip(tip, { sticky: true }).addTo(this.map));
+      this.lineLayers.set(id, layers);
+    });
+  }
+
+  // What the map key shows: one row per line on the map.
+  legendItems() {
+    return [...this.lineLayers.keys()].map((id) => ({ route: this.city.routes.get(id), color: this.colorOf(id) }));
   }
 
   // Fit the map around everything shown.
   fit() {
-    const layers = [...this.lineLayers.values()];
+    const layers = [...this.lineLayers.values()].flat();
     if (layers.length) this.map.fitBounds(L.featureGroup(layers).getBounds(), { padding: [30, 30] });
   }
 
@@ -114,7 +143,7 @@ export class LiveLines {
     this.destroyed = true;
     this.pause();
     document.removeEventListener('visibilitychange', this.onVisibility);
-    for (const layer of this.lineLayers.values()) layer.remove();
+    for (const layers of this.lineLayers.values()) layers.forEach((l) => l.remove());
     this.busLayer.remove();
   }
 }

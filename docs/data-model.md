@@ -3,6 +3,7 @@
 ## Favorite
 
 Stored in Firestore at `users/{uid}/favorites/{slot}`, where `slot` is `"1"`, `"2"` or `"3"`.
+The debug version uses `users/{uid}/favoritesDebug/{slot}` ([release-process.md](release-process.md)).
 Written by [src/store.js](../src/store.js). Protected by [firestore.rules](../firestore.rules):
 a user can read and write only their own favorites, and a favorite has 1–2 stops.
 
@@ -14,9 +15,15 @@ a user can read and write only their own favorites, and a favorite has 1–2 sto
     { "stopId": "12345", "stopName": "Dizengoff Center", "stopCode": "21471", "routeIds": ["10931", "10936"] },
     { "stopId": "23456", "stopName": "Azrieli",          "stopCode": "21233", "routeIds": ["10931"] }
   ],
+  "origin":      { "lat": 32.0791, "lon": 34.7739, "label": "Dizengoff 50, Tel Aviv" },
+  "destination": { "lat": 32.0741, "lon": 34.7922, "label": "Azrieli Center, Tel Aviv" },
   "updatedAt": "2026-10-09T18:00:00.000Z"
 }
 ```
+
+- `origin` and `destination` are optional (REQ-FAV-5): missing or `null` means not set.
+  Older versions of the app ignore them, so favorites saved by a newer version still open
+  in an older one.
 
 - `stopId` and `routeIds` are GTFS IDs, and they match the city bundle.
 - `stopName` and `stopCode` are copies, so the menu can show them without loading the bundle.
@@ -51,16 +58,18 @@ downloads small. It is read by [src/cityData.js](../src/cityData.js).
   "generatedAt": "…",
   "agencies": ["Dan", "Egged", "…"],
   "stops":  [[ "12345", "21471", "Dizengoff Center", 32.075, 34.775 ], …],
-  "routes": [[ "10931", "5", "Bat Yam", 0, 3, [17, 4, 88, …], "encodedPolyline" ], …]
+  "routes": [[ "10931", "5", "Bat Yam", 0, 3, [17, 4, 88, …], "encodedPolyline", [0, 2, 4, …] ], …]
 }
 ```
 
 | Field | Row layout |
 |-------|------------|
 | `stops[i]` | `[stopId, stopCode, name, lat, lon]` |
-| `routes[j]` | `[routeId, lineNumber, destination, agencyIndex, routeType, stopIndexes[], shape]` |
+| `routes[j]` | `[routeId, lineNumber, destination, agencyIndex, routeType, stopIndexes[], shape, minutes[]]` |
 
 - `stopIndexes` are positions in `stops[]`, in travel order, from first stop to last.
+- `minutes[]` (REQ-DATA-6) has one entry per stop: scheduled minutes from the first stop,
+  from the line's representative trip. It may be `null`. Older apps ignore it.
 - `shape` is a Google encoded polyline, precision 5. The encoder and decoder are shared in
   [src/lib/polyline.js](../src/lib/polyline.js).
 

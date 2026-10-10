@@ -52,6 +52,9 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | REQ-DATA-2 | A pipeline turns the national GTFS feed of the Ministry of Transport into one small file per city. The file holds stops, lines, the stop order of each line, and its route shape. The pipeline runs every night. | Done |
 | REQ-DATA-3 | Base map tiles are cached on the device as they are viewed, so areas already seen work with a weak connection. | Done |
 | REQ-DATA-4 | Download the whole city base map ahead of time for full offline use (vector tiles, see ADR-0003). | Planned |
+| REQ-DATA-5 | Every bus line in the government feed is included, whatever days it runs: weekdays, Friday, Saturday, Saturday night. There is no filter by day. | Done |
+| REQ-DATA-6 | Each line in a city bundle carries its scheduled travel minutes from the first stop to each stop, so the app knows where a bus is "5 minutes before your stop". | Done |
+| REQ-DATA-7 | Include bus lines that are **not** in the government feed, such as municipal weekend/Shabbat services (e.g. a weekend-only line 708). Needs a data source for each; see data-pipeline.md. | Planned |
 
 ## Favorite commutes
 
@@ -61,6 +64,7 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | REQ-FAV-2 | Each favorite has an edit option. | Done |
 | REQ-FAV-3 | Favorites are saved to the user's account, so they follow the user to other devices. | Done |
 | REQ-FAV-4 | A favorite has a name the user can edit, and the user can clear it. | Done |
+| REQ-FAV-5 | A favorite can have an optional **start point** and **destination**. The user sets each by tapping the map or searching an address; the start point can also be the current location. | Done |
 
 ## Editing a favorite commute
 
@@ -87,3 +91,10 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | ID | Requirement | Status |
 |----|-------------|--------|
 | REQ-COMM-1 | Opening a favorite shows its stops and selected lines with live buses, the same as in the editor. | Done |
+| REQ-COMM-2 | The commute view opens zoomed so that the start point, destination and chosen stops are all visible, plus each chosen line's last **~5 minutes of travel before** its stop (by timetable, or ~1.5 km when the timetable is missing). | Done |
+| REQ-COMM-3 | The start point is marked with a **green flag**, the destination with a **checkered flag**, on the map and in the editor. | Done |
+| REQ-COMM-4 | Each line is drawn in two parts: before the chosen stop (incoming) **lighter and more transparent**, after the stop (outbound) solid. | Done |
+| REQ-COMM-5 | Where lines share a street, they are drawn **side by side**, so every line passing there is visible. | Done |
+| REQ-COMM-6 | A **map key** in the top-left corner lists each line's color, number and destination, the flags, and the bus symbols. It can be collapsed. | Done |
+| REQ-COMM-7 | The panel lists every line of every stop in the favorite with a **checkbox, all checked** when the view opens. Unchecking hides that line from the current view (map, buses, key) but does **not** change the favorite. | Done |
+| REQ-COMM-8 | Scrolling down the panel makes the map larger and the panel smaller (down to a quarter of the screen); scrolling back up restores it. | Done |

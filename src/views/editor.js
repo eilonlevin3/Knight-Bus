@@ -1,10 +1,11 @@
 // Edit a favorite commute: pick up to 2 stops, check lines, save. Docs: docs/user-flows.md#3-editing-a-favorite
-// @req REQ-EDIT-1 @req REQ-EDIT-2 @req REQ-EDIT-3 @req REQ-EDIT-5 @req REQ-EDIT-6 @req REQ-FAV-2 @req REQ-FAV-4
+// @req REQ-EDIT-1 @req REQ-EDIT-2 @req REQ-EDIT-3 @req REQ-EDIT-5 @req REQ-EDIT-6 @req REQ-FAV-2 @req REQ-FAV-4 @req REQ-FAV-5
 
 import { h, toast } from '../lib/dom.js';
 import { MAX_STOPS_PER_FAVORITE } from '../config.js';
-import { createMap, stopLayer, userMarker } from '../map.js';
-import { watchPosition } from '../location.js';
+import { createMap, stopLayer, userMarker, flagMarker, flagHtml } from '../map.js';
+import { watchPosition, getPosition } from '../location.js';
+import { searchPlaces, placeName } from '../geocode.js';
 import { LiveLines } from '../liveLines.js';
 import { saveFavorite, deleteFavorite } from '../store.js';
 import { liveSummary, lineBadge } from './liveInfo.js';
@@ -17,10 +18,15 @@ export async function render(root, ctx, { slot }) {
   const draft = existing
     ? structuredClone(existing)
     : { name: `Favorite ${slot}`, cityId: city.id, stops: [] };
+  // Optional start point and destination: { lat, lon, label } or null.
+  draft.origin ??= null;
+  draft.destination ??= null;
 
   const state = {
-    mode: draft.stops.length ? 'summary' : 'pick', // 'summary' | 'pick' | 'lines'
+    mode: draft.stops.length ? 'summary' : 'pick', // 'summary' | 'pick' | 'lines' | 'place'
     index: 0, // which stop (0 or 1) is being edited
+    placeKind: null, // 'origin' | 'destination' while setting one on the map
+    placeResults: [], // address search results
     stop: null, // stop picked on the map
     checked: new Set(), // route ids checked for that stop
     live: new Map(), // `${stopId}|${routeId}` -> live row
@@ -47,10 +53,33 @@ export async function render(root, ctx, { slot }) {
   const stops = stopLayer(map, city, {
     selectedIds: () => [state.stop?.id, ...draft.stops.map((s) => s.stopId)].filter(Boolean),
     onPick: (s) => {
-      if (state.mode === 'summary') return;
-      pickStop(s);
+      if (state.mode === 'pick' || state.mode === 'lines') pickStop(s);
     },
   });
+
+  // Start point and destination flags.
+  let flags = [];
+  function drawFlags() {
+    flags.forEach((m) => m.remove());
+    flags = ['origin', 'destination'].filter((k) => draft[k]).map((k) => flagMarker(map, k, draft[k]));
+  }
+
+  // While setting a start point or destination, a tap anywhere on the map places it.
+  map.on('click', (e) => {
+    if (state.mode !== 'place') return;
+    setPlace(state.placeKind, { lat: e.latlng.lat, lon: e.latlng.lng, label: 'Pinned point' }, true);
+  });
+
+  function setPlace(kind, place, lookUpName = false) {
+    const p = { lat: +place.lat.toFixed(6), lon: +place.lon.toFixed(6), label: place.label };
+    draft[kind] = p;
+    go('summary');
+    if (lookUpName) {
+      placeName(p.lat, p.lon).then((name) => {
+        if (name && draft[kind] === p) { p.label = name; drawFlags(); paint(); }
+      });
+    }
+  }
 
   function pickStop(s) {
     const saved = draft.stops[state.index];
@@ -72,7 +101,14 @@ export async function render(root, ctx, { slot }) {
   function update() {
     lines.set(shownEntries());
     stops.refresh();
+    drawFlags();
     paint();
+  }
+
+  // Summary view: the chosen lines plus the flags.
+  function fitSummary() {
+    const layers = [...lines.lineLayers.values()].flat().concat(flags);
+    if (layers.length) map.fitBounds(L.featureGroup(layers).getBounds(), { padding: [30, 30], maxZoom: 16 });
   }
 
   const go = (mode, index = state.index) => {
@@ -80,7 +116,7 @@ export async function render(root, ctx, { slot }) {
     state.index = index;
     if (mode === 'pick') state.stop = null;
     update();
-    if (mode === 'summary') lines.fit();
+    if (mode === 'summary') fitSummary();
   };
 
   // ---------- Sheet contents per mode ----------
@@ -151,6 +187,71 @@ export async function render(root, ctx, { slot }) {
     ];
   }
 
+  function paintPlace() {
+    const kind = state.placeKind;
+    const what = kind === 'origin' ? 'start point' : 'destination';
+    const input = h('input', { type: 'search', placeholder: 'Address or place', enterKeyHint: 'search' });
+    const status = h('p', { class: 'muted small', role: 'status' }, state.placeStatus || '');
+    const results = h('div', { class: 'results' }, ...state.placeResults.map((r) =>
+      h('button', { class: 'result', onclick: () => { map.setView([r.lat, r.lon], 16); setPlace(kind, r); } }, r.label)));
+    const form = h('form', {
+      class: 'row',
+      onsubmit: async (e) => {
+        e.preventDefault();
+        if (!input.value.trim()) return;
+        status.textContent = 'Searching…';
+        try {
+          state.placeResults = await searchPlaces(input.value.trim(), city.meta);
+          state.placeStatus = state.placeResults.length ? '' : 'Nothing found. Try another spelling, or tap the map.';
+        } catch (err) {
+          state.placeStatus = err.message;
+        }
+        paint();
+      },
+    }, input, h('button', { type: 'submit' }, 'Search'));
+    return [
+      h('h2', {}, h('span', { class: 'flag-inline', innerHTML: flagHtml(kind) }), ` Set ${what}`),
+      h('p', { class: 'muted' }, `Tap the map where your ${what} is, or search for an address:`),
+      form,
+      status,
+      results,
+      kind === 'origin'
+        ? h('button', {
+            onclick: async (e) => {
+              e.target.disabled = true;
+              try {
+                const p = await getPosition();
+                setPlace('origin', { ...p, label: 'My location' }, true);
+              } catch (err) {
+                toast(err.message);
+                e.target.disabled = false;
+              }
+            },
+          }, '📍 Use my current location')
+        : null,
+      h('div', { class: 'row' }, h('button', { onclick: () => go('summary') }, 'Cancel')),
+    ];
+  }
+
+  function placeCard(kind) {
+    const place = draft[kind];
+    const title = kind === 'origin' ? 'Start point' : 'Destination';
+    const startSetting = () => {
+      state.placeKind = kind;
+      state.placeResults = [];
+      state.placeStatus = '';
+      go('place');
+    };
+    return h('div', { class: 'card place-card' },
+      h('div', { class: 'row between' },
+        h('span', {}, h('span', { class: 'flag-inline', innerHTML: flagHtml(kind) }), ' ', h('b', {}, title),
+          h('span', { class: 'muted small' }, place ? '' : ' (optional)')),
+        h('span', {},
+          h('button', { class: 'link small', onclick: startSetting }, place ? 'Change' : 'Set'),
+          place ? h('button', { class: 'link small danger', onclick: () => { draft[kind] = null; update(); } }, 'Remove') : null)),
+      place ? h('small', { class: 'muted place-label' }, place.label) : null);
+  }
+
   function paintSummary() {
     const name = h('input', { type: 'text', value: draft.name, maxLength: 40, oninput: (e) => (draft.name = e.target.value) });
     const stopCards = draft.stops.map((st, i) => h('div', { class: 'card' },
@@ -170,10 +271,12 @@ export async function render(root, ctx, { slot }) {
     return [
       h('h2', {}, `Favorite ${slot}`),
       h('label', { class: 'field' }, 'Name', name),
+      placeCard('origin'),
       ...stopCards,
       draft.stops.length < MAX_STOPS_PER_FAVORITE
         ? h('button', { onclick: () => go('pick', draft.stops.length) }, `+ Add stop ${draft.stops.length + 1}`)
         : null,
+      placeCard('destination'),
       h('div', { class: 'row sticky' },
         h('button', { onclick: () => ctx.go('#/menu') }, 'Cancel'),
         h('button', {
@@ -208,13 +311,13 @@ export async function render(root, ctx, { slot }) {
 
   function paint() {
     const scroll = sheet.scrollTop;
-    const content = state.mode === 'pick' ? paintPick() : state.mode === 'lines' ? paintLines() : paintSummary();
-    sheet.replaceChildren(...content);
+    const content = { pick: paintPick, lines: paintLines, place: paintPlace, summary: paintSummary }[state.mode]();
+    sheet.replaceChildren(...content.filter(Boolean)); // optional parts are null when hidden
     sheet.scrollTop = scroll;
   }
 
   update();
-  if (state.mode === 'summary') lines.fit();
+  if (state.mode === 'summary') fitSummary();
   setTimeout(() => map.invalidateSize(), 0);
 
   return () => {

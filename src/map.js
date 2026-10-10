@@ -71,6 +71,71 @@ export function busIcon(label, color, kind) {
   });
 }
 
+// Start point = green flag, destination = checkered flag. The pole's foot marks the spot.
+// @req REQ-COMM-3
+const FLAG_SVG = {
+  origin: `<svg viewBox="0 0 32 40" width="32" height="40" aria-hidden="true">
+    <rect x="5" y="3" width="3" height="35" rx="1.5" fill="#1b0a2e"/>
+    <path d="M8 4h19l-4 7 4 7H8z" fill="#2b9348" stroke="#fff" stroke-width="1.5"/></svg>`,
+  destination: `<svg viewBox="0 0 32 40" width="32" height="40" aria-hidden="true">
+    <defs><pattern id="kb-checker" width="6" height="6" patternUnits="userSpaceOnUse">
+      <rect width="6" height="6" fill="#fff"/><rect width="3" height="3" fill="#111"/><rect x="3" y="3" width="3" height="3" fill="#111"/>
+    </pattern></defs>
+    <rect x="5" y="3" width="3" height="35" rx="1.5" fill="#1b0a2e"/>
+    <rect x="8" y="4" width="20" height="14" fill="url(#kb-checker)" stroke="#111" stroke-width="1.5"/></svg>`,
+};
+
+export function flagIcon(kind) {
+  return L.divIcon({ className: 'flag-marker', html: FLAG_SVG[kind], iconSize: [32, 40], iconAnchor: [6, 38] });
+}
+
+export function flagMarker(map, kind, place) {
+  return L.marker([place.lat, place.lon], { icon: flagIcon(kind), zIndexOffset: 2000, keyboard: false })
+    .bindTooltip(`${kind === 'origin' ? 'Start' : 'Destination'}: ${place.label}`, { direction: 'top', offset: [8, -36] })
+    .addTo(map);
+}
+
+export function flagHtml(kind) {
+  return FLAG_SVG[kind].replace('width="32" height="40"', 'width="16" height="20"');
+}
+
+// Mix a #rrggbb color with white. amount 0..1.
+export function lighten(hex, amount) {
+  const n = parseInt(hex.slice(1), 16);
+  const mix = (c) => Math.round(c + (255 - c) * amount);
+  const [r, g, b] = [mix(n >> 16), mix((n >> 8) & 255), mix(n & 255)];
+  return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
+}
+
+// The map key in the top-left corner. update(html) replaces its contents.
+// @req REQ-COMM-6
+export function legendControl(map) {
+  let body;
+  const Legend = L.Control.extend({
+    onAdd() {
+      const el = L.DomUtil.create('div', 'map-legend');
+      const head = L.DomUtil.create('button', 'legend-head', el);
+      head.type = 'button';
+      head.textContent = 'Key';
+      head.setAttribute('aria-expanded', 'true');
+      body = L.DomUtil.create('div', 'legend-body', el);
+      head.onclick = () => {
+        const open = el.classList.toggle('closed') === false;
+        head.setAttribute('aria-expanded', String(open));
+      };
+      L.DomEvent.disableClickPropagation(el);
+      L.DomEvent.disableScrollPropagation(el);
+      return el;
+    },
+  });
+  const control = new Legend({ position: 'topleft' }).addTo(map);
+  return {
+    update(html) { body.innerHTML = html; control.getContainer().hidden = !html; },
+    width() { return control.getContainer().offsetWidth; },
+    remove() { control.remove(); },
+  };
+}
+
 export function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 }
