@@ -5,11 +5,21 @@
   "extraSources": [
     {
       "id": "busofash",
+      "type": "busofash-arcgis",
       "name": "נעים בסופ\"ש",
       "hours": "Fri 16:30–02:00 · Sat 09:00–17:30",
       "info": "https://busofash.co.il/",
       "linesUrl": "https://gisn.tel-aviv.gov.il/arcgis/rest/services/IView2/MapServer/992",
       "stopsUrl": "https://gisn.tel-aviv.gov.il/arcgis/rest/services/IView2/MapServer/993"
+    },
+    {
+      "id": "sababus",
+      "type": "noat-kml",
+      "name": "סבבוס",
+      "folder": "סבבוס",
+      "hours": "Fri evening · Sat daytime",
+      "info": "https://www.noat.co.il/routes",
+      "kmlUrl": "https://www.google.com/maps/d/kml?mid=1zUQK4dHqJ4srilKzhYJM6t5vQfGkfo8&forcekml=1"
     }
   ],
   "cities": [
@@ -17,29 +27,29 @@
       "id": "tel-aviv",
       "name": "Tel Aviv – Gush Dan",
       "nameHe": "תל אביב – גוש דן",
-      "bbox": [34.70, 31.86, 35.02, 32.22],
+      "bbox": [34.7, 31.86, 35.02, 32.22],
       "center": [32.0853, 34.7818]
     },
     {
       "id": "jerusalem",
       "name": "Jerusalem",
       "nameHe": "ירושלים",
-      "bbox": [35.08, 31.70, 35.30, 31.88],
+      "bbox": [35.08, 31.7, 35.3, 31.88],
       "center": [31.7784, 35.2066]
     },
     {
       "id": "haifa",
       "name": "Haifa & Krayot",
       "nameHe": "חיפה והקריות",
-      "bbox": [34.94, 32.73, 35.15, 32.90],
-      "center": [32.7940, 34.9896]
+      "bbox": [34.94, 32.73, 35.15, 32.9],
+      "center": [32.794, 34.9896]
     },
     {
       "id": "beer-sheva",
       "name": "Be'er Sheva",
       "nameHe": "באר שבע",
-      "bbox": [34.72, 31.20, 34.88, 31.31],
-      "center": [31.2520, 34.7915]
+      "bbox": [34.72, 31.2, 34.88, 31.31],
+      "center": [31.252, 34.7915]
     }
   ]
 }

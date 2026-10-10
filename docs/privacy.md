@@ -43,6 +43,7 @@ id; the account is never attached.
 | `commute_opened` | slot, city, **hour and weekday**, number of stops, lines (range), has start/destination |
 | `live_seen` | city, lines (range), buses on the way (range), any error |
 | `line_toggled` | on or off |
+| `line_info_opened`, `line_map_opened`, `line_stop_tapped`, `schedule_opened` | that it happened, the number of route patterns, whether a timetable existed. Not which line or stop |
 | `panel_dragged` | small / half / large |
 | `commute_cleared`, `update_applied`, `usage_sharing_on` | that it happened |
 
@@ -65,6 +66,7 @@ Google Analytics. Google's rules forbid precise locations there.
 | `commute_opened` | the whole commute, plus the phone's exact location at that moment |
 | `live_seen` | per stop and line: how many stops away each bus was |
 | `line_toggled` | which stop and line |
+| `line_map_opened`, `schedule_opened` | which line and stop |
 
 Each person can read and delete their own detail events; the rules do not allow editing
 them, and refuse any event that claims to come from the user version.

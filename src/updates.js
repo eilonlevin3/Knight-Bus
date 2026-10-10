@@ -10,7 +10,7 @@
 import { h } from './lib/dom.js';
 import { track } from './analytics.js';
 
-let reloading = false;
+let updateRequested = false; // set when the person taps Update
 
 export function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return;
@@ -29,9 +29,11 @@ export function registerServiceWorker() {
     });
   }).catch((e) => console.warn('Service worker not registered', e));
 
+  // Reload only for an update the person asked for. A service worker also "takes control" on
+  // the very first visit; reloading then would interrupt whatever they are doing (signing in).
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (reloading) return;
-    reloading = true;
+    if (!updateRequested) return;
+    updateRequested = false;
     location.reload();
   });
 }
@@ -40,7 +42,7 @@ function offerUpdate(worker) {
   if (document.querySelector('.update-banner')) return;
   const banner = h('div', { class: 'update-banner', role: 'status' },
     h('span', {}, 'A new version of Knight Bus is ready.'),
-    h('button', { class: 'primary', onclick: () => { track('update_applied'); worker.postMessage('SKIP_WAITING'); } }, 'Update'),
+    h('button', { class: 'primary', onclick: () => { track('update_applied'); updateRequested = true; worker.postMessage('SKIP_WAITING'); } }, 'Update'),
     h('button', { class: 'link small', onclick: () => banner.remove(), 'aria-label': 'Later' }, 'Later'));
   document.body.append(banner);
 }

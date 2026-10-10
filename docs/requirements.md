@@ -55,7 +55,9 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | REQ-DATA-4 | Download the whole city base map ahead of time for full offline use (vector tiles, see ADR-0003). | Planned |
 | REQ-DATA-5 | Every bus line in the government feed is included, whatever days it runs: weekdays, Friday, Saturday, Saturday night. There is no filter by day. | Done |
 | REQ-DATA-6 | Each line in a city bundle carries its scheduled travel minutes from the first stop to each stop, so the app knows where a bus is "5 minutes before your stop". | Done |
-| REQ-DATA-7 | Include bus lines that are **not** in the government feed: the municipal weekend service *Naaim BeSofash* (lines 705–729, e.g. 708), read from the Tel Aviv municipality's public map server. They appear at the same stops as other lines. | Done |
+| REQ-DATA-7 | Include bus lines that are **not** in the government feed: the municipal weekend services *Naaim BeSofash* (lines 705–729, from the Tel Aviv municipality's map server) and *Sababus* (Ramat Gan's green, blue, red and white lines, from the operator's public map). They appear at the same stops as other lines. | Done |
+| REQ-DATA-8 | A line whose trips do not all serve the same stops keeps **every stop pattern** (the usual route and up to three variants), each with its share of the week's trips. The line is listed at every stop any pattern serves. | Done |
+| REQ-DATA-9 | The pipeline writes one small **timetable file per line** for the coming week (start times per weekday and pattern, minutes to each stop). The app loads a file only when a stop's schedule is opened. | Done |
 
 ## Home screen
 
@@ -111,6 +113,15 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | REQ-COMM-7 | The panel lists every line of every stop in the favorite with a **checkbox, all checked** when the view opens. Unchecking hides that line from the current view (map, buses, key) but does **not** change the favorite. | Done |
 | REQ-COMM-8 | The panel can be **dragged**: down (by its handle, or swiping down while the list is at its top) for more map, up for more list. It settles at small, half or large. | Done |
 | REQ-COMM-9 | On installed phone apps, nothing is drawn under the status bar (clock/battery): the map, its key and buttons start below it, so they are sharp and can be tapped. | Done |
+
+## Lines with more than one route
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| REQ-LINE-1 | When a line is shown from a stop: (a) if only **one** of its stop patterns passes that stop, only that pattern is drawn; (b) if **several** pass it, the most common is drawn as the normal line and the others as **dotted** lines. Live buses are placed on the pattern that passes the stop. | Done |
+| REQ-LINE-2 | A line with more than one stop pattern shows a small **⚠ hazard sign** next to it in every list. Pressing it opens a pop-up about the line: each pattern's share of trips, how it differs (stops skipped or added), whether it stops at this stop, and what is drawn. | Done |
+| REQ-LINE-3 | The pop-up links to a **full-line screen**: the line on the map with all its stop patterns (usual route solid, variants dotted, each in its own color) and all their stops. | Done |
+| REQ-LINE-4 | On the full-line screen, pressing a stop shows a link to that stop's **full schedule**: every scheduled time of the line at the stop, by weekday, with variant-route trips marked. Lines without a published timetable say so. | Done |
 
 ## Usage insights (see privacy.md and ADR-0008)
 

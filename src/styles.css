@@ -253,3 +253,29 @@ ul.plain { margin: 0; padding-inline-start: 18px; display: flex; flex-direction:
   -webkit-mask: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 8px);
   mask: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 8px);
 }
+
+/* Lines with more than one route: the hazard sign, its pop-up, and the full-line screen */
+.hazard {
+  min-height: 0; padding: 0 6px; border: none; background: none; font-size: 1.05rem; line-height: 1.2;
+  color: #e85d04; cursor: pointer;
+}
+.hazard-mark { color: #e85d04; font-weight: 700; }
+.modal {
+  position: fixed; inset: 0; z-index: 4000; background: rgb(0 0 0 / 0.45);
+  display: grid; place-items: end center; padding: 12px 12px calc(12px + var(--safe-bottom));
+}
+.modal-card { width: min(100%, 520px); max-height: 85vh; overflow-y: auto; }
+.grow { flex: 1; min-width: 0; unicode-bidi: plaintext; }
+.block { display: block; }
+.pattern-row { display: flex; gap: 10px; align-items: flex-start; }
+.pattern-swatch { flex: none; width: 34px; height: 0; margin-top: 9px; border-top: 5px solid var(--c); border-radius: 3px; }
+.pattern-swatch.dotted { border-top-style: dotted; }
+.stop-popup { display: flex; flex-direction: column; gap: 4px; unicode-bidi: plaintext; }
+.stop-popup button.link { text-align: start; padding: 4px 0; }
+.day-tabs { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.day-tabs button { min-height: 36px; padding: 4px 0; font-size: 0.85rem; }
+.hours { display: flex; flex-direction: column; gap: 2px; }
+.hour-row { display: flex; gap: 10px; padding: 3px 0; border-bottom: 1px solid var(--line); }
+.hour-row b { min-width: 2.6ch; }
+.minutes { display: flex; flex-wrap: wrap; gap: 2px 10px; font-variant-numeric: tabular-nums; }
+.variant-time { text-decoration: underline dotted; text-underline-offset: 3px; color: #e85d04; }

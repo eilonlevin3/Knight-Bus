@@ -83,18 +83,37 @@ downloads small. It is read by [src/cityData.js](../src/cityData.js).
 | Field | Row layout |
 |-------|------------|
 | `stops[i]` | `[stopId, stopCode, name, lat, lon]` |
-| `routes[j]` | `[routeId, lineNumber, destination, agencyIndex, routeType, stopIndexes[], shape, minutes[], source?]` |
+| `routes[j]` | `[routeId, lineNumber, destination, agencyIndex, routeType, stopIndexes[], shape, minutes[], source?, variants?]` |
 
 - `stopIndexes` are positions in `stops[]`, in travel order, from first stop to last.
 - `minutes[]` (REQ-DATA-6) has one entry per stop: scheduled minutes from the first stop,
   from the line's representative trip. It may be `null`. Older apps ignore it.
 - `source` (optional, 9th entry) marks a line from outside the government feed (REQ-DATA-7).
   Its details are in `sources`. These lines have no live buses.
+- `variants` (optional, 10th entry; `source` is then `null` if not set) lists the line's
+  less common stop patterns (REQ-DATA-8): `[[stopIndexes[], shape, minutes[], share], …]`,
+  where `share` is the percent of the week's trips. Entries 6–8 describe the usual route,
+  whose share is 100 minus the others. Older apps ignore the entry.
 - `shape` is a Google encoded polyline, precision 5. The encoder and decoder are shared in
   [src/lib/polyline.js](../src/lib/polyline.js).
 
 When the app loads a bundle, it builds a `stop → lines` index in memory. That index
 answers "which lines serve this stop" (REQ-EDIT-2).
+
+## Line timetable
+
+`data/schedules/<routeId>.json` (REQ-DATA-9), read by [src/lib/schedule.js](../src/lib/schedule.js):
+
+```json
+{ "v": 1, "routeId": "23918",
+  "patterns": [ { "stops": ["51529", "13662", "…"], "offsets": [0, 2, 3, 5] }, { "stops": ["…"], "offsets": [0, 2, 4] } ],
+  "trips": [ [62, 350, 0], [62, 365, 1], [64, 540, 0] ] }
+```
+
+- `patterns` are in the same order as in the city bundle: usual route first.
+- `offsets`: scheduled minutes from the first stop to each stop.
+- `trips`: `[day mask, start minute of the day, pattern index]`. Day mask bit 0 is Sunday,
+  bit 6 Saturday (62 = Monday to Friday). A time at a stop is start + that stop's offset.
 
 ## Device storage
 

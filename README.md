@@ -89,10 +89,11 @@ Knight Bus/
 │   ├── analytics.js         Usage insights: consent first, safe events, debug-only details
 │   ├── styles.css
 │   ├── lib/                 dom.js (UI helper), polyline.js (shape encoding), routeGeometry.js (positions along a line)
-│   └── views/               One file per screen: login, city, home, editor, commute, privacy, report
+│   └── views/               One file per screen: login, city, home, editor, commute, line, privacy, report
 ├── pipeline/
 │   ├── cities.json          Which cities exist and their boundaries
-│   └── build-city-data.mjs  National GTFS → data/cities/<city>.json
+│   ├── build-city-data.mjs  National GTFS → data/cities/<city>.json + data/schedules/<line>.json
+│   └── sources/             Weekend lines from outside the government feed (Busofash, Sababus)
 ├── scripts/
 │   ├── build-site.sh        Builds one version (main or debug) for publishing
 │   ├── check-docs.mjs       Docs-as-code check (runs in CI)

@@ -183,3 +183,47 @@ Code: [views/commute.js](../src/views/commute.js), [liveLines.js](../src/liveLin
 [lib/routeGeometry.js](../src/lib/routeGeometry.js), [lib/offsetLine.js](../src/lib/offsetLine.js),
 [lib/sheetDrag.js](../src/lib/sheetDrag.js), [map.js](../src/map.js).
 
+
+## Lines with more than one route
+
+About 1–2% of lines do not always drive the same way: some trips skip a street, take a
+detour or run a longer evening route. Each way is a *stop pattern* (REQ-DATA-8).
+
+**What is drawn** (REQ-LINE-1). It depends on the stop the line is opened from:
+
+```
+only ONE pattern passes your stop          SEVERAL patterns pass your stop
+────────────────🚏───────────────          ────────────🚏──────┬───────────   usual route: normal line
+(just that pattern, even if it is                              ┊· · · · ·     variant: dotted, only
+ not the usual one)                                                             visible where it leaves
+```
+
+**The ⚠ sign** (REQ-LINE-2). Every such line has a small ⚠ next to its destination, in the
+home stop list, the editor and the commute. Pressing it opens a pop-up:
+
+- *Usual route: 51% of trips · 36 stops · stops here*
+- *Variant: 49% of trips · 35 stops · does not stop here*, with *Skips: …* and *Also stops at: …*
+- one sentence saying what the map shows from this stop,
+- **Show the full line on the map**.
+
+Pressing ⚠ inside a checkbox row does not tick the box.
+
+## 5. A line in full
+
+Opened from the ⚠ pop-up (REQ-LINE-3). Address: `#/line/<city>/<line>/<stop>`.
+
+- **Map:** the whole line. The usual route is a solid purple line; each variant is dotted in
+  its own color. All stops are shown; a stop that only one pattern serves has that
+  pattern's color. The stop you came from is highlighted.
+- **Panel:** the line, its operator, and the list of patterns with their share of trips and
+  differences.
+- **Press a stop** (REQ-LINE-4): a pop-up with its name and **Full schedule at this stop →**.
+  The schedule shows in the panel: weekday tabs (today first selected) and the times by
+  hour, for example `07  :00 :15 :35 :55`. Times of a variant route have a dotted
+  underline; `⁺` marks times after midnight. These are timetable times, not live.
+- Weekend-service lines have no timetable; the panel says so and gives their hours.
+- **← Back** returns to where you came from.
+
+Code: [views/lineInfo.js](../src/views/lineInfo.js), [views/line.js](../src/views/line.js),
+[lib/schedule.js](../src/lib/schedule.js), [liveLines.js](../src/liveLines.js),
+[cityData.js](../src/cityData.js).

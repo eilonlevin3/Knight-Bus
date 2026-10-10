@@ -16,7 +16,8 @@ only its own city, in a few MB.
 For each bus line (GTFS `route_id`; in Israel this is one direction and one variant of a line):
 
 - line number, destination, operator;
-- the **ordered list of stops** from first to last (taken from one representative trip);
+- the **ordered list of stops** from first to last, for **every stop pattern** the line has
+  (see below);
 - the **scheduled minutes** from the first stop to each stop, from the same trip
   (REQ-DATA-6). It is used to zoom the commute view to the last 5 minutes before your stop;
 - the **route shape** (the road path), simplified to about 4 m accuracy and stored as an
@@ -31,15 +32,35 @@ It drops timetables, calendars and fares. Live data covers "when is my bus", and
 
 1. **Download** the national zip, or reuse `.cache/gtfs.zip` if it is less than 20 hours old.
 2. **Stream** the CSV files out of the zip, without unzipping them to disk:
-   `agency.txt` → `routes.txt` (bus only, `route_type = 3`) → `trips.txt` (first trip of
-   each route) → `stop_times.txt` (stop order for those trips only) → `stops.txt` →
-   `shapes.txt` (only the shapes used).
+   `agency.txt` → `routes.txt` (bus only, `route_type = 3`) → `calendar.txt` → `trips.txt`
+   → `stop_times.txt` (every trip, one at a time) → `stops.txt` → `shapes.txt` (only the
+   shapes used).
 3. **Simplify** each shape with the Ramer–Douglas–Peucker algorithm.
 4. **For each city** in [pipeline/cities.json](../pipeline/cities.json): keep every line with
    **at least one stop inside the city box**. The whole line is kept, so a line that leaves
    the city still draws from end to end. Keep the stops those lines use.
 5. **Write** `data/cities/<city>.json` and `data/cities/index.json`. Each bundle gets a
    content hash as its version, and the app re-downloads only when the version changes.
+
+## Stop patterns: a line is not always one route
+
+Until 2026-10-10 the pipeline kept the stops of each line's *first* trip, assuming all
+trips of a GTFS `route_id` serve the same stops. They don't: in that day's feed 142 of
+6,596 bus lines had two stop patterns or more. So line 62 was missing at Dizengoff/Sheinkin
+(94 of its trips stop there, 92 don't), and line 445 was there one day and gone the next.
+
+Now (REQ-DATA-8) every trip is read. Trips with the same stop list form a **pattern**, and
+a line keeps its patterns sorted by how many trips of the **coming week** use them (up to
+four). The most common is the "usual route"; the others carry their share in percent. The
+line is listed at every stop any pattern serves. In the feed of 2026-10-10: 68 lines had
+variants this week, 36 of them in the Tel Aviv file.
+
+## Timetable files
+
+For the schedule screen (REQ-DATA-9) the pipeline writes `data/schedules/<line id>.json`
+for every published government line: the patterns with minutes to each stop, and one
+entry per trip of the coming week. Only services whose dates overlap the next seven days
+count. 4,246 files, 3.5 MB in total, each loaded only on demand.
 
 ## Which lines are included
 
@@ -88,8 +109,28 @@ them (checked 2026-10-10, a Saturday, at 09:10 and at 13:18 local time):
 So the app marks these lines clearly as weekend lines without live tracking (REQ-RT-6).
 Getting live data needs the operator or the municipalities to share a feed (REQ-RT-7).
 
-The source is set in `extraSources` in [pipeline/cities.json](../pipeline/cities.json). If
-the server is down or blocks GitHub's runners, the build logs a warning and continues
+### Sababus
+
+*Sababus* (סבבוס) is Ramat Gan's free weekend service: four lines named by color (green,
+blue, red, white), Friday evening and Saturday. Like Naaim BeSofash it is run by the
+"נוע תנוע" organisation ([noat.co.il](https://www.noat.co.il/routes)) and is in neither
+government feed.
+
+The pipeline reads the operator's public Google map, exported as KML
+([pipeline/sources/noat.mjs](../pipeline/sources/noat.mjs)). It has route shapes per line
+and stops labelled with **line and direction**, but no stop codes. So:
+1. each direction takes the shape its stops fit best;
+2. stops are ordered along that shape;
+3. each stop is matched to the national stop within 25 m, or to one with the same name
+   within 100 m ("דיזנגוף/שד' נורדאו" = "שדרות נורדאו/דיזנגוף"). On 2026-10-10: 294
+   matched, 11 became stops of their own.
+
+The operator's map and other apps do not always agree on which stop a line uses. Near
+Dizengoff/Sheinkin (25778) the map puts the green and blue lines at Dizengoff/Ben Gurion
+and Dizengoff/Gordon, about 140 m either side; we follow the operator's map.
+
+Both sources are set in `extraSources` in [pipeline/cities.json](../pipeline/cities.json). If
+a server is down or blocks GitHub's runners, the build logs a warning and continues
 without these lines. There is no timetable, so the "5 minutes before your stop" zoom uses
 the ~1.5 km fallback.
 

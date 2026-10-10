@@ -8,7 +8,23 @@ export const LINE_COLORS = [
   '#bc6c25', '#3a86ff', '#588157', '#9d0208', '#5f0f40', '#0a9396', '#ca6702', '#414833',
 ];
 
+// Leaflet can run a queued redraw after a map was removed (when leaving a screen) and then
+// throws, because the canvas is gone. Skip the redraw in that case.
+let canvasGuarded = false;
+function guardCanvasRedraw() {
+  if (canvasGuarded) return;
+  canvasGuarded = true;
+  const redraw = L.Canvas.prototype._redraw;
+  L.Canvas.include({
+    _redraw() {
+      if (!this._ctx) { this._redrawRequest = null; return; }
+      redraw.call(this);
+    },
+  });
+}
+
 export function createMap(el, center, zoom = 15) {
+  guardCanvasRedraw();
   const map = L.map(el, { preferCanvas: true, zoomControl: false, attributionControl: true }).setView(center, zoom);
   L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,

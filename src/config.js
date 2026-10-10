@@ -35,6 +35,8 @@ export const realtime = {
 
 // City bundles produced by pipeline/build-city-data.mjs.
 export const dataBaseUrl = './data/cities/';
+// One small timetable file per line, loaded only when a stop's schedule is opened.
+export const scheduleBaseUrl = './data/schedules/';
 
 export const MAX_STOPS_PER_FAVORITE = 2;
 export const FAVORITE_SLOTS = [1, 2, 3];

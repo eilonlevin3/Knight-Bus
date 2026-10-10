@@ -1,5 +1,5 @@
 // Text summary of live buses for one (stop, line) row. Shared by editor and commute screens.
-// @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6
+// @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-LINE-2
 
 import { h } from '../lib/dom.js';
 import { ageLabel } from '../realtime.js';
@@ -44,7 +44,16 @@ export function weekendTag(route) {
     : null;
 }
 
-// "→ destination" with the weekend tag when it applies.
-export function lineTitle(route) {
-  return h('span', { class: 'line-title' }, h('span', {}, `→ ${route.dest}`), weekendTag(route));
+// "→ destination", the weekend tag when it applies, and a ⚠ for a line that does not always
+// take the same route. onInfo opens its explanation (REQ-LINE-2).
+export function lineTitle(route, onInfo) {
+  const hazard = route.multi && onInfo
+    ? h('button', {
+        type: 'button', class: 'hazard', title: 'This line does not always take the same route',
+        'aria-label': `Line ${route.short} does not always take the same route. Details`,
+        // Inside a checkbox row: do not tick the box.
+        onclick: (e) => { e.preventDefault(); e.stopPropagation(); onInfo(); },
+      }, '⚠')
+    : null;
+  return h('span', { class: 'line-title' }, h('span', {}, `→ ${route.dest}`), hazard, weekendTag(route));
 }

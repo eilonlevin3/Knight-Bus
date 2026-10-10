@@ -1,7 +1,7 @@
 // Downloads and caches one city's transit bundle. Docs: docs/data-model.md#city-bundle
 // @req REQ-DATA-1
 
-import { dataBaseUrl } from './config.js';
+import { dataBaseUrl, scheduleBaseUrl } from './config.js';
 import { decode } from './lib/polyline.js';
 
 const CACHE_NAME = 'kb-city-data-v1';
@@ -61,6 +61,17 @@ async function removeOldVersions(cache, cityMeta) {
   }
 }
 
+// A line's timetable for the coming week, or null when there is none (weekend-service lines).
+// { patterns: [{ stops: [stopId], offsets: [minutes] }], trips: [[dayMask, startMinute, patternIndex]] }
+export async function loadSchedule(routeId) {
+  try {
+    const res = await fetch(`${scheduleBaseUrl}${encodeURIComponent(routeId)}.json`);
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
 // In-memory model of one city, with the lookups the screens need.
 export class CityData {
   constructor(raw, meta) {
@@ -78,23 +89,39 @@ export class CityData {
     });
 
     this.routes = new Map();
-    for (const [id, short, dest, agencyIdx, type, seq, shape, times = null, source = null] of raw.routes) {
-      const stops = seq.map((i) => this.stopList[i]);
-      // times: scheduled minutes from the first stop (newer bundles only; may be missing).
+    for (const [id, short, dest, agencyIdx, type, seq, shape, times = null, source = null, alts = []] of raw.routes) {
+      // A line can take more than one route ("stop pattern"): the usual one, plus variants
+      // that skip or add stops (REQ-DATA-8). patterns[0] is the most common.
+      //   times: scheduled minutes from the first stop (may be missing)
+      //   share: % of the week's trips that use this pattern
+      const pattern = (stopIdx, encodedShape, minutes, share) => ({
+        stops: stopIdx.map((i) => this.stopList[i]), times: minutes, encodedShape, _shape: null, share,
+      });
+      const altShare = alts.reduce((n, a) => n + a[3], 0);
+      const patterns = [pattern(seq, shape, times, Math.max(1, 100 - altShare)), ...alts.map((a) => pattern(a[0], a[1], a[2], a[3]))];
       // source: set for lines outside the government feed; those have no live buses (REQ-RT-5).
       const route = {
-        id, short, dest, agency: this.agencies[agencyIdx], type, stops, times, encodedShape: shape, _shape: null,
+        id, short, dest, agency: this.agencies[agencyIdx], type,
+        patterns, multi: patterns.length > 1,
+        stops: patterns[0].stops, times: patterns[0].times, // the usual route, for code that needs just one
         source, live: !source, hours: source ? this.sources[source]?.hours || null : null,
       };
       this.routes.set(id, route);
-      for (const s of new Set(stops)) s.routeIds.push(id);
+      // The line is listed at every stop that any of its patterns serves.
+      for (const s of new Set(patterns.flatMap((p) => p.stops))) s.routeIds.push(id);
     }
   }
 
-  // Full route line from first stop to last, decoded on first use.
-  shapeOf(route) {
-    if (!route._shape) route._shape = decode(route.encodedShape);
-    return route._shape;
+  // The path of a pattern (or of a line's usual route), decoded on first use.
+  shapeOf(patternOrRoute) {
+    const p = patternOrRoute.patterns ? patternOrRoute.patterns[0] : patternOrRoute;
+    if (!p._shape) p._shape = decode(p.encodedShape);
+    return p._shape;
+  }
+
+  // The patterns of a line that pass a stop, most common first.
+  patternsAt(route, stopId) {
+    return route.patterns.filter((p) => p.stops.some((s) => s.id === stopId));
   }
 
   // Lines serving a stop, sorted by line number.

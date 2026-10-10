@@ -1,6 +1,6 @@
 // Draws the chosen lines and their live buses on a map, and keeps the buses fresh.
 // Used by both the editor and the commute screen, so they behave the same (REQ-COMM-1).
-// @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
+// @req REQ-LINE-1 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
 
 import { realtime } from './config.js';
 import { fetchLiveBuses, classifyBuses, ageLabel } from './realtime.js';
@@ -55,13 +55,15 @@ export class LiveLines {
     const gap = n > 12 ? 1.5 : n > 6 ? 3 : weight + 1;
     routeIds.forEach((id, i) => {
       const route = this.city.routes.get(id);
-      const path = this.city.shapeOf(route);
-      const pos = stopPositions(route.stops, path);
+      const stopIds = this.entries.filter((e) => e.routeId === id).map((e) => e.stopId);
+      // A line can take more than one route. Only the routes that pass the chosen stop are
+      // drawn: the most common of them as the normal line, any others dotted (REQ-LINE-1).
+      const through = this.city.patternsAt(route, stopIds[0]);
+      const main = through[0] || route.patterns[0];
+      const path = this.city.shapeOf(main);
+      const pos = stopPositions(main.stops, path);
       // Split at the first chosen stop along the line (a line may be chosen at both stops).
-      const idx = this.entries
-        .filter((e) => e.routeId === id)
-        .map((e) => route.stops.findIndex((s) => s.id === e.stopId))
-        .filter((k) => k >= 0);
+      const idx = stopIds.map((sid) => main.stops.findIndex((s) => s.id === sid)).filter((k) => k >= 0);
       // (If the stop is somehow not on the line, draw it all as outbound.)
       const [incoming, outbound] = idx.length ? splitPath(path, pos[Math.min(...idx)]) : [[], path];
       const color = this.colorOf(id);
@@ -70,11 +72,15 @@ export class LiveLines {
       // for a line that simply has no bus on the way.
       const dashArray = route.live ? null : `${weight * 2} ${weight * 1.6}`;
       const tip = `Line ${route.short} → ${route.dest}${route.live ? '' : ` · ${route.agency} (weekend line, no live tracking)`}`;
+      const variants = through.slice(1).map((p) => new OffsetPolyline(this.city.shapeOf(p), {
+        color, weight: Math.max(3, weight - 1), opacity: 0.9, offset, dashArray: `1 ${weight * 1.8}`, lineCap: 'round',
+      }).bindTooltip(`${tip} · less common route (${p.share}% of trips)`, { sticky: true }));
       const layers = [
-        new OffsetPolyline(outbound, { color: lighten(color, 0.3), weight, opacity: 0.6, offset, lineCap: 'butt', dashArray }),
-        new OffsetPolyline(incoming, { color, weight, opacity: 0.95, offset, lineCap: 'butt', dashArray }),
+        ...variants, // drawn first, so only where they leave the usual route do the dots show
+        new OffsetPolyline(outbound, { color: lighten(color, 0.3), weight, opacity: 0.6, offset, lineCap: 'butt', dashArray }).bindTooltip(tip, { sticky: true }),
+        new OffsetPolyline(incoming, { color, weight, opacity: 0.95, offset, lineCap: 'butt', dashArray }).bindTooltip(tip, { sticky: true }),
       ];
-      layers.filter((l) => l.getLatLngs().length > 1).forEach((l) => l.bindTooltip(tip, { sticky: true }).addTo(this.map));
+      layers.filter((l) => l.getLatLngs().length > 1).forEach((l) => l.addTo(this.map));
       this.lineLayers.set(id, layers);
     });
   }
@@ -110,7 +116,9 @@ export class LiveLines {
       const route = this.city.routes.get(routeId);
       const stop = this.city.stops.get(stopId);
       const { buses, error, noLive = false } = byRoute.get(routeId);
-      const { next, passed } = error || noLive ? { next: [], passed: [] } : classifyBuses(buses, route.stops, stopId, this.city.shapeOf(route));
+      // Place buses on the route that passes this stop (the most common one, if several do).
+      const pattern = this.city.patternsAt(route, stopId)[0] || route.patterns[0];
+      const { next, passed } = error || noLive ? { next: [], passed: [] } : classifyBuses(buses, pattern.stops, stopId, this.city.shapeOf(pattern));
       return { stop, route, color: this.colorOf(routeId), next, passed, error, noLive };
     });
     this.drawBuses(rows);

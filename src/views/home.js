@@ -14,6 +14,7 @@ import { commuteName } from '../lib/names.js';
 import { consent, setConsent, detailed, track, trackDetail, bucket } from '../analytics.js';
 import { SAFE_SUMMARY, DEBUG_SUMMARY } from './privacy.js';
 import { liveSummary, lineBadge, lineTitle } from './liveInfo.js';
+import { showLineInfo } from './lineInfo.js';
 
 const MAX_LINES_SHOWN_AT_FIRST = 30; // very busy stops: the rest start unchecked
 const LAST_POSITION_KEY = `${storagePrefix}lastPosition`; // kept on this phone only, for a quick start
@@ -156,7 +157,7 @@ export async function render(root, ctx) {
         }),
         lineBadge(r, on ? lines.colorOf(r.id) : null),
         h('span', { class: 'line-text' },
-          lineTitle(r),
+          lineTitle(r, () => showLineInfo(ctx, city, r, s.id)),
           on ? liveSummary(live) : h('small', { class: 'muted' }, 'Hidden from the map')));
     });
     return h('div', { class: 'stop-section' },

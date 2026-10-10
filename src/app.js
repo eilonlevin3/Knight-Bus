@@ -17,6 +17,7 @@ import * as editor from './views/editor.js';
 import * as commute from './views/commute.js';
 import * as privacy from './views/privacy.js';
 import * as report from './views/report.js';
+import * as line from './views/line.js';
 import * as analytics from './analytics.js';
 
 const root = document.getElementById('app');
@@ -68,18 +69,19 @@ async function route() {
   cleanup = null;
   root.replaceChildren();
 
-  const [, name = 'home', param] = location.hash.match(/^#\/(\w+)(?:\/(\d))?/) || [];
+  // #/commute/2 · #/edit/1 · #/line/<city>/<line id>/<stop id>
+  const [, name = 'home', param, param2, param3] = location.hash.match(/^#\/(\w+)(?:\/([\w-]+))?(?:\/([\w-]+))?(?:\/([\w-]+))?/) || [];
 
   // Guards: signed in -> city chosen -> requested screen.
   if (!ctx.user) { analytics.screen('login'); return login.render(root, ctx); }
   if (name === 'city' || !ctx.city) { analytics.screen('city'); return cityView.render(root, ctx); }
   if (name === 'privacy') { analytics.screen('privacy'); return privacy.render(root, ctx); }
 
-  const views = { home, menu: home, edit: editor, commute, report: ctx.isAdmin ? report : home };
+  const views = { home, menu: home, edit: editor, commute, line, report: ctx.isAdmin ? report : home };
   const view = views[name] || home;
   const slot = Number(param);
   if ((view === editor || view === commute) && ![1, 2, 3].includes(slot)) return ctx.go('#/home');
-  analytics.screen(view === home ? 'home' : view === editor ? 'editor' : view === report ? 'report' : 'commute');
+  analytics.screen(view === home ? 'home' : view === editor ? 'editor' : view === report ? 'report' : view === line ? 'line' : 'commute');
 
   // Render into a container that is already in the page (the map needs its size),
   // with a loading overlay on top until the screen is ready.
@@ -87,7 +89,7 @@ async function route() {
   const overlay = loading('Loading…');
   root.append(container, overlay);
   try {
-    const nextCleanup = await view.render(container, ctx, { slot });
+    const nextCleanup = await view.render(container, ctx, { slot, cityId: param, routeId: param2, stopId: param3 });
     if (token !== renderToken) return typeof nextCleanup === 'function' && nextCleanup();
     cleanup = nextCleanup;
     overlay.remove();

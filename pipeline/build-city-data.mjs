@@ -1,5 +1,5 @@
 // Builds one transit bundle per city from the national GTFS feed.
-// @req REQ-DATA-2 @req REQ-SCOPE-1 @req REQ-DATA-5 @req REQ-DATA-6 @req REQ-DATA-7
+// @req REQ-DATA-2 @req REQ-SCOPE-1 @req REQ-DATA-5 @req REQ-DATA-6 @req REQ-DATA-7 @req REQ-DATA-8 @req REQ-DATA-9
 // Docs: docs/data-pipeline.md (how it works), docs/data-model.md (output format).
 //
 // Usage:  npm run build:data
@@ -17,10 +17,12 @@ import yauzl from 'yauzl';
 import { parse } from 'csv-parse';
 import { encode } from '../src/lib/polyline.js';
 import { loadBusofash } from './sources/busofash.mjs';
+import { loadNoatKml } from './sources/noat.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const config = JSON.parse(fs.readFileSync(path.join(ROOT, 'pipeline/cities.json'), 'utf8'));
 const OUT_DIR = path.join(ROOT, 'data/cities');
+const SCHEDULE_DIR = path.join(ROOT, 'data/schedules');
 const CACHE_ZIP = path.join(ROOT, '.cache/gtfs.zip');
 const SHAPE_TOLERANCE_DEG = 0.00004; // ~4 m. Larger = smaller files, rougher lines.
 
@@ -141,6 +143,10 @@ function destinationFromLongName(longName) {
 
 // ---------- 4. Build ----------
 
+const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+const MAX_PATTERNS = 4; // per line: the usual route plus up to 3 variants
+const ymd = (d) => Number(d.toISOString().slice(0, 10).replaceAll('-', ''));
+
 async function main() {
   const { file, lastModified } = await getZip();
   const z = await openZip(file);
@@ -158,40 +164,83 @@ async function main() {
       longName: g('route_long_name'),
       agency: g('agency_id'),
       type: Number(g('route_type')),
-      trip: null,
-      shapeId: null,
-      headsign: '',
-      stops: [],
+      patternsByKey: new Map(), // "stop,stop,..." -> pattern
+      patterns: [], // filled below: most common first
+      trips: [], // [dayMask, startMinute, pattern] for the schedule files
+      source: null,
     });
   });
 
-  // Every bus line in the feed is kept, whatever days it runs (weekdays, Friday, Saturday,
-  // Saturday night): there is deliberately no calendar filter here (REQ-DATA-5).
-  // One representative trip per route. In the Israeli feed every route_id is already one
-  // direction + one variant of a line, so all of its trips share the same stop pattern.
-  log('Picking one trip per route');
-  const repTrips = new Map(); // trip_id -> route
-  await readCsv(z, 'trips.txt', (g) => {
-    const r = routes.get(g('route_id'));
-    if (!r || r.trip) return;
-    r.trip = g('trip_id');
-    r.shapeId = g('shape_id') || null;
-    r.headsign = g('trip_headsign');
-    repTrips.set(r.trip, r);
+  // Which services run in the coming week (the feed also lists future timetables).
+  const weekStart = ymd(new Date());
+  const weekEnd = ymd(new Date(Date.now() + 6 * 86400e3));
+  const services = new Map(); // service_id -> { mask, active }
+  await readCsv(z, 'calendar.txt', (g) => {
+    let mask = 0;
+    DAYS.forEach((d, i) => { if (g(d) === '1') mask |= 1 << i; });
+    services.set(g('service_id'), { mask, active: Number(g('start_date')) <= weekEnd && Number(g('end_date')) >= weekStart });
   });
 
-  log('Reading stop order (stop_times.txt is large, this takes a few minutes)');
-  await readCsv(z, 'stop_times.txt', (g) => {
-    const r = repTrips.get(g('trip_id'));
-    if (r) r.stops.push([Number(g('stop_sequence')), g('stop_id'), toSeconds(g('arrival_time'))]);
+  // Every bus line in the feed is kept, whatever days it runs (weekdays, Friday, Saturday,
+  // Saturday night): there is deliberately no filter by day here (REQ-DATA-5).
+  log('Reading trips');
+  const trips = new Map(); // trip_id -> { route, service, shapeId, headsign }
+  await readCsv(z, 'trips.txt', (g) => {
+    const route = routes.get(g('route_id'));
+    if (route) trips.set(g('trip_id'), { route, service: g('service_id'), shapeId: g('shape_id') || null, headsign: g('trip_headsign') });
   });
+
+  // A line's trips do NOT all serve the same stops: about 2% of lines have two or more
+  // "stop patterns" (a detour, a skipped street, a longer evening route). Keep every
+  // pattern, counted, so a line is listed at every stop it really serves (REQ-DATA-8).
+  // The file keeps each trip's rows together, so trips are handled one at a time.
+  log('Reading stop patterns of every trip (stop_times.txt is large, this takes a few minutes)');
+  let currentTrip = null;
+  let rows = [];
+  const finishTrip = () => {
+    const t = currentTrip && trips.get(currentTrip);
+    if (t && rows.length > 1) {
+      rows.sort((a, b) => a[0] - b[0]);
+      const stopIds = rows.map((r) => r[1]);
+      const key = stopIds.join(',');
+      const t0 = rows[0][2];
+      let p = t.route.patternsByKey.get(key);
+      if (!p) {
+        // Scheduled minutes from the first stop, used for "5 minutes before your stop" (REQ-DATA-6).
+        const times = rows.map((r) => (Number.isFinite(r[2]) && Number.isFinite(t0) ? Math.round((r[2] - t0) / 60) : null));
+        p = { stops: stopIds, times, shapeId: t.shapeId, headsign: t.headsign, count: 0, weekCount: 0 };
+        t.route.patternsByKey.set(key, p);
+      }
+      p.count++;
+      const svc = services.get(t.service);
+      if (svc?.active && Number.isFinite(t0)) {
+        p.weekCount++;
+        t.route.trips.push([svc.mask, Math.round(t0 / 60), p]);
+      }
+    }
+    rows = [];
+  };
+  await readCsv(z, 'stop_times.txt', (g) => {
+    const id = g('trip_id');
+    if (id !== currentTrip) { finishTrip(); currentTrip = id; }
+    if (trips.has(id)) rows.push([Number(g('stop_sequence')), g('stop_id'), toSeconds(g('arrival_time'))]);
+  });
+  finishTrip();
+  trips.clear();
+
+  let multi = 0;
   for (const r of routes.values()) {
-    r.stops.sort((a, b) => a[0] - b[0]);
-    // Scheduled minutes from the first stop, used to find "5 minutes before your stop" (REQ-DATA-6).
-    const t0 = r.stops[0]?.[2];
-    r.times = r.stops.map((s) => (Number.isFinite(s[2]) && Number.isFinite(t0) ? Math.round((s[2] - t0) / 60) : null));
-    r.stops = r.stops.map((s) => s[1]);
+    const useWeek = [...r.patternsByKey.values()].some((p) => p.weekCount);
+    r.patterns = [...r.patternsByKey.values()]
+      .map((p) => ({ ...p, weight: useWeek ? p.weekCount : p.count, ref: p }))
+      .filter((p) => p.weight > 0)
+      .sort((a, b) => b.weight - a.weight)
+      .slice(0, MAX_PATTERNS);
+    r.patternsByKey = null;
+    if (r.patterns.length > 1) multi++;
   }
+  for (const [id, r] of routes) if (!r.patterns.length) routes.delete(id);
+  log(`  ${routes.size} bus lines, ${multi} with more than one stop pattern`);
 
   log('Reading stops');
   const stops = new Map();
@@ -207,7 +256,7 @@ async function main() {
 
   log('Reading shapes');
   const neededShapes = new Map();
-  for (const r of routes.values()) if (r.shapeId) neededShapes.set(r.shapeId, []);
+  for (const r of routes.values()) for (const p of r.patterns) if (p.shapeId) neededShapes.set(p.shapeId, []);
   await readCsv(z, 'shapes.txt', (g) => {
     const pts = neededShapes.get(g('shape_id'));
     if (pts) pts.push([Number(g('shape_pt_sequence')), Number(g('shape_pt_lat')), Number(g('shape_pt_lon'))]);
@@ -220,29 +269,61 @@ async function main() {
   z.zip.close();
 
   // Lines that are not in the government feed (REQ-DATA-7), e.g. municipal weekend buses.
-  // They reuse the national stops (matched by stop code) so they show up at the same stops.
-  // If a source is down, the build carries on without it.
+  // They reuse the national stops (by stop code, or by position when the source has no
+  // codes) so they show up at the same stops. If a source is down, the build carries on.
   const sourceInfo = {};
   const stopIdByCode = new Map();
-  for (const s of stops.values()) if (s.code && !stopIdByCode.has(s.code)) stopIdByCode.set(s.code, s.id);
+  const grid = new Map(); // ~200 m cells -> national stops, for matching by position
+  const cell = (lat, lon) => `${Math.floor(lat * 500)},${Math.floor(lon * 500)}`;
+  for (const s of stops.values()) {
+    if (s.code && !stopIdByCode.has(s.code)) stopIdByCode.set(s.code, s.id);
+    const k = cell(s.lat, s.lon);
+    if (!grid.has(k)) grid.set(k, []);
+    grid.get(k).push(s);
+  }
+  // "דיזנגוף/שד' נורדאו" and "שדרות נורדאו/דיזנגוף" are the same stop: compare the street names
+  // on both sides of the slash, in any order, with common spellings evened out.
+  const nameKey = (name) => String(name).replace(/["'׳״.]/g, '').replace(/שדרות|שד(?=\s)/g, 'שד').replace(/דרך זאב/g, 'דרך')
+    .replace(/דיזינגוף/g, 'דיזנגוף').split('/').map((x) => x.trim().replace(/\s+/g, ' ')).filter(Boolean).sort().join('/');
+  // A stop without a code: the national stop within 25 m, or one with the same name within 100 m.
+  const nearestStop = (lat, lon, name) => {
+    let close = null;
+    let closeD = 25;
+    let named = null;
+    let namedD = 100;
+    const key = nameKey(name);
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      for (const s of grid.get(`${Math.floor(lat * 500) + dy},${Math.floor(lon * 500) + dx}`) || []) {
+        const d = Math.hypot((s.lon - lon) * Math.cos(lat * Math.PI / 180), s.lat - lat) * 111320;
+        if (d < closeD) { closeD = d; close = s; }
+        if (d < namedD && nameKey(s.name) === key) { namedD = d; named = s; }
+      }
+    }
+    return close || named;
+  };
+  const loaders = { 'busofash-arcgis': loadBusofash, 'noat-kml': loadNoatKml };
   for (const src of config.extraSources || []) {
     try {
       log(`Reading extra lines: ${src.name}`);
-      const extra = await loadBusofash(src, log);
+      const extra = await loaders[src.type](src, log);
       agencies.set(`src:${src.id}`, src.name);
+      let matched = 0;
+      let added = 0;
       for (const x of extra) {
         const ids = x.stops.map((s) => {
-          const known = stopIdByCode.get(s.code);
-          if (known) return known;
-          const id = `${src.id}-${s.code}`;
-          if (!stops.has(id)) stops.set(id, { id, code: s.code, name: s.name, lat: s.lat, lon: s.lon });
+          const known = (s.code && stopIdByCode.get(s.code)) || (!s.code && nearestStop(s.lat, s.lon, s.name)?.id);
+          if (known) { matched++; return known; }
+          const id = `${src.id}-${s.code || `${Math.round(s.lat * 1e5)}_${Math.round(s.lon * 1e5)}`}`;
+          if (!stops.has(id)) { stops.set(id, { id, code: s.code || '', name: s.name, lat: s.lat, lon: s.lon }); added++; }
           return id;
         });
+        const stopIds = ids.filter((id, i) => i === 0 || id !== ids[i - 1]);
         routes.set(x.id, {
-          id: x.id, short: x.short, longName: '', headsign: x.dest, agency: `src:${src.id}`, type: 3,
-          stops: ids, times: ids.map(() => null), encoded: encode(simplify(x.path, SHAPE_TOLERANCE_DEG)), source: src.id,
+          id: x.id, short: x.short, longName: '', agency: `src:${src.id}`, type: 3, source: src.id, trips: [],
+          patterns: [{ stops: stopIds, times: stopIds.map(() => null), encoded: encode(simplify(x.path, SHAPE_TOLERANCE_DEG)), headsign: x.dest, weight: 1 }],
         });
       }
+      log(`  ${src.id}: ${extra.length} line directions; stops matched to national stops: ${matched}, added: ${added}`);
       sourceInfo[src.id] = { name: src.name, hours: src.hours, info: src.info };
     } catch (e) {
       log(`WARNING: skipped ${src.id}: ${e.message}`);
@@ -252,16 +333,15 @@ async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const generatedAt = new Date().toISOString();
   const index = { v: 1, country: config.country, generatedAt, gtfsLastModified: lastModified, cities: [] };
+  const published = new Set(); // lines that appear in at least one city
 
   for (const city of cities) {
-    // A line belongs to a city if any of its stops is inside the city box.
+    // A line belongs to a city if any stop of any of its patterns is inside the city box.
     // The whole line is kept (all its stops), so lines that leave the city still draw fully.
-    const cityRoutes = [...routes.values()].filter(
-      (r) => r.stops.length > 1 && r.stops.some((sid) => {
-        const s = stops.get(sid);
-        return s && inBbox(city.bbox, s.lat, s.lon);
-      }),
-    );
+    const cityRoutes = [...routes.values()].filter((r) => r.patterns.some((p) => p.stops.some((sid) => {
+      const s = stops.get(sid);
+      return s && inBbox(city.bbox, s.lat, s.lon);
+    })));
 
     const stopIdx = new Map();
     const stopRows = [];
@@ -272,28 +352,40 @@ async function main() {
       return map.get(key);
     };
 
-    const routeRows = cityRoutes.map((r) => {
-      const kept = r.stops.map((sid, i) => [sid, r.times[i]]).filter(([sid]) => stops.has(sid));
+    // One pattern -> [stopIndexes, shape, minutes]
+    const patternRow = (p) => {
+      const kept = p.stops.map((sid, i) => [sid, p.times[i]]).filter(([sid]) => stops.has(sid));
       const times = kept.every(([, t]) => t != null) ? kept.map(([, t]) => t) : null;
-      const seq = kept
-        .map(([sid]) => sid)
-        .map((sid) => {
-          const s = stops.get(sid);
-          return idxOf(stopIdx, stopRows, sid, [s.id, s.code, s.name, +s.lat.toFixed(6), +s.lon.toFixed(6)]);
-        });
-      const shape = r.encoded || (r.shapeId && encodedShapes.get(r.shapeId)) ||
+      const seq = kept.map(([sid]) => {
+        const s = stops.get(sid);
+        return idxOf(stopIdx, stopRows, sid, [s.id, s.code, s.name, +s.lat.toFixed(6), +s.lon.toFixed(6)]);
+      });
+      const shape = p.encoded || (p.shapeId && encodedShapes.get(p.shapeId)) ||
         encode(seq.map((i) => [stopRows[i][3], stopRows[i][4]]));
-      return [
+      return [seq, shape, times];
+    };
+
+    const routeRows = cityRoutes.map((r) => {
+      published.add(r.id);
+      const [main, ...others] = r.patterns;
+      const total = r.patterns.reduce((n, p) => n + p.weight, 0);
+      const [seq, shape, times] = patternRow(main);
+      // Less common patterns: [stopIndexes, shape, minutes, share of trips in %]
+      const alts = others.map((p) => [...patternRow(p), Math.max(1, Math.round((100 * p.weight) / total))]);
+      const row = [
         r.id,
         r.short,
-        r.headsign || destinationFromLongName(r.longName),
+        main.headsign || destinationFromLongName(r.longName),
         idxOf(agencyIdx, agencyRows, r.agency, agencies.get(r.agency) || r.agency),
         r.type,
         seq,
         shape,
         times,
-        ...(r.source ? [r.source] : []), // not from the government feed: no live buses
       ];
+      // Optional tail: [8] source (not from the government feed: no live buses), [9] other patterns.
+      if (r.source || alts.length) row.push(r.source || null);
+      if (alts.length) row.push(alts);
+      return row;
     });
     const usedSources = Object.fromEntries([...new Set(cityRoutes.map((r) => r.source).filter(Boolean))].map((id) => [id, sourceInfo[id]]));
 
@@ -303,11 +395,38 @@ async function main() {
     const fileName = `${city.id}.json`;
     fs.writeFileSync(path.join(OUT_DIR, fileName), json);
     index.cities.push({ ...city, file: fileName, version, bytes: json.length, stops: stopRows.length, routes: routeRows.length });
-    log(`${city.id}: ${routeRows.length} lines, ${stopRows.length} stops, ${(json.length / 1e6).toFixed(1)} MB`);
+    log(`${city.id}: ${routeRows.length} lines (${cityRoutes.filter((r) => r.patterns.length > 1).length} with variants), ${stopRows.length} stops, ${(json.length / 1e6).toFixed(1)} MB`);
   }
 
   fs.writeFileSync(path.join(OUT_DIR, 'index.json'), JSON.stringify(index, null, 2));
   log('Wrote', path.join(OUT_DIR, 'index.json'));
+
+  // One small timetable file per line, loaded only when someone opens a stop's schedule
+  // (REQ-DATA-9). trips: [day mask (bit 0 = Sunday), start minute of day, pattern index].
+  fs.rmSync(SCHEDULE_DIR, { recursive: true, force: true });
+  fs.mkdirSync(SCHEDULE_DIR, { recursive: true });
+  let bytes = 0;
+  let files = 0;
+  for (const id of published) {
+    const r = routes.get(id);
+    if (r.source || !r.trips.length) continue;
+    const indexOfPattern = new Map(r.patterns.map((p, i) => [p.ref, i]));
+    const seen = new Set();
+    const tripRows = [];
+    for (const [mask, start, p] of r.trips) {
+      const pi = indexOfPattern.get(p);
+      const k = `${mask},${start},${pi}`;
+      if (pi === undefined || seen.has(k)) continue;
+      seen.add(k);
+      tripRows.push([mask, start, pi]);
+    }
+    tripRows.sort((a, b) => a[1] - b[1]);
+    const json = JSON.stringify({ v: 1, routeId: id, generatedAt, patterns: r.patterns.map((p) => ({ stops: p.stops, offsets: p.times })), trips: tripRows });
+    fs.writeFileSync(path.join(SCHEDULE_DIR, `${id}.json`), json);
+    bytes += json.length;
+    files++;
+  }
+  log(`Wrote ${files} line timetables to ${SCHEDULE_DIR} (${(bytes / 1e6).toFixed(1)} MB in total)`);
 }
 
 main().catch((e) => {

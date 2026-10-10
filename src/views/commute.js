@@ -10,6 +10,7 @@ import { draggableSheet } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { track, trackDetail, bucket, hourOfDay, weekday } from '../analytics.js';
 import { liveSummary, lineBadge, lineTitle, isWeekendLine } from './liveInfo.js';
+import { showLineInfo } from './lineInfo.js';
 
 export async function render(root, ctx, { slot }) {
   const fav = ctx.favorites[slot];
@@ -122,7 +123,7 @@ export async function render(root, ctx, { slot }) {
           }),
           lineBadge(route, on ? lines.colorOf(id) : null),
           h('span', { class: 'line-text' },
-            lineTitle(route),
+            lineTitle(route, () => showLineInfo(ctx, city, route, st.stopId)),
             on ? liveSummary(live) : h('small', { class: 'muted' }, 'Hidden from the map')));
       });
       return h('div', { class: 'stop-section' },

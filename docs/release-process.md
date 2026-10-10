@@ -122,6 +122,8 @@ sequenceDiagram
   P->>P: delete the old version's files
 ```
 
+- **The app reloads only when the person taps Update.** A first visit also installs the
+  offline copy, but that never reloads the page (it used to, until 2026-10-10).
 - **Nobody is stuck on an old version for long.** It updates at the latest on the next
   cold start after the download.
 - **No mixed versions.** The new files go into a separate cache and switch over all at once.
