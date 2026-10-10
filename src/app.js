@@ -7,7 +7,7 @@ import { storagePrefix } from './config.js';
 import { build } from './build.js';
 import { registerServiceWorker } from './updates.js';
 import { watchUser } from './auth.js';
-import { loadFavorites } from './store.js';
+import { loadFavorites, adoptDemoFavorites } from './store.js';
 import { loadCityIndex, loadCity } from './cityData.js';
 import * as login from './views/login.js';
 import * as cityView from './views/city.js';
@@ -111,7 +111,7 @@ async function start() {
     const saved = (() => { try { return localStorage.getItem(CITY_KEY); } catch { return null; } })();
     const meta = ctx.cityIndex.cities.find((c) => c.id === saved);
     const [, favs] = await Promise.all([meta && !ctx.city ? ctx.setCity(meta) : null, loadFavorites(ctx.user)]);
-    ctx.favorites = favs;
+    ctx.favorites = await adoptDemoFavorites(ctx.user, favs).catch((e) => { console.warn('Demo commutes not copied', e); return favs; });
   } catch (e) {
     console.error(e);
     root.replaceChildren(errorBox(e));

@@ -12,11 +12,15 @@ export const isDebug = channel === 'debug';
 export const storagePrefix = isDebug ? 'kb.debug.' : 'kb.';
 export const favoritesCollection = isDebug ? 'favoritesDebug' : 'favorites';
 
+// Firebase project "knight-bus" (console.firebase.google.com/project/knight-bus-a91d3).
 export const firebaseConfig = {
-  apiKey: 'REPLACE_ME',
-  authDomain: 'REPLACE_ME.firebaseapp.com',
-  projectId: 'REPLACE_ME',
-  appId: 'REPLACE_ME',
+  apiKey: 'AIzaSyCYVKARDk1rmCuBo16avHQYR429ychDAHY',
+  authDomain: 'knight-bus-a91d3.firebaseapp.com',
+  projectId: 'knight-bus-a91d3',
+  storageBucket: 'knight-bus-a91d3.firebasestorage.app',
+  messagingSenderId: '443434520716',
+  appId: '1:443434520716:web:9e5d3efecbabb07eefaba9',
+  measurementId: 'G-91J047X5GH',
 };
 
 export const FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';

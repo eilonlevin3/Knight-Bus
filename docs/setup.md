@@ -32,6 +32,9 @@ Without Firebase, the app already works in **local demo mode**.
    [src/config.js](../src/config.js).
 6. Commit and push. Test on `debug` first ([release-process.md](release-process.md)).
 
+**Done for this repo on 2026-10-10:** project `knight-bus-a91d3`, Google and Email/Password
+sign-in, authorized domain `eilonlevin3.github.io`, Firestore in `me-west1`, rules published.
+
 The Firebase web config is **not a secret**. It only identifies the project. The Firestore
 rules are what protect user data.
 

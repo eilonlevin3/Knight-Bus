@@ -40,6 +40,7 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | REQ-AUTH-1 | A user can create an account and sign in with email and password. | Done |
 | REQ-AUTH-2 | A user can sign in with a Google account. | Done |
 | REQ-AUTH-3 | All screens except sign-in need a signed-in user. The user can sign out. | Done |
+| REQ-AUTH-5 | On the first sign-in on a device, commutes saved there in demo mode are copied into the account (empty slots only), then removed from the device. | Done |
 | REQ-AUTH-4 | If Firebase is not configured yet, the app offers a *local demo mode*, which stores data only on the device. This is for development. | Done |
 
 ## Location and city data

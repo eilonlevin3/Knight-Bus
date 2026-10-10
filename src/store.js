@@ -54,6 +54,24 @@ export async function saveFavorite(user, slot, favorite) {
   await fs.setDoc(fs.doc(d, 'users', user.uid, favoritesCollection, String(slot)), fav);
 }
 
+// The first time someone signs in on a device where they used demo mode, copy the commutes
+// saved there into their account, so nothing is lost. Only fills empty slots; runs once.
+// @req REQ-AUTH-5
+export async function adoptDemoFavorites(user, current) {
+  if (!firebaseConfigured || user.local) return current;
+  const demo = readLocal('local');
+  const slots = Object.keys(demo).filter((slot) => demo[slot] && !current[slot]);
+  if (!slots.length) return current;
+  const merged = { ...current };
+  for (const slot of slots) {
+    const { name, cityId, stops, origin = null, destination = null } = demo[slot];
+    await saveFavorite(user, Number(slot), { name, cityId, stops, origin, destination });
+    merged[slot] = demo[slot];
+  }
+  try { localStorage.removeItem(localKey('local')); } catch {}
+  return merged;
+}
+
 export async function deleteFavorite(user, slot) {
   if (!firebaseConfigured || user.local) {
     const all = readLocal(user.uid);
