@@ -50,7 +50,9 @@ export class LiveLines {
     OffsetPolyline ||= makeOffsetPolyline(L);
     const routeIds = [...new Set(this.entries.map((e) => e.routeId))];
     const n = routeIds.length;
-    const weight = n > 4 ? 4 : 5;
+    // A commute has a few lines; a busy stop on the home map can have dozens.
+    const weight = n > 6 ? 3 : n > 4 ? 4 : 5;
+    const gap = n > 12 ? 1.5 : n > 6 ? 3 : weight + 1;
     routeIds.forEach((id, i) => {
       const route = this.city.routes.get(id);
       const path = this.city.shapeOf(route);
@@ -63,7 +65,7 @@ export class LiveLines {
       // (If the stop is somehow not on the line, draw it all as outbound.)
       const [incoming, outbound] = idx.length ? splitPath(path, pos[Math.min(...idx)]) : [[], path];
       const color = this.colorOf(id);
-      const offset = (i - (n - 1) / 2) * (weight + 1); // pixels (src/lib/offsetLine.js)
+      const offset = (i - (n - 1) / 2) * gap; // pixels (src/lib/offsetLine.js)
       const tip = `Line ${route.short} → ${route.dest}`;
       const layers = [
         new OffsetPolyline(outbound, { color: lighten(color, 0.3), weight, opacity: 0.6, offset, lineCap: 'butt' }),

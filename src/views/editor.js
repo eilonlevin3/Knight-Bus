@@ -19,8 +19,9 @@ export async function render(root, ctx, { slot }) {
   // Working copy; nothing is saved until "Save favorite".
   const draft = existing
     ? structuredClone(existing)
-    : { name: `Commute ${slot}`, cityId: city.id, stops: [] };
-  draft.name = commuteName(draft, slot);
+    : { name: '', cityId: city.id, stops: [] };
+  // A default name ("Commute 2", or the older "Favorite 2") shows as an empty box with a hint.
+  if (/^(Commute|Favorite) \d$/.test(draft.name || '')) draft.name = '';
   // Optional start point and destination: { lat, lon, label } or null.
   draft.origin ??= null;
   draft.destination ??= null;
@@ -143,7 +144,7 @@ export async function render(root, ctx, { slot }) {
       search,
       results,
       h('div', { class: 'row' },
-        h('button', { onclick: () => (draft.stops.length ? go('summary') : ctx.go('#/menu')) }, 'Cancel')),
+        h('button', { onclick: () => (draft.stops.length ? go('summary') : ctx.go('#/home')) }, 'Cancel')),
     ];
   }
 
@@ -179,7 +180,7 @@ export async function render(root, ctx, { slot }) {
         ' ', h('button', { class: 'link small', onclick: () => go('pick') }, 'Change stop')),
       h('div', { class: 'line-list' }, ...rows),
       h('div', { class: 'row sticky' },
-        h('button', { onclick: () => (draft.stops.length ? go('summary') : ctx.go('#/menu')) }, 'Cancel'),
+        h('button', { onclick: () => (draft.stops.length ? go('summary') : ctx.go('#/home')) }, 'Cancel'),
         h('button', {
           class: 'primary',
           disabled: state.checked.size === 0,
@@ -259,7 +260,10 @@ export async function render(root, ctx, { slot }) {
   }
 
   function paintSummary() {
-    const name = h('input', { type: 'text', value: draft.name, maxLength: 40, oninput: (e) => (draft.name = e.target.value) });
+    const name = h('input', {
+      type: 'text', value: draft.name, maxLength: 40, placeholder: `e.g. To work (otherwise: Commute ${slot})`,
+      oninput: (e) => (draft.name = e.target.value),
+    });
     const stopCards = draft.stops.map((st, i) => h('div', { class: 'card' },
       h('div', { class: 'row between' },
         h('b', {}, `Stop ${i + 1}: ${st.stopName}`),
@@ -276,7 +280,7 @@ export async function render(root, ctx, { slot }) {
 
     return [
       h('h2', {}, `Commute ${slot}`),
-      h('label', { class: 'field' }, 'Name', name),
+      h('label', { class: 'field' }, 'Name (shown on its home-screen button)', name),
       placeCard('origin'),
       ...stopCards,
       draft.stops.length < MAX_STOPS_PER_FAVORITE
@@ -284,7 +288,7 @@ export async function render(root, ctx, { slot }) {
         : null,
       placeCard('destination'),
       h('div', { class: 'row sticky' },
-        h('button', { onclick: () => ctx.go('#/menu') }, 'Cancel'),
+        h('button', { onclick: () => ctx.go('#/home') }, 'Cancel'),
         h('button', {
           class: 'primary',
           disabled: draft.stops.length === 0,
@@ -301,7 +305,7 @@ export async function render(root, ctx, { slot }) {
               trackDetail('commute_saved', { slot, commute: draft });
               await ctx.reloadFavorites();
               toast('Commute saved');
-              ctx.go('#/menu');
+              ctx.go('#/home');
             } catch (err) {
               toast(`Could not save: ${err.message}`);
               e.target.disabled = false;
@@ -316,7 +320,7 @@ export async function render(root, ctx, { slot }) {
               track('commute_cleared', { slot });
               await ctx.reloadFavorites();
               toast('Commute cleared');
-              ctx.go('#/menu');
+              ctx.go('#/home');
             },
           }, 'Clear this commute')
         : null,
@@ -333,6 +337,11 @@ export async function render(root, ctx, { slot }) {
   update();
   if (state.mode === 'summary') fitSummary();
   setTimeout(() => map.invalidateSize(), 0);
+
+  // "New commute" pressed while a stop was open on the home map: start with that stop.
+  const startStop = !existing && ctx.newCommuteStopId ? city.stops.get(ctx.newCommuteStopId) : null;
+  ctx.newCommuteStopId = null;
+  if (startStop) { map.setView([startStop.lat, startStop.lon], 16); pickStop(startStop, 'home'); }
 
   return () => {
     stopWatch();

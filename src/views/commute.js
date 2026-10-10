@@ -5,7 +5,7 @@ import { h } from '../lib/dom.js';
 import { createMap, stopLayer, userMarker, flagMarker, flagHtml, legendControl, lighten, escapeHtml } from '../map.js';
 import { watchPosition } from '../location.js';
 import { LiveLines } from '../liveLines.js';
-import { approachPath } from '../lib/routeGeometry.js';
+import { approachPoints } from '../lib/mapFit.js';
 import { draggableSheet } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { track, trackDetail, bucket, hourOfDay, weekday } from '../analytics.js';
@@ -83,12 +83,7 @@ export async function render(root, ctx, { slot }) {
   function fitCommute() {
     const pts = [];
     for (const f of ['origin', 'destination']) if (fav[f]) pts.push([fav[f].lat, fav[f].lon]);
-    for (const e of all) {
-      const route = city.routes.get(e.routeId);
-      const idx = route ? route.stops.findIndex((s) => s.id === e.stopId) : -1;
-      if (idx < 0) continue;
-      pts.push(...approachPath(route, city.shapeOf(route), idx, 5));
-    }
+    pts.push(...approachPoints(city, all));
     for (const st of fav.stops) {
       const s = city.stops.get(st.stopId);
       if (s) pts.push([s.lat, s.lon]);
@@ -139,7 +134,7 @@ export async function render(root, ctx, { slot }) {
     const scroll = sheet.scrollTop;
     sheet.replaceChildren(
       h('div', { class: 'row between' },
-        h('button', { class: 'link', onclick: () => ctx.go('#/menu') }, '← Menu'),
+        h('button', { class: 'link', onclick: () => ctx.go('#/home') }, '← Home'),
         h('h2', {}, commuteName(fav, slot)),
         h('button', { class: 'link', onclick: () => ctx.go(`#/edit/${slot}`) }, '✎ Edit')),
       h('p', { class: 'muted small' }, 'Uncheck a line to hide it here. Your saved commute stays the same.'),

@@ -89,7 +89,7 @@ Knight Bus/
 │   ├── analytics.js         Usage insights: consent first, safe events, debug-only details
 │   ├── styles.css
 │   ├── lib/                 dom.js (UI helper), polyline.js (shape encoding), routeGeometry.js (positions along a line)
-│   └── views/               One file per screen: login, city, menu, editor, commute
+│   └── views/               One file per screen: login, city, home, editor, commute, privacy, report
 ├── pipeline/
 │   ├── cities.json          Which cities exist and their boundaries
 │   └── build-city-data.mjs  National GTFS → data/cities/<city>.json

@@ -11,9 +11,10 @@ flowchart TD
   C -- no --> G[Ask for GPS → find city<br/>or pick from list]
   G --> D[Download city data]
   D --> M
-  C -- yes --> M[Main menu<br/>Favorite 1 · 2 · 3]
-  M -- tap empty favorite / ✎ --> E[Editor]
-  M -- tap saved favorite --> V[Commute view]
+  C -- yes --> M[Home screen<br/>map around you · saved commutes]
+  M -- ＋ New commute / ✎ --> E[Editor]
+  M -- tap a saved commute --> V[Commute view]
+  M -- tap a bus stop --> M
   V -- ✎ Edit --> E
   E -- Save commute --> M
 ```
@@ -32,18 +33,51 @@ flowchart TD
 Code: [views/login.js](../src/views/login.js), [views/city.js](../src/views/city.js),
 [location.js](../src/location.js), [cityData.js](../src/cityData.js).
 
-## 2. Main menu
+## 2. Home screen
 
-- Three large buttons, **Commute 1, 2, 3** (REQ-FAV-1). A saved favorite shows its name and
-  stops. An empty one says *Tap to set up*.
-- A **✎** button next to each opens the editor (REQ-FAV-2).
-- Top right: the current city. Tap it to change city.
-- Bottom: the signed-in email, *Sign out* (REQ-AUTH-3) and *Privacy & usage data*.
-- The first time, a card asks **Help improve Knight Bus?** (REQ-ANL-3): *Share usage* or
-  *No thanks*. Until answered, nothing is recorded. The *Privacy & usage data* screen
-  explains what is kept and has the on/off switch. What is recorded: [privacy.md](privacy.md).
+The first screen after sign-in (REQ-HOME-1). It used to be called the main menu.
 
-Code: [views/menu.js](../src/views/menu.js).
+```
+┌──────────────────────────────┐
+│            MAP               │  centered on you (blue dot); ◎ returns to you
+│   ○  ○   ○ ← bus stops       │  tap a stop → its lines + live buses
+│        ◉ you                 │
+├───────────── ▬ ──────────────┤  drag the handle: more map / more list
+│ Knight Bus        📍 city    │
+│ My commutes                  │
+│ [ To work            ] [✎]   │  one button per SAVED commute, with your name for it
+│ [ Home               ] [✎]   │
+│ Tap a bus stop on the map…   │
+│               (＋ New commute)│  small, bottom right, while a slot is free
+└──────────────────────────────┘
+```
+
+**The map** opens around your location. Until the phone has a fix, it uses the last
+position remembered on this phone, or the city center. The **◎** button brings you back.
+
+**Tap a bus stop** (REQ-HOME-2). Zoom in if no stops show. The stop is highlighted, the map
+zooms to it and to where its buses are in their last ~5 minutes, and **every line through
+the stop is drawn**: solid where it comes to the stop, lighter after it, side by side where
+lines share a street. Live buses appear as in a commute: the next two and the last that
+passed, per line. The panel shows the stop first, with one row per line and its live status.
+
+**Line checkboxes** (REQ-HOME-3). All lines start checked; at a very busy stop, the first
+30. Uncheck a line to hide it and its buses. **✕ Close** returns to the plain map.
+
+**My commutes** (REQ-FAV-1, REQ-FAV-2, REQ-FAV-4). Only commutes you saved are shown, each
+as a button with the **name you gave it** ("Commute N" if you gave none), its stops and
+number of lines. Tap it to open the commute; **✎** opens the editor.
+
+**＋ New commute**, bottom right, appears while fewer than three are saved. If a stop is
+open on the map, the new commute starts at that stop.
+
+Also in the panel: the city (tap to change), the signed-in email, *Sign out* (REQ-AUTH-3),
+*Privacy & usage data*, and for admins *📊 Commute report*. The first time, a card asks
+**Help improve Knight Bus?** (REQ-ANL-3): *Share usage* or *No thanks*. Until answered,
+nothing is recorded. What is recorded: [privacy.md](privacy.md).
+
+Code: [views/home.js](../src/views/home.js), [liveLines.js](../src/liveLines.js),
+[lib/mapFit.js](../src/lib/mapFit.js), [lib/sheetDrag.js](../src/lib/sheetDrag.js).
 
 ## 3. Editing a favorite
 
@@ -60,7 +94,7 @@ stateDiagram-v2
   Summary --> Lines: Edit a stop
   Summary --> Place: Set start / destination
   Place --> Summary: tap map / pick address / my location
-  Summary --> [*]: Save commute → menu
+  Summary --> [*]: Save commute → home
 ```
 
 **Pick a stop** (REQ-EDIT-1). Zoom in to see stops as white dots, then tap one. You can also
@@ -80,8 +114,9 @@ Unchecking removes the line and its buses.
 **Save stop** (REQ-EDIT-5) stores the stop with its checked lines and opens the summary.
 From there, *+ Add stop 2* repeats the steps for a second stop (up to 2 per favorite).
 
-**Summary** (REQ-FAV-4, REQ-EDIT-6). Rename the favorite. Edit or remove each stop.
-*Save commute* saves it to your account and returns to the menu. *Clear this commute*
+**Summary** (REQ-FAV-4, REQ-EDIT-6). **Name the commute**: the name becomes the text of its
+home-screen button (leave it empty for "Commute N"). Edit or remove each stop.
+*Save commute* saves it to your account and returns to the home screen. *Clear this commute*
 empties the slot.
 
 **Start point and destination** (REQ-FAV-5, optional). The summary shows *Start point*

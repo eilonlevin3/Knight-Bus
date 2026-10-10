@@ -15,7 +15,7 @@ export function render(root, ctx) {
       await ctx.setCity(meta, (msg) => (status.textContent = msg));
       track('city_chosen', { city: meta.id, how });
       trackDetail('city_chosen', { city: meta.id, how, position: ctx.position });
-      ctx.go('#/menu');
+      ctx.go('#/home');
     } catch (e) {
       status.textContent = e.message;
       root.querySelectorAll('button').forEach((b) => (b.disabled = false));
@@ -58,7 +58,7 @@ export function render(root, ctx) {
         h('button', { class: 'primary', onclick: useGps }, '📍 Use my location'),
         status,
         list,
-        ctx.city ? h('button', { class: 'link', onclick: () => ctx.go('#/menu') }, 'Cancel') : null)),
+        ctx.city ? h('button', { class: 'link', onclick: () => ctx.go('#/home') }, 'Cancel') : null)),
   );
   showList();
 }

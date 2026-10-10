@@ -2,14 +2,14 @@
 
 Requirements: REQ-ANL-1 to REQ-ANL-5. Decision: [ADR-0008](adr/0008-usage-insights.md).
 Code: [src/analytics.js](../src/analytics.js), [src/views/privacy.js](../src/views/privacy.js),
-[src/views/menu.js](../src/views/menu.js), [firestore.rules](../firestore.rules).
+[src/views/home.js](../src/views/home.js), [firestore.rules](../firestore.rules).
 
 This is the source for what the app tells people on its *Privacy & usage data* screen. If
 you change what is collected, change this file, the screen text and the code together.
 
 ## The rules
 
-1. **Nothing is recorded until the person agrees.** The menu asks once: *Help improve Knight
+1. **Nothing is recorded until the person agrees.** The home screen asks once: *Help improve Knight
    Bus?* with *Share usage* and *No thanks*. No answer means off.
 2. **It can be turned off any time**: *Menu → Privacy & usage data*.
 3. **The user version collects only "safe" data** (table below): no names, emails, account
@@ -23,7 +23,7 @@ you change what is collected, change this file, the screen text and the code tog
 |------|-------|-----------------|
 | Sign-in: email or Google account | Firebase Authentication | The account owner; project admins |
 | Saved commutes: stops, lines, start/destination | Firestore `users/{uid}/favorites` | The account owner; project admins |
-| Location | Used on the phone to pick the city and draw "you are here" | Not saved, not sent |
+| Location | Used on the phone to pick the city, center the home map and draw "you are here". The last position is remembered **on the phone only** (`kb.lastPosition`), for a quick start | Never sent |
 
 ## Safe usage data: everyone who agreed (user and debug versions)
 
@@ -34,9 +34,10 @@ id; the account is never attached.
 |-------|------------------|
 | `app_open` | installed app or browser, hour, weekday |
 | `signed_in` | method: google / password |
-| `screen_view`, `screen_time` | screen name (login, city, menu, editor, commute, privacy), seconds on it (background time not counted) |
+| `screen_view`, `screen_time` | screen name (login, city, home, editor, commute, privacy, report), seconds on it (background time not counted) |
 | `city_chosen` | city, how: GPS or list |
-| `stop_picked` | how: map or search |
+| `stop_picked` | how: map, search, or from the home map |
+| `stop_explored` | city, number of lines at the stop (as a range). Not which stop |
 | `place_set` | start or destination, how: tap / search / my location |
 | `commute_saved` | slot, city, new or edited, number of stops, lines (as a range: 1–2, 3–5, 6+), has start, has destination, includes a weekend line |
 | `commute_opened` | slot, city, **hour and weekday**, number of stops, lines (range), has start/destination |
@@ -59,6 +60,7 @@ Google Analytics. Google's rules forbid precise locations there.
 | Event | Extra detail |
 |-------|--------------|
 | `city_chosen` | exact location, if GPS was used |
+| `stop_explored` | which stop was opened on the home map |
 | `commute_saved` | the whole commute: stop ids and names, line ids, start and destination coordinates |
 | `commute_opened` | the whole commute, plus the phone's exact location at that moment |
 | `live_seen` | per stop and line: how many stops away each bus was |

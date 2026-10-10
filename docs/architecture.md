@@ -37,7 +37,7 @@ flowchart LR
 | Part | What it does | Code | Doc |
 |------|--------------|------|-----|
 | App shell | The page, the screen router, start-up | [index.html](../index.html), [src/app.js](../src/app.js) | [user-flows.md](user-flows.md) |
-| Screens | Sign-in, choose city, menu, editor, commute | [src/views/](../src/views/) | [user-flows.md](user-flows.md) |
+| Screens | Sign-in, choose city, home, editor, commute, privacy, report | [src/views/](../src/views/) | [user-flows.md](user-flows.md) |
 | Accounts | Email and Google sign-in through Firebase Auth | [src/auth.js](../src/auth.js) | [ADR-0004](adr/0004-firebase.md) |
 | Favorites storage | Saves favorites per user in Firestore | [src/store.js](../src/store.js), [firestore.rules](../firestore.rules) | [data-model.md](data-model.md#favorite) |
 | Location | GPS and choosing the city | [src/location.js](../src/location.js) | [user-flows.md](user-flows.md#1-first-launch) |
@@ -69,7 +69,7 @@ The URL hash picks the screen:
 |------|--------|------|
 | `#/login` | Sign in / create account | [views/login.js](../src/views/login.js) |
 | `#/city` | Choose metropolitan area | [views/city.js](../src/views/city.js) |
-| `#/menu` | Main menu, three favorites | [views/menu.js](../src/views/menu.js) |
+| `#/home` (old name `#/menu` still works) | Home screen: map around you, stop explorer, saved commutes | [views/home.js](../src/views/home.js) |
 | `#/privacy` | Privacy notice, usage-sharing switch | [views/privacy.js](../src/views/privacy.js) |
 | `#/report` | Commute report (admins only) | [views/report.js](../src/views/report.js) |
 | `#/edit/1` … `#/edit/3` | Edit a favorite | [views/editor.js](../src/views/editor.js) |

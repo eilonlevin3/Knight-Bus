@@ -1,5 +1,6 @@
 // App start-up and screen router. Docs: docs/architecture.md#the-app
-// Screens are chosen by the URL hash: #/login, #/city, #/menu, #/edit/1, #/commute/1
+// Screens are chosen by the URL hash: #/login, #/city, #/home, #/edit/1, #/commute/1
+// (#/menu is the old name of #/home and still works, for apps installed before the rename.)
 // @req REQ-AUTH-3 @req REQ-PWA-2
 
 import { h } from './lib/dom.js';
@@ -11,7 +12,7 @@ import { loadFavorites, adoptDemoFavorites, isAdmin } from './store.js';
 import { loadCityIndex, loadCity } from './cityData.js';
 import * as login from './views/login.js';
 import * as cityView from './views/city.js';
-import * as menu from './views/menu.js';
+import * as home from './views/home.js';
 import * as editor from './views/editor.js';
 import * as commute from './views/commute.js';
 import * as privacy from './views/privacy.js';
@@ -67,18 +68,18 @@ async function route() {
   cleanup = null;
   root.replaceChildren();
 
-  const [, name = 'menu', param] = location.hash.match(/^#\/(\w+)(?:\/(\d))?/) || [];
+  const [, name = 'home', param] = location.hash.match(/^#\/(\w+)(?:\/(\d))?/) || [];
 
   // Guards: signed in -> city chosen -> requested screen.
   if (!ctx.user) { analytics.screen('login'); return login.render(root, ctx); }
   if (name === 'city' || !ctx.city) { analytics.screen('city'); return cityView.render(root, ctx); }
   if (name === 'privacy') { analytics.screen('privacy'); return privacy.render(root, ctx); }
 
-  const views = { menu, edit: editor, commute, report: ctx.isAdmin ? report : menu };
-  const view = views[name] || menu;
+  const views = { home, menu: home, edit: editor, commute, report: ctx.isAdmin ? report : home };
+  const view = views[name] || home;
   const slot = Number(param);
-  if ((view === editor || view === commute) && ![1, 2, 3].includes(slot)) return ctx.go('#/menu');
-  analytics.screen(view === menu ? 'menu' : view === editor ? 'editor' : view === report ? 'report' : 'commute');
+  if ((view === editor || view === commute) && ![1, 2, 3].includes(slot)) return ctx.go('#/home');
+  analytics.screen(view === home ? 'home' : view === editor ? 'editor' : view === report ? 'report' : 'commute');
 
   // Render into a container that is already in the page (the map needs its size),
   // with a loading overlay on top until the screen is ready.

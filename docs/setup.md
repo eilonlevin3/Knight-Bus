@@ -42,7 +42,7 @@ sign-in, authorized domain `eilonlevin3.github.io`, Firestore in `me-west1`, rul
 3. **Firestore → Data → Start collection**: collection ID `admins`, document ID = your UID,
    add one field (`role` = `owner`, any field works), **Save**.
 4. Publish the current [firestore.rules](../firestore.rules) (*Firestore → Rules*).
-5. Reopen the app: the menu now shows **📊 Commute report**.
+5. Reopen the app: the home screen's panel now shows **📊 Commute report**.
 
 The Firebase web config is **not a secret**. It only identifies the project. The Firestore
 rules are what protect user data.

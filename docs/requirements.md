@@ -57,14 +57,22 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | REQ-DATA-6 | Each line in a city bundle carries its scheduled travel minutes from the first stop to each stop, so the app knows where a bus is "5 minutes before your stop". | Done |
 | REQ-DATA-7 | Include bus lines that are **not** in the government feed: the municipal weekend service *Naaim BeSofash* (lines 705–729, e.g. 708), read from the Tel Aviv municipality's public map server. They appear at the same stops as other lines. | Done |
 
+## Home screen
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| REQ-HOME-1 | The first screen after sign-in is the **home screen** (formerly "main menu"). Its upper half is a map centered on the user's location, with a button to return to it. | Done |
+| REQ-HOME-2 | Tapping a bus stop on the home map selects it: the map zooms to the stop and the last ~5 minutes of every line before it, **all lines through the stop are drawn** (incoming solid, outbound lighter) with their **live buses**, and the panel lists them with live status, the same as in a commute. | Done |
+| REQ-HOME-3 | In the stop's line list every line has a checkbox, all checked (for very busy stops, the first 30). Unchecking hides a line. Closing the stop returns to the plain map. **＋ New commute** with a stop selected starts the new commute at that stop. | Done |
+
 ## Favorite commutes
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| REQ-FAV-1 | The main menu shows three saved-commute buttons, labeled **Commute 1, 2, 3** (or the name the user gave). Older saves named "Favorite N" show as "Commute N". | Done |
+| REQ-FAV-1 | The home screen shows a button for each **saved** commute (up to three), labeled with the name the user gave it. Empty slots are not shown. A small **＋ New commute** button sits at the bottom right while a slot is free. | Done |
 | REQ-FAV-2 | Each favorite has an edit option. | Done |
 | REQ-FAV-3 | Favorites are saved to the user's account, so they follow the user to other devices. | Done |
-| REQ-FAV-4 | A favorite has a name the user can edit, and the user can clear it. | Done |
+| REQ-FAV-4 | The user names each commute in the editor; that name is the text of its home-screen button. Without a name it is called "Commute N". The user can rename or clear a commute. | Done |
 | REQ-FAV-5 | A favorite can have an optional **start point** and **destination**. The user sets each by tapping the map or searching an address; the start point can also be the current location. | Done |
 
 ## Editing a favorite commute
@@ -76,7 +84,7 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | REQ-EDIT-3 | Each line has a checkbox. **By default none are checked.** The user checks the lines they want. | Done |
 | REQ-EDIT-4 | A checked line is drawn on the map along its whole route, from its first stop to its last. | Done |
 | REQ-EDIT-5 | "Save stop" stores the stop and its checked lines. The user then adds the next stop or finishes. | Done |
-| REQ-EDIT-6 | "Save commute" saves the commute and returns to the main menu. | Done |
+| REQ-EDIT-6 | "Save commute" saves the commute and returns to the home screen. | Done |
 
 ## Live buses
 
@@ -108,6 +116,6 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 |----|-------------|--------|
 | REQ-ANL-1 | With the person's agreement, record **safe, anonymous** usage: app opens, sign-in method, screens and time on each, features used, city and hour. Never names, emails, account ids, stop or line ids, addresses or coordinates. The exact list is in privacy.md. | Done |
 | REQ-ANL-2 | A report of what commutes people save, as **counts only**: people and commutes, commutes per person, by city, 1 or 2 stops, start/destination set or not, most saved lines, by month. A stop is listed only when at least 3 different people saved it. Real users and debug testers are shown separately. | Done |
-| REQ-ANL-3 | Nothing is recorded until the person agrees. The menu asks once; a *Privacy & usage data* screen explains what is kept and lets them turn sharing on or off at any time. | Done |
+| REQ-ANL-3 | Nothing is recorded until the person agrees. The home screen asks once; a *Privacy & usage data* screen explains what is kept and lets them turn sharing on or off at any time. | Done |
 | REQ-ANL-5 | The report is open only to **admins**. Admins are listed by hand in the database (`admins/{uid}`); the app cannot add one. The database rules refuse the report's query to anyone else. | Done |
 | REQ-ANL-4 | The **debug** version is counted apart from real users (kept out of the normal reports), and, with agreement to its own clearer notice, also records details: the stops and lines of commutes, start/destination points, and exact location when a commute is opened. Details are stored in our own database under the tester's account, never in Google Analytics. | Done |

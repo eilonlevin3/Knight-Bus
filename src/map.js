@@ -3,7 +3,10 @@
 
 const STOP_MIN_ZOOM = 15;
 
-export const LINE_COLORS = ['#7b2cbf', '#e85d04', '#0077b6', '#2a9d8f', '#d00000', '#6a994e', '#b5179e', '#495057'];
+export const LINE_COLORS = [
+  '#7b2cbf', '#e85d04', '#0077b6', '#2a9d8f', '#d00000', '#6a994e', '#b5179e', '#495057',
+  '#bc6c25', '#3a86ff', '#588157', '#9d0208', '#5f0f40', '#0a9396', '#ca6702', '#414833',
+];
 
 export function createMap(el, center, zoom = 15) {
   const map = L.map(el, { preferCanvas: true, zoomControl: false, attributionControl: true }).setView(center, zoom);

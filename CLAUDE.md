@@ -9,7 +9,7 @@ For what the app does and how it is built, start at [README.md](README.md) (docs
 changed open item, update the matching section and the "Last updated" line. Remove things
 that stop being true. Do not copy what the docs already say; link to them.
 
-Last updated: 2026-10-10 (after release `34aad5a`).
+Last updated: 2026-10-10 (home screen round, on `debug` only; main is still `34aad5a`).
 
 ## The owner and how to work with them
 
@@ -66,7 +66,7 @@ Claude could not do these in this setup; ask the owner, with exact steps:
 - Making the repo public, and anything else that publishes content, was blocked for
   Claude by the permission settings; the owner ran the command.
 - Signing in to the app. Claude must not create accounts or sign in, so screens behind
-  sign-in (menu, editor, commute, privacy, report) cannot be clicked through by Claude on
+  sign-in (home, editor, commute, privacy, report) cannot be clicked through by Claude on
   the real backend.
 
 ## This computer
@@ -88,8 +88,15 @@ Claude could not do these in this setup; ask the owner, with exact steps:
 - **Screens behind sign-in:** with Firebase configured there is no demo mode, so:
   - load a view module in the browser with its data call replaced (fetch the file, swap
     the `store.js` import for a stub, import it from a Blob URL), or
-  - temporarily set the Firebase `apiKey` to `REPLACE_ME` locally to get demo mode back.
-    Never commit that.
+  - best: copy `index.html manifest.webmanifest sw.js src icons data` to a scratch folder,
+    set the Firebase `apiKey` there to `REPLACE_ME` (demo mode comes back), and serve that
+    copy. The repo itself stays untouched. This is how the home screen was clicked through.
+- **Leftover servers:** stopping a background server task does not always kill the Python
+  process, and Windows lets a second server bind the same port, so requests go to the
+  *old* one. Before starting a server, check `netstat -ano | grep :8081` and `taskkill`
+  leftovers. If the page shows the wrong files, this is why.
+- **Clicking a bus stop** in an automated browser needs exact pixel coordinates; zoom into
+  a screenshot region first to find the marker's center.
 - **Serving locally:** use a small Python server that sends `Cache-Control: no-store`.
   The plain `python -m http.server` let Chrome serve stale files and wasted a lot of time.
   A fresh port is a fresh origin (clean service worker and storage).
@@ -151,6 +158,11 @@ Claude could not do these in this setup; ask the owner, with exact steps:
 - Address search by OpenStreetMap Nominatim: only on pressing Search, 1 request per second (ADR-0007).
 - Usage insights: opt-in; safe anonymous events for everyone; detail only in debug; an
   admin report with counts only, stops listed from 3 people up (ADR-0008, docs/privacy.md).
+- The first screen is the **home screen** (the owner renamed it from "main menu"): map
+  around the user on top, tap any stop to explore its lines, saved commutes below. Route
+  `#/home`; `#/menu` is kept as an alias for apps installed earlier.
+- Only saved commutes get a button, labeled with the user's own name for it; new ones are
+  made with the small ＋ New commute button (bottom right).
 - UI wording: saved items are "Commute 1/2/3" on screen. The code and data still say
   `favorite` (collections `favorites`, `favoritesDebug`): do not rename stored data.
 - "Lines show up when a stop is picked" was read as: listed with checkboxes, none checked,
@@ -158,7 +170,8 @@ Claude could not do these in this setup; ask the owner, with exact steps:
 
 ## Open items
 
-- Owner to confirm on the iPhone (round of 2026-10-10): top of screen not blurred, map key
+- Owner to confirm on the iPhone: the new home screen (map around them, tapping a stop,
+  named commute buttons, ＋ New commute). And from the round of 2026-10-10: top of screen not blurred, map key
   tappable, panel drags, incoming lines solid, no circles, 708 listed at their stop, the
   usage question card, the privacy screen.
 - Owner to publish the latest Firestore rules and create their `admins` document (above).
@@ -168,4 +181,4 @@ Claude could not do these in this setup; ask the owner, with exact steps:
 - Before a public launch: a lawyer should review docs/privacy.md; set Analytics data
   retention; the workflow actions still warn about an old Node runtime (`@v4` actions).
 - Ideas not requested yet: Hebrew UI, more cities, light rail and trains (pipeline is
-  bus-only: `routeTypes: [3]`), a version line in the main app's menu.
+  bus-only: `routeTypes: [3]`), a version line on the main app's home screen.

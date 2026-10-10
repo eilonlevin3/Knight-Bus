@@ -26,7 +26,7 @@ a user can read and write only their own favorites, and a favorite has 1–2 sto
   in an older one.
 
 - `stopId` and `routeIds` are GTFS IDs, and they match the city bundle.
-- `stopName` and `stopCode` are copies, so the menu can show them without loading the bundle.
+- `stopName` and `stopCode` are copies, so the home screen can show them without loading the bundle.
 - `cityId` lets a favorite from another city still open; the app loads that city's bundle.
 
 In local demo mode the same objects are stored in `localStorage` under `kb.favorites.local`.
