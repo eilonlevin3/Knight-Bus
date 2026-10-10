@@ -47,7 +47,8 @@ flowchart LR
 | Offline | Caches app files and map tiles | [sw.js](../sw.js) | [#offline](#offline) |
 | Install | Name, icon, full-screen mode | [manifest.webmanifest](../manifest.webmanifest), [icons/](../icons/) | [ADR-0001](adr/0001-pwa.md) |
 | Data pipeline | National GTFS → one small file per city | [pipeline/](../pipeline/) | [data-pipeline.md](data-pipeline.md) |
-| Deploy | Builds data, publishes to GitHub Pages | [.github/workflows/deploy.yml](../.github/workflows/deploy.yml) | [setup.md](setup.md) |
+| Deploy | Builds main + debug, publishes to GitHub Pages | [.github/workflows/deploy.yml](../.github/workflows/deploy.yml), [scripts/build-site.sh](../scripts/build-site.sh) | [release-process.md](release-process.md) |
+| Updates | Detects new versions, offers *Update* | [src/updates.js](../src/updates.js), [src/build.js](../src/build.js) | [release-process.md](release-process.md#what-users-see-when-you-release) |
 
 ## The app
 
@@ -81,8 +82,10 @@ app before Firebase is set up.
 
 `sw.js` is a service worker. The browser runs it in the background for this site.
 
-- **App files** use *stale-while-revalidate*: the app opens at once from the cache, and new
-  versions download in the background and apply on the next launch.
+- **App files** are cached **per version** (the commit id). The app always opens from its
+  own complete copy. A new version downloads whole in the background, then the app offers
+  *Update*; otherwise the new version starts at the next cold start. Details:
+  [release-process.md](release-process.md#what-users-see-when-you-release).
 - **Map tiles** use *cache-first*. The 3,000 most recent tiles are kept.
 - **City data** is cached by `src/cityData.js` itself, keyed by version, so it downloads
   only when the pipeline publishes a change.
@@ -91,11 +94,16 @@ app before Firebase is set up.
 ## Hosting and deployment
 
 GitHub Pages serves the app over HTTPS. Phones need HTTPS for GPS and for installing.
-On every push to `main`, and every night, [deploy.yml](../.github/workflows/deploy.yml):
+On every push to `main` or `debug`, and every night,
+[deploy.yml](../.github/workflows/deploy.yml) builds **both versions** with
+[build-site.sh](../scripts/build-site.sh). For each one it:
 
-1. runs the docs check ([ADR-0005](adr/0005-docs-as-code.md)),
+1. runs the docs check ([ADR-0005](adr/0005-docs-as-code.md)) and the unit tests,
 2. downloads the national GTFS feed and builds one bundle per city,
-3. publishes the app files plus `data/cities/*.json` to Pages.
+3. stamps the version (commit id, channel) into `src/build.js` and `sw.js`.
+
+`main` is published at the site root; `debug` at `/debug/`, for testing on a phone first.
+See [release-process.md](release-process.md).
 
 The city bundles are **not** committed to git (they are large and change daily). They exist
 only in the published site.
@@ -109,3 +117,4 @@ The reasons behind these choices are in [adr/](adr/):
 - [ADR-0003](adr/0003-maps.md) OpenStreetMap raster tiles cached on view, with offline vector maps later
 - [ADR-0004](adr/0004-firebase.md) Firebase for accounts and favorites
 - [ADR-0005](adr/0005-docs-as-code.md) Docs as code, with requirement IDs checked in CI
+- [ADR-0006](adr/0006-release-channels.md) A debug version in a sub-folder of the same site

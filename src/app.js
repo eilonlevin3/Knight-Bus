@@ -3,6 +3,9 @@
 // @req REQ-AUTH-3 @req REQ-PWA-2
 
 import { h } from './lib/dom.js';
+import { storagePrefix } from './config.js';
+import { build } from './build.js';
+import { registerServiceWorker } from './updates.js';
 import { watchUser } from './auth.js';
 import { loadFavorites } from './store.js';
 import { loadCityIndex, loadCity } from './cityData.js';
@@ -13,7 +16,7 @@ import * as editor from './views/editor.js';
 import * as commute from './views/commute.js';
 
 const root = document.getElementById('app');
-const CITY_KEY = 'kb.cityId';
+const CITY_KEY = `${storagePrefix}cityId`;
 
 const ctx = {
   user: null,
@@ -125,6 +128,11 @@ watchUser((user) => {
   if (changed || !ctx.cityIndex) start();
 });
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js').catch((e) => console.warn('Service worker not registered', e));
+registerServiceWorker();
+
+// Test versions wear a badge, so you always know which one you are looking at.
+// @req REQ-REL-2
+if (build.channel !== 'main') {
+  document.body.append(h('div', { class: `channel-badge ${build.channel}`, title: build.builtAt || '' },
+    `${build.channel.toUpperCase()} · ${build.commit}`));
 }

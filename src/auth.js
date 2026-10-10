@@ -1,14 +1,14 @@
 // Sign-in, sign-up, sign-out. Docs: docs/architecture.md#accounts
 // @req REQ-AUTH-1 @req REQ-AUTH-2 @req REQ-AUTH-3 @req REQ-AUTH-4
 
-import { firebaseConfig, FIREBASE_SDK } from './config.js';
+import { firebaseConfig, FIREBASE_SDK, storagePrefix } from './config.js';
 
 export const firebaseConfigured = !firebaseConfig.apiKey.startsWith('REPLACE');
 
 let app = null;
 let fa = null; // firebase-auth module
 let auth = null;
-const LOCAL_USER_KEY = 'kb.localUser';
+const LOCAL_USER_KEY = `${storagePrefix}localUser`;
 
 export async function getFirebaseApp() {
   if (!app) {

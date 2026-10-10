@@ -1,14 +1,15 @@
-# Draws the home-screen icons (a purple triple-decker bus) into icons/.
+# Draws the home-screen icons (a purple triple-decker bus) into icons/,
+# and the orange test-version icons into icons-debug/ (docs/release-process.md).
 # Windows PowerShell:  powershell -ExecutionPolicy Bypass -File scripts/make-icons.ps1
+# @req REQ-REL-2
 Add-Type -AssemblyName System.Drawing
-$out = Join-Path $PSScriptRoot '..\icons'
-New-Item -ItemType Directory -Force $out | Out-Null
 
-function Draw-Icon([int]$size, [string]$file, [bool]$maskable) {
+function Draw-Icon([int]$size, [string]$file, [bool]$maskable, [string]$bgHex, [string]$out) {
+  New-Item -ItemType Directory -Force $out | Out-Null
   $bmp = New-Object System.Drawing.Bitmap $size, $size
   $g = [System.Drawing.Graphics]::FromImage($bmp)
   $g.SmoothingMode = 'AntiAlias'
-  $bg = [System.Drawing.ColorTranslator]::FromHtml('#3c096c')
+  $bg = [System.Drawing.ColorTranslator]::FromHtml($bgHex)
   $g.Clear($(if ($maskable) { $bg } else { [System.Drawing.Color]::Transparent }))
   $s = $size / 100.0
   if (-not $maskable) {
@@ -34,8 +35,14 @@ function Draw-Icon([int]$size, [string]$file, [bool]$maskable) {
   $g.Dispose(); $bmp.Dispose()
 }
 
-Draw-Icon 192 'icon-192.png' $false
-Draw-Icon 512 'icon-512.png' $false
-Draw-Icon 512 'maskable-512.png' $true
-Draw-Icon 180 'apple-touch-icon.png' $true   # iOS rounds the corners itself
-Write-Output "Icons written to $out"
+$variants = @(
+  @{ bg = '#3c096c'; dir = Join-Path $PSScriptRoot '..\icons' },        # main
+  @{ bg = '#e85d04'; dir = Join-Path $PSScriptRoot '..\icons-debug' }   # debug: orange
+)
+foreach ($v in $variants) {
+  Draw-Icon 192 'icon-192.png' $false $v.bg $v.dir
+  Draw-Icon 512 'icon-512.png' $false $v.bg $v.dir
+  Draw-Icon 512 'maskable-512.png' $true $v.bg $v.dir
+  Draw-Icon 180 'apple-touch-icon.png' $true $v.bg $v.dir   # iOS rounds the corners itself
+  Write-Output "Icons written to $($v.dir)"
+}

@@ -53,11 +53,11 @@ async function openCache() {
   try { return await caches.open(CACHE_NAME); } catch { return null; }
 }
 
+// Main and debug share this cache, so match the full address, not just the file name.
 async function removeOldVersions(cache, cityMeta) {
+  const base = new URL(`${dataBaseUrl}${cityMeta.file}?v=`, location.href).href;
   for (const req of await cache.keys()) {
-    if (req.url.includes(`/${cityMeta.file}?v=`) && !req.url.endsWith(`?v=${cityMeta.version}`)) {
-      await cache.delete(req);
-    }
+    if (req.url.startsWith(base) && req.url !== `${base}${cityMeta.version}`) await cache.delete(req);
   }
 }
 

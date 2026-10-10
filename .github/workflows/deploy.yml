@@ -1,12 +1,15 @@
-# Builds the city data and publishes the app to GitHub Pages.
-# Runs on every push to main, every night (fresh timetables), and by hand.
-# Docs: docs/architecture.md#hosting-and-deployment, docs/data-pipeline.md
-# @req REQ-DATA-2
+# Builds BOTH versions and publishes them together to GitHub Pages:
+#   main branch  -> https://<user>.github.io/Knight-Bus/        (what users get)
+#   debug branch -> https://<user>.github.io/Knight-Bus/debug/  (test it on your phone first)
+# Runs on every push to main or debug, every night (fresh timetables), and by hand.
+# A broken debug build never stops the main site from deploying.
+# Docs: docs/release-process.md, docs/data-pipeline.md
+# @req REQ-REL-1 @req REQ-REL-3 @req REQ-DATA-2
 name: Build data and deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, debug]
   schedule:
     - cron: '30 1 * * *' # 04:30 Israel time (summer), after the ministry publishes the new GTFS
   workflow_dispatch:
@@ -25,25 +28,62 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          path: main
+
+      - name: Is there a debug branch?
+        id: debug
+        run: |
+          if git ls-remote --exit-code --heads "https://github.com/${{ github.repository }}" debug >/dev/null; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check out debug
+        if: steps.debug.outputs.exists == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: debug
+          path: debug
+
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm ci --no-audit --no-fund
-      - name: Check docs and code agree
-        run: npm run check:docs
-      - name: Unit tests
-        run: npm test
-      - name: Build city bundles from the national GTFS feed
-        run: npm run build:data
+
+      - name: Build main site
+        run: bash main/scripts/build-site.sh main _site
         env:
           NODE_OPTIONS: --max-old-space-size=6144
-      - name: Assemble site
+
+      - name: Build debug site (allowed to fail)
+        id: debugbuild
+        if: steps.debug.outputs.exists == 'true'
+        continue-on-error: true
+        run: bash debug/scripts/build-site.sh debug _site/debug
+        env:
+          NODE_OPTIONS: --max-old-space-size=6144
+          GTFS_ZIP: ${{ github.workspace }}/main/.cache/gtfs.zip # reuse main's download
+
+      - name: Summary
         run: |
-          mkdir -p _site
-          cp -r index.html manifest.webmanifest sw.js src icons data _site/
           touch _site/.nojekyll
-          du -sh _site/data/cities/*
+          {
+            echo "### Published"
+            echo "- main: \`$(git -C main rev-parse --short HEAD)\` → /"
+            if [ "${{ steps.debug.outputs.exists }}" = "true" ]; then
+              if [ "${{ steps.debugbuild.outcome }}" = "success" ]; then
+                echo "- debug: \`$(git -C debug rev-parse --short HEAD)\` → /debug/"
+              else
+                echo "- ⚠️ debug build FAILED: /debug/ is not published this time. Open the 'Build debug site' step for the error."
+              fi
+            fi
+            echo; echo '```'; du -sh _site/data/cities/* _site/debug/data/cities/* 2>/dev/null || true; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

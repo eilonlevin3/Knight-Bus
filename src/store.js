@@ -2,9 +2,10 @@
 // @req REQ-FAV-3
 //
 // Firestore path: users/{uid}/favorites/{slot}   (slot = "1" | "2" | "3")
+// The debug version uses users/{uid}/favoritesDebug/{slot} instead (@req REQ-REL-2).
 // Local demo mode keeps the same shape in localStorage.
 
-import { FIREBASE_SDK, FAVORITE_SLOTS } from './config.js';
+import { FIREBASE_SDK, FAVORITE_SLOTS, storagePrefix, favoritesCollection } from './config.js';
 import { firebaseConfigured, getFirebaseApp } from './auth.js';
 
 let fs = null;
@@ -20,7 +21,7 @@ async function firestore() {
   return db;
 }
 
-const localKey = (uid) => `kb.favorites.${uid}`;
+const localKey = (uid) => `${storagePrefix}favorites.${uid}`;
 const readLocal = (uid) => {
   try { return JSON.parse(localStorage.getItem(localKey(uid))) || {}; } catch { return {}; }
 };
@@ -36,7 +37,7 @@ export async function loadFavorites(user) {
     return result;
   }
   const d = await firestore();
-  const snap = await fs.getDocs(fs.collection(d, 'users', user.uid, 'favorites'));
+  const snap = await fs.getDocs(fs.collection(d, 'users', user.uid, favoritesCollection));
   snap.forEach((doc) => { result[Number(doc.id)] = doc.data(); });
   return result;
 }
@@ -50,7 +51,7 @@ export async function saveFavorite(user, slot, favorite) {
     return;
   }
   const d = await firestore();
-  await fs.setDoc(fs.doc(d, 'users', user.uid, 'favorites', String(slot)), fav);
+  await fs.setDoc(fs.doc(d, 'users', user.uid, favoritesCollection, String(slot)), fav);
 }
 
 export async function deleteFavorite(user, slot) {
@@ -61,5 +62,5 @@ export async function deleteFavorite(user, slot) {
     return;
   }
   const d = await firestore();
-  await fs.deleteDoc(fs.doc(d, 'users', user.uid, 'favorites', String(slot)));
+  await fs.deleteDoc(fs.doc(d, 'users', user.uid, favoritesCollection, String(slot)));
 }

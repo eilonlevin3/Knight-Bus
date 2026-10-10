@@ -31,7 +31,8 @@ for (const m of reqText.matchAll(/^\|\s*(REQ-[A-Z]+-\d+)\s*\|.*\|\s*(Done|Planne
 
 // --- @req references in code ---
 const codeFiles = [
-  ...CODE_DIRS.flatMap((d) => walk(path.join(ROOT, d), ['.js', '.mjs', '.css', '.html', '.ps1'])),
+  ...CODE_DIRS.flatMap((d) => walk(path.join(ROOT, d), ['.js', '.mjs', '.css', '.html', '.ps1', '.sh'])),
+  ...walk(path.join(ROOT, '.github/workflows'), ['.yml']),
   ...CODE_FILES.map((f) => path.join(ROOT, f)).filter((f) => fs.existsSync(f)),
 ];
 for (const file of codeFiles) {

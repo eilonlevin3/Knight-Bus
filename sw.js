@@ -1,21 +1,27 @@
-// Service worker: makes the app open offline and caches map tiles. Docs: docs/architecture.md#offline
-// @req REQ-PWA-2 @req REQ-DATA-3
+// Service worker: makes the app open offline, caches map tiles, and handles updates.
+// Docs: docs/architecture.md#offline, docs/release-process.md#what-users-see-when-you-release
+// @req REQ-PWA-2 @req REQ-DATA-3 @req REQ-PWA-3 @req REQ-REL-2
 //
-// Bump SHELL_VERSION when you change files in SHELL, so phones pick up the new version.
+// SHELL_VERSION and CHANNEL are filled in by scripts/build-site.sh at deploy time
+// (commit id and 'main' | 'debug'). The browser compares this file byte for byte;
+// a new commit id means a new version.
 
-const SHELL_VERSION = 'v1';
-const SHELL_CACHE = `kb-shell-${SHELL_VERSION}`;
-const TILE_CACHE = 'kb-tiles-v1';
+const SHELL_VERSION = 'dev';
+const CHANNEL = 'local';
+const SHELL_PREFIX = `kb-${CHANNEL}-shell-`;
+const SHELL_CACHE = `${SHELL_PREFIX}${SHELL_VERSION}`;
+const TILE_CACHE = 'kb-tiles-v1'; // shared by main and debug: same map images
 const MAX_TILES = 3000; // ~50 MB at most
 // City data has its own cache (src/cityData.js) and is never touched here.
-const KEEP = new Set([SHELL_CACHE, TILE_CACHE, 'kb-city-data-v1']);
 
 const SHELL = [
   './',
   'index.html',
   'manifest.webmanifest',
   'src/styles.css',
+  'src/build.js',
   'src/app.js',
+  'src/updates.js',
   'src/config.js',
   'src/auth.js',
   'src/store.js',
@@ -39,16 +45,25 @@ const SHELL = [
   'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
 ];
 
+// Download the complete new version. It waits until the app says "update now"
+// (the user taps the banner) or until every window of the app is closed.
 self.addEventListener('install', (event) => {
   // cache: 'reload' skips the browser's HTTP cache, so a new version never precaches old files.
   const fresh = SHELL.map((url) => new Request(url, { cache: 'reload' }));
-  event.waitUntil(caches.open(SHELL_CACHE).then((c) => c.addAll(fresh)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(SHELL_CACHE).then((c) => c.addAll(fresh)));
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data === 'SKIP_WAITING') self.skipWaiting();
+});
+
+// The new version takes over: delete this channel's older app files (never the other channel's).
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => !KEEP.has(k)).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys
+        .filter((k) => (k.startsWith(SHELL_PREFIX) && k !== SHELL_CACHE) || k === 'kb-shell-v1') // kb-shell-v1: first release
+        .map((k) => caches.delete(k))))
       .then(() => self.clients.claim()),
   );
 });
@@ -60,40 +75,54 @@ self.addEventListener('fetch', (event) => {
 
   // Map tiles: cache first, keep the most recent MAX_TILES.
   if (url.hostname === 'tile.openstreetmap.org') {
-    event.respondWith(cacheFirst(req, TILE_CACHE, true));
+    event.respondWith(tileFirst(req));
     return;
   }
 
-  // Same-origin app files and Leaflet: show the cached copy now, update it in the background.
-  const isShell = (url.origin === self.location.origin && !url.pathname.includes('/data/')) ||
-    url.hostname === 'unpkg.com';
-  if (isShell) event.respondWith(staleWhileRevalidate(req));
+  // App files come only from this version's cache, so a running app never mixes versions.
+  // The main app's scope also covers /debug/, which belongs to the debug app: leave it alone.
+  const scope = new URL(self.registration.scope);
+  const inScope = url.origin === scope.origin && url.pathname.startsWith(scope.pathname);
+  const rest = inScope ? url.pathname.slice(scope.pathname.length) : '';
+  const isOwnFile = inScope && !rest.startsWith('data/') && !rest.startsWith('debug/');
+  if (isOwnFile || url.hostname === 'unpkg.com') event.respondWith(shellFirst(req));
   // Everything else (live bus API, Firebase, city data) goes straight to the network.
 });
 
-async function cacheFirst(req, cacheName, trim) {
-  const cache = await caches.open(cacheName);
+async function shellFirst(req) {
+  const cache = await caches.open(SHELL_CACHE);
+  // On your own computer the version never changes ('dev'), so prefer fresh files there.
+  if (CHANNEL === 'local') {
+    try {
+      const res = await fetch(req, { cache: 'no-cache' });
+      if (res.ok) cache.put(req, res.clone());
+      return res;
+    } catch {
+      return (await cache.match(req, { ignoreSearch: true })) || Response.error();
+    }
+  }
+  const hit = await cache.match(req, { ignoreSearch: true }) ||
+    (req.mode === 'navigate' ? await cache.match('index.html') : null);
+  if (hit) return hit;
+  const res = await fetch(req);
+  if (res.ok) cache.put(req, res.clone());
+  return res;
+}
+
+async function tileFirst(req) {
+  const cache = await caches.open(TILE_CACHE);
   const hit = await cache.match(req);
   if (hit) return hit;
   const res = await fetch(req);
   if (res.ok) {
     await cache.put(req, res.clone());
-    if (trim) trimCache(cache);
+    trimTiles(cache);
   }
   return res;
 }
 
-async function staleWhileRevalidate(req) {
-  const cache = await caches.open(SHELL_CACHE);
-  const hit = await cache.match(req, { ignoreSearch: true });
-  const network = fetch(req)
-    .then((res) => { if (res.ok) cache.put(req, res.clone()); return res; })
-    .catch(() => hit || (req.mode === 'navigate' ? cache.match('index.html') : Response.error()));
-  return hit || network;
-}
-
 let trimming = false;
-async function trimCache(cache) {
+async function trimTiles(cache) {
   if (trimming) return;
   trimming = true;
   const keys = await cache.keys();

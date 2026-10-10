@@ -2,6 +2,16 @@
 // These values are NOT secret: Firebase web config is meant to be public.
 // Access is protected by firestore.rules.
 
+import { build } from './build.js';
+
+// Main and debug run on the same web address, so they share the browser's storage.
+// Everything they save is kept apart by these names (docs/release-process.md).
+// @req REQ-REL-2
+export const channel = build.channel;
+export const isDebug = channel === 'debug';
+export const storagePrefix = isDebug ? 'kb.debug.' : 'kb.';
+export const favoritesCollection = isDebug ? 'favoritesDebug' : 'favorites';
+
 export const firebaseConfig = {
   apiKey: 'REPLACE_ME',
   authDomain: 'REPLACE_ME.firebaseapp.com',

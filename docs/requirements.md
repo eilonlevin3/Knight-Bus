@@ -23,6 +23,15 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 |----|-------------|--------|
 | REQ-PWA-1 | The app runs in a phone browser and can be added to the home screen with its own icon and name, opening full screen with no browser bar. | Done |
 | REQ-PWA-2 | The app shell (HTML/JS/CSS/icons) works offline after the first visit. | Done |
+| REQ-PWA-3 | When a new version is published, an open app downloads it in the background and offers *Update*. If the user ignores the offer, the new version starts the next time the app is opened from closed. A running app never mixes files from two versions. | Done |
+
+## Releases: test before users get it
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| REQ-REL-1 | There are two versions of the site, built from two branches: **main** at `/Knight-Bus/` (what users get) and **debug** at `/Knight-Bus/debug/` (for testing on a phone before release). Both deploy on every push to either branch, and every night. | Done |
+| REQ-REL-2 | The debug version installs as a separate app (name *KB Debug*, orange icon), shows a badge with its commit, and keeps its favorites and settings separate from the main version. | Done |
+| REQ-REL-3 | A broken debug build never stops or breaks the main site from deploying. | Done |
 
 ## Accounts
 

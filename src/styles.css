@@ -148,3 +148,18 @@ input[type="email"], input[type="password"], input[type="text"], input[type="sea
 
 /* Stop and line names are mostly Hebrew: let each text block pick its own direction. */
 .line-text, .result, .stop-title, .fav-text, .sheet h2 { unicode-bidi: plaintext; }
+
+/* Version handling (docs/release-process.md) */
+.update-banner {
+  position: fixed; left: 12px; right: 12px; bottom: calc(12px + var(--safe-bottom)); z-index: 3000;
+  display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: var(--radius);
+  background: var(--card); border: 2px solid var(--purple); box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+}
+.update-banner span { flex: 1; }
+.update-banner button.primary { min-height: 36px; padding: 6px 14px; }
+.channel-badge {
+  position: fixed; top: calc(4px + var(--safe-top)); left: 50%; transform: translateX(-50%); z-index: 3000;
+  padding: 2px 10px; border-radius: 999px; font: 700 11px/1.6 ui-monospace, monospace; letter-spacing: 0.05em;
+  background: #e85d04; color: #fff; pointer-events: none; opacity: 0.92;
+}
+.channel-badge.local { background: #495057; }

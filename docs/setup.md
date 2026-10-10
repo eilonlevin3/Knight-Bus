@@ -26,7 +26,7 @@ Without Firebase, the app already works in **local demo mode**.
 5. *Project settings → General → Your apps → Web (`</>`)*: register an app and copy
    `apiKey`, `authDomain`, `projectId` and `appId` into
    [src/config.js](../src/config.js).
-6. Bump `SHELL_VERSION` in [sw.js](../sw.js), then commit and push.
+6. Commit and push. Test on `debug` first ([release-process.md](release-process.md)).
 
 The Firebase web config is **not a secret**. It only identifies the project. The Firestore
 rules are what protect user data.
@@ -40,7 +40,9 @@ Open the site URL on the phone, then:
   Safari.
 
 The Knight Bus icon appears on the home screen. It opens full screen like a store app. It
-updates itself: new versions download in the background and apply on the next launch.
+updates itself: when you release a new version, the app offers *Update*; otherwise the
+new version starts the next time it is opened. To try changes before users get them,
+install the debug version too; see [release-process.md](release-process.md).
 
 > iPhone note: in an installed app, Google's sign-in pop-up sometimes fails. If it does,
 > sign in once in Safari first, or use email sign-in.
@@ -58,8 +60,8 @@ npm start                            # http://localhost:8080
 `localhost` counts as secure, so GPS and the service worker work on it. To test on a phone
 over Wi-Fi you need HTTPS: use the deployed site, or a tunnel such as `npx localtunnel --port 8080`.
 
-The service worker caches app files hard. While developing, open DevTools →
-*Application → Service workers* and tick **Update on reload**.
+On your computer the app runs as the `local` version (grey `LOCAL` badge). There, the
+service worker always fetches fresh files, so reloading shows your edits.
 
 ## 5. Before you push
 
