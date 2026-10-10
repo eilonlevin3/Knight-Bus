@@ -6,6 +6,10 @@
    private, either make it public (*Settings → General → Danger zone → Change visibility*)
    or use a paid plan.
 2. *Settings → Pages → Build and deployment → Source:* choose **GitHub Actions**.
+   Then *Settings → Environments → github-pages → Deployment branches*: allow **main**
+   and **debug**. Without `debug` there, pushes to the debug branch build but are refused
+   at the publish step ([release-process.md](release-process.md)). Command-line version:
+   `gh api -X POST repos/<user>/Knight-Bus/environments/github-pages/deployment-branch-policies -f name=debug -f type=branch`
 3. *Actions → Build data and deploy → Run workflow*, or push to `main`.
 4. When it finishes (about 5 minutes; the data step takes ~2–3), the app is at
    `https://<your-user>.github.io/Knight-Bus/`.

@@ -28,6 +28,9 @@ is tested too.
 If the debug build fails, the main site still deploys. Only `/debug/` is missing from that
 publish, and the run summary says why (REQ-REL-3).
 
+**One-time setting:** the `github-pages` environment must allow both branches to deploy
+([setup.md §1](setup.md#1-hosting-on-github-pages)). This is already done for this repo.
+
 ## Day-to-day: how to use it
 
 **1. Work on `debug`.**
