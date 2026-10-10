@@ -50,7 +50,7 @@ for (const [id, r] of reqs) {
 }
 
 // --- Links in markdown ---
-const mdFiles = [path.join(ROOT, 'README.md'), ...walk(path.join(ROOT, 'docs'), ['.md'])];
+const mdFiles = [path.join(ROOT, 'README.md'), path.join(ROOT, 'CLAUDE.md'), ...walk(path.join(ROOT, 'docs'), ['.md'])].filter((f) => fs.existsSync(f));
 for (const md of mdFiles) {
   const text = fs.readFileSync(md, 'utf8').replace(/```[\s\S]*?```/g, '');
   for (const m of text.matchAll(/\]\(([^)\s]+)\)/g)) {
