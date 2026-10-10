@@ -1,6 +1,6 @@
 # Privacy and usage data
 
-Requirements: REQ-ANL-1, REQ-ANL-3, REQ-ANL-4. Decision: [ADR-0008](adr/0008-usage-insights.md).
+Requirements: REQ-ANL-1 to REQ-ANL-5. Decision: [ADR-0008](adr/0008-usage-insights.md).
 Code: [src/analytics.js](../src/analytics.js), [src/views/privacy.js](../src/views/privacy.js),
 [src/views/menu.js](../src/views/menu.js), [firestore.rules](../firestore.rules).
 
@@ -82,7 +82,26 @@ them, and refuse any event that claims to come from the user version.
 | How many users, how often, which screens, how long | Firebase console → **Analytics** (Dashboard, Events, Realtime). New data takes up to a day to reach the reports. |
 | Debug testing as it happens | Firebase console → **Analytics → DebugView** |
 | Detailed debug events | Firebase console → **Firestore → users → (your id) → debugEvents** |
-| What commutes people save (REQ-ANL-2, planned) | A report over `users/*/favorites`, counts only |
+| What commutes people save | In the app: **Menu → 📊 Commute report** (admins only, below) |
+
+## The commute report (admin only)
+
+*Menu → 📊 Commute report* (REQ-ANL-2, REQ-ANL-5). Code: [src/views/report.js](../src/views/report.js),
+[src/lib/report.js](../src/lib/report.js), tests in [tests/report.test.mjs](../tests/report.test.mjs).
+
+It reads every saved commute and shows **counts only**: people with a saved commute,
+commutes per person, by city, one or two stops, with start/destination, the most saved
+lines, and commutes by month. It has two tabs: *Real users* and *Debug testers*.
+
+- **No person is shown.** Account ids are used only to count "different people" and never
+  leave the counting function. A unit test checks this.
+- **Stops are places**, so a stop is listed only when at least **3 different people** saved
+  it. Lines are listed from 1, since a line alone does not locate anyone.
+- **Who can open it:** people with a document at `admins/{their uid}` in Firestore. That
+  document can only be created in the Firebase console. The rules refuse the query to
+  everyone else, so hiding the menu link is not what protects it.
+- An admin can already see the same raw data in the Firebase console. The report adds no
+  access; it adds a summary.
 
 ## Before a public launch
 

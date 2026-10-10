@@ -220,3 +220,16 @@ body::before {
 .consent { border-color: var(--purple-2); }
 .consent small.notice { padding: 8px; }
 ul.plain { margin: 0; padding-inline-start: 18px; display: flex; flex-direction: column; gap: 6px; }
+
+/* Admin commute report */
+.report { max-width: 720px; }
+.stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.stat-grid div { display: flex; flex-direction: column; }
+.stat-grid b { font-size: 1.8rem; line-height: 1.1; color: var(--purple-2); }
+@media (prefers-color-scheme: dark) { .stat-grid b { color: #c8a8ff; } }
+.bar-row { display: grid; grid-template-columns: minmax(0, 1fr) 90px auto; gap: 4px 8px; align-items: center; }
+.bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; unicode-bidi: plaintext; }
+.bar-track { height: 10px; border-radius: 5px; background: var(--line); overflow: hidden; }
+.bar-fill { display: block; height: 100%; background: var(--purple-2); border-radius: 5px; }
+.bar-count { min-width: 2ch; text-align: end; }
+.bar-row small { grid-column: 1 / -1; margin-top: -4px; }

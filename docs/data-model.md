@@ -31,6 +31,12 @@ a user can read and write only their own favorites, and a favorite has 1–2 sto
 
 In local demo mode the same objects are stored in `localStorage` under `kb.favorites.local`.
 
+## Admins
+
+`admins/{uid}`: any document here makes that account an admin (may open the commute
+report). Created by hand in the Firebase console; the rules allow the app only to read
+your own entry.
+
 ## Debug detail events
 
 Only written by the debug version, after the tester agreed ([privacy.md](privacy.md)).

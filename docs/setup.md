@@ -35,6 +35,15 @@ Without Firebase, the app already works in **local demo mode**.
 **Done for this repo on 2026-10-10:** project `knight-bus-a91d3`, Google and Email/Password
 sign-in, authorized domain `eilonlevin3.github.io`, Firestore in `me-west1`, rules published.
 
+### Make yourself an admin (for the commute report)
+
+1. Sign in to the app once, so your account exists.
+2. Firebase console → **Authentication → Users**: copy your **User UID**.
+3. **Firestore → Data → Start collection**: collection ID `admins`, document ID = your UID,
+   add one field (`role` = `owner`, any field works), **Save**.
+4. Publish the current [firestore.rules](../firestore.rules) (*Firestore → Rules*).
+5. Reopen the app: the menu now shows **📊 Commute report**.
+
 The Firebase web config is **not a secret**. It only identifies the project. The Firestore
 rules are what protect user data.
 

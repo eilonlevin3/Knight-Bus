@@ -71,6 +71,7 @@ The URL hash picks the screen:
 | `#/city` | Choose metropolitan area | [views/city.js](../src/views/city.js) |
 | `#/menu` | Main menu, three favorites | [views/menu.js](../src/views/menu.js) |
 | `#/privacy` | Privacy notice, usage-sharing switch | [views/privacy.js](../src/views/privacy.js) |
+| `#/report` | Commute report (admins only) | [views/report.js](../src/views/report.js) |
 | `#/edit/1` … `#/edit/3` | Edit a favorite | [views/editor.js](../src/views/editor.js) |
 | `#/commute/1` … `#/commute/3` | Use a favorite | [views/commute.js](../src/views/commute.js) |
 

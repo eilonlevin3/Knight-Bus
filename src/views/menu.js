@@ -50,6 +50,7 @@ export function render(root, ctx) {
         h('span', { class: 'muted small' }, ctx.user.email || ctx.user.displayName),
         h('button', { class: 'link small', onclick: async () => { await signOut(); ctx.setUser(null); } }, 'Sign out'),
         h('button', { class: 'link small', onclick: () => ctx.go('#/privacy') }, 'Privacy & usage data'),
+        ctx.isAdmin ? h('button', { class: 'link small', onclick: () => ctx.go('#/report') }, '📊 Commute report') : null,
         h('span', { class: 'muted small' },
           `Bus data ${new Date(ctx.cityIndex.generatedAt).toLocaleDateString()} · Live: Ministry of Transport SIRI via Open Bus`))),
   );

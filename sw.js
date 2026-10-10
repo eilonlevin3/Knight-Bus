@@ -45,6 +45,8 @@ const SHELL = [
   'src/views/commute.js',
   'src/views/liveInfo.js',
   'src/views/privacy.js',
+  'src/views/report.js',
+  'src/lib/report.js',
   'icons/icon.svg',
   'icons/icon-192.png',
   'icons/apple-touch-icon.png',

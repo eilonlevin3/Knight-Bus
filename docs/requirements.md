@@ -107,6 +107,7 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | ID | Requirement | Status |
 |----|-------------|--------|
 | REQ-ANL-1 | With the person's agreement, record **safe, anonymous** usage: app opens, sign-in method, screens and time on each, features used, city and hour. Never names, emails, account ids, stop or line ids, addresses or coordinates. The exact list is in privacy.md. | Done |
-| REQ-ANL-2 | Report what commutes people save: cities, lines, number of stops, start/destination set or not, as aggregate counts only. | Planned |
+| REQ-ANL-2 | A report of what commutes people save, as **counts only**: people and commutes, commutes per person, by city, 1 or 2 stops, start/destination set or not, most saved lines, by month. A stop is listed only when at least 3 different people saved it. Real users and debug testers are shown separately. | Done |
 | REQ-ANL-3 | Nothing is recorded until the person agrees. The menu asks once; a *Privacy & usage data* screen explains what is kept and lets them turn sharing on or off at any time. | Done |
+| REQ-ANL-5 | The report is open only to **admins**. Admins are listed by hand in the database (`admins/{uid}`); the app cannot add one. The database rules refuse the report's query to anyone else. | Done |
 | REQ-ANL-4 | The **debug** version is counted apart from real users (kept out of the normal reports), and, with agreement to its own clearer notice, also records details: the stops and lines of commutes, start/destination points, and exact location when a commute is opened. Details are stored in our own database under the tester's account, never in Google Analytics. | Done |

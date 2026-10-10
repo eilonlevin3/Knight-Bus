@@ -7,7 +7,7 @@ import { storagePrefix } from './config.js';
 import { build } from './build.js';
 import { registerServiceWorker } from './updates.js';
 import { watchUser } from './auth.js';
-import { loadFavorites, adoptDemoFavorites } from './store.js';
+import { loadFavorites, adoptDemoFavorites, isAdmin } from './store.js';
 import { loadCityIndex, loadCity } from './cityData.js';
 import * as login from './views/login.js';
 import * as cityView from './views/city.js';
@@ -15,6 +15,7 @@ import * as menu from './views/menu.js';
 import * as editor from './views/editor.js';
 import * as commute from './views/commute.js';
 import * as privacy from './views/privacy.js';
+import * as report from './views/report.js';
 import * as analytics from './analytics.js';
 
 const root = document.getElementById('app');
@@ -25,6 +26,7 @@ const ctx = {
   cityIndex: null,
   city: null, // CityData of the selected city
   favorites: {},
+  isAdmin: false, // may open the commute report
   position: null, // last known GPS position
 
   go(hash) {
@@ -34,7 +36,7 @@ const ctx = {
 
   setUser(user) {
     ctx.user = user;
-    if (!user) ctx.favorites = {};
+    if (!user) { ctx.favorites = {}; ctx.isAdmin = false; }
     start();
   },
 
@@ -72,11 +74,11 @@ async function route() {
   if (name === 'city' || !ctx.city) { analytics.screen('city'); return cityView.render(root, ctx); }
   if (name === 'privacy') { analytics.screen('privacy'); return privacy.render(root, ctx); }
 
-  const views = { menu, edit: editor, commute };
+  const views = { menu, edit: editor, commute, report: ctx.isAdmin ? report : menu };
   const view = views[name] || menu;
   const slot = Number(param);
-  if (view !== menu && ![1, 2, 3].includes(slot)) return ctx.go('#/menu');
-  analytics.screen(view === menu ? 'menu' : view === editor ? 'editor' : 'commute');
+  if ((view === editor || view === commute) && ![1, 2, 3].includes(slot)) return ctx.go('#/menu');
+  analytics.screen(view === menu ? 'menu' : view === editor ? 'editor' : view === report ? 'report' : 'commute');
 
   // Render into a container that is already in the page (the map needs its size),
   // with a loading overlay on top until the screen is ready.
@@ -114,7 +116,8 @@ async function start() {
     ctx.cityIndex ||= await loadCityIndex();
     const saved = (() => { try { return localStorage.getItem(CITY_KEY); } catch { return null; } })();
     const meta = ctx.cityIndex.cities.find((c) => c.id === saved);
-    const [, favs] = await Promise.all([meta && !ctx.city ? ctx.setCity(meta) : null, loadFavorites(ctx.user)]);
+    const [, favs, admin] = await Promise.all([meta && !ctx.city ? ctx.setCity(meta) : null, loadFavorites(ctx.user), isAdmin(ctx.user)]);
+    ctx.isAdmin = admin;
     ctx.favorites = await adoptDemoFavorites(ctx.user, favs).catch((e) => { console.warn('Demo commutes not copied', e); return favs; });
   } catch (e) {
     console.error(e);

@@ -54,6 +54,26 @@ export async function saveFavorite(user, slot, favorite) {
   await fs.setDoc(fs.doc(d, 'users', user.uid, favoritesCollection, String(slot)), fav);
 }
 
+// Admins are listed by hand in the database: a document at admins/{uid} (docs/setup.md).
+// @req REQ-ANL-5
+export async function isAdmin(user) {
+  if (!firebaseConfigured || !user || user.local) return false;
+  try {
+    const d = await firestore();
+    return (await fs.getDoc(fs.doc(d, 'admins', user.uid))).exists();
+  } catch {
+    return false;
+  }
+}
+
+// Every saved commute of every person, for the admin report (the rules refuse anyone else).
+// which: 'favorites' (real users) or 'favoritesDebug' (testers).
+export async function loadAllCommutes(which) {
+  const d = await firestore();
+  const snap = await fs.getDocs(fs.collectionGroup(d, which));
+  return snap.docs.map((doc) => ({ uid: doc.ref.parent.parent.id, slot: Number(doc.id), fav: doc.data() }));
+}
+
 // Detailed usage events of the debug version (src/analytics.js). Saved under the person's own
 // account at users/{uid}/debugEvents, never in the user version. @req REQ-ANL-4
 export async function logDebugEvent(user, name, detail) {
