@@ -167,8 +167,13 @@ swiping down on the list while it's scrolled to the top. Swipe up for more list.
 settles at small (about a fifth of the screen), half, or large.
 
 Lines from outside the government feed, such as the weekend *Naaim BeSofash* lines, have
-no live buses. They show "No live tracking for this line · runs Fri 16:30–02:00 · Sat
-09:00–17:30" (REQ-RT-5).
+no live buses (REQ-RT-5), and are marked the same way everywhere (REQ-RT-6):
+
+- in every list: a yellow **Weekend · no live tracking** tag next to the destination, and
+  a dashed yellow ring around the line number;
+- on the map: a **dashed** line instead of a solid one, and a dashed entry in the map key;
+- under the line: "נעים בסופ"ש: buses on this line cannot be tracked. Runs Fri
+  16:30–02:00 · Sat 09:00–17:30".
 
 **Top of the screen** (REQ-COMM-9). In the installed iPhone app, the status bar (clock,
 battery) gets a solid strip, and the map starts below it. That way the map key and zoom

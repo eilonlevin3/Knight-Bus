@@ -48,7 +48,7 @@ export async function render(root, ctx) {
     }
     const lineLabel = (l) => {
       const route = cities.get(l.cityId)?.routes.get(l.routeId);
-      return route ? `${route.short} → ${route.dest}` : `Line ${l.routeId} (no longer runs)`;
+      return route ? `${route.short} → ${route.dest}${route.source ? ' · weekend line' : ''}` : `Line ${l.routeId} (no longer runs)`;
     };
     const weekend = r.topLines.filter((l) => cities.get(l.cityId)?.routes.get(l.routeId)?.source).reduce((n, l) => n + l.commutes, 0);
 

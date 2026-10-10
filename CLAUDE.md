@@ -120,7 +120,10 @@ Claude could not do these in this setup; ask the owner, with exact steps:
   Limit: 250 m from the path.
 - **Line 708 and other weekend lines** (705–729) are the municipal *Naaim BeSofash*
   service. They are **not** in the government GTFS and have **no live positions** anywhere
-  we can read. Routes and stops come from the Tel Aviv municipality map server
+  we can read. The owner sees them live in other apps (Moovit / Rav-Pass / Google Maps get
+  private feeds) and expected the same here; checked three times, see
+  docs/data-pipeline.md. Do not re-investigate without a new lead (REQ-RT-7). They are
+  marked as weekend lines everywhere instead (REQ-RT-6). Routes and stops come from the Tel Aviv municipality map server
   (`pipeline/sources/busofash.mjs`). GitHub's runners can reach it.
 - **Side-by-side lines:** the Leaflet.PolylineOffset plugin drew little circles at corners
   when zoomed out. Replaced by `src/lib/offsetLine.js`. Some loops are real route geometry

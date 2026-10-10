@@ -8,7 +8,7 @@ import { watchPosition, getPosition } from '../location.js';
 import { searchPlaces, placeName } from '../geocode.js';
 import { LiveLines } from '../liveLines.js';
 import { saveFavorite, deleteFavorite } from '../store.js';
-import { liveSummary, lineBadge } from './liveInfo.js';
+import { liveSummary, lineBadge, lineTitle } from './liveInfo.js';
 import { commuteName } from '../lib/names.js';
 import { track, trackDetail, bucket } from '../analytics.js';
 
@@ -170,7 +170,7 @@ export async function render(root, ctx, { slot }) {
         }),
         lineBadge(r, on ? lines.colorOf(r.id) : null),
         h('span', { class: 'line-text' },
-          h('span', {}, `→ ${r.dest}`),
+          lineTitle(r),
           h('small', { class: 'muted' }, r.agency + (r.hours ? ` · ${r.hours}` : '') + variant),
           on ? liveSummary(live) : null));
     });

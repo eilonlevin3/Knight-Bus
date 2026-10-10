@@ -9,7 +9,7 @@ import { approachPoints } from '../lib/mapFit.js';
 import { draggableSheet } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { track, trackDetail, bucket, hourOfDay, weekday } from '../analytics.js';
-import { liveSummary, lineBadge } from './liveInfo.js';
+import { liveSummary, lineBadge, lineTitle, isWeekendLine } from './liveInfo.js';
 
 export async function render(root, ctx, { slot }) {
   const fav = ctx.favorites[slot];
@@ -67,13 +67,15 @@ export async function render(root, ctx, { slot }) {
 
   function paintLegend() {
     const items = lines.legendItems().map(({ route, color }) =>
-      `<div class="legend-row"><span class="legend-swatch" style="--in:${color};--out:${lighten(color, 0.3)}"></span>` +
+      `<div class="legend-row"><span class="legend-swatch${isWeekendLine(route) ? ' dashed' : ''}" style="--in:${color};--out:${lighten(color, 0.3)}"></span>` +
       `<b>${escapeHtml(route.short)}</b> <span class="legend-dest">${escapeHtml(route.dest)}</span></div>`);
+    const anyWeekend = lines.legendItems().some(({ route }) => isWeekendLine(route));
     const placeRows = ['origin', 'destination'].filter((k) => fav[k]).map((k) =>
       `<div class="legend-row"><span class="legend-flag">${flagHtml(k)}</span>${k === 'origin' ? 'Start' : 'Destination'}</div>`);
     const help = items.length
       ? '<div class="legend-help"><span class="legend-swatch demo"></span> to stop → from stop</div>' +
-        '<div class="legend-help"><span class="legend-bus"></span> next <span class="legend-bus passed"></span> passed</div>'
+        '<div class="legend-help"><span class="legend-bus"></span> next <span class="legend-bus passed"></span> passed</div>' +
+        (anyWeekend ? '<div class="legend-help"><span class="legend-swatch demo dashed"></span> weekend line, no live</div>' : '')
       : '';
     legend.update(items.join('') + placeRows.join('') + help);
   }
@@ -120,7 +122,7 @@ export async function render(root, ctx, { slot }) {
           }),
           lineBadge(route, on ? lines.colorOf(id) : null),
           h('span', { class: 'line-text' },
-            h('span', {}, `→ ${route.dest}`),
+            lineTitle(route),
             on ? liveSummary(live) : h('small', { class: 'muted' }, 'Hidden from the map')));
       });
       return h('div', { class: 'stop-section' },

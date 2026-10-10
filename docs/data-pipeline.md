@@ -77,6 +77,17 @@ How it becomes lines like the others:
 4. Marked with `source: "busofash"` in the bundle. The app shows **no live tracking**
    for these lines, with their hours (REQ-RT-5).
 
+**Live positions: looked for, not found.** Moovit, Rav-Pass and Google Maps do show these
+buses live, so the operators send positions to those companies. No public source carries
+them (checked 2026-10-10, a Saturday, at 09:10 and at 13:18 local time):
+- the ministry's SIRI feed through Stride: 1,650 live vehicle records at 13:18, every one
+  on a GTFS line, and none within 400 m of a stop served only by 705/710/716;
+- busofash.co.il: no live map, it points to the three apps;
+- the Tel Aviv municipality map server: lines and stops only, no vehicle layer.
+
+So the app marks these lines clearly as weekend lines without live tracking (REQ-RT-6).
+Getting live data needs the operator or the municipalities to share a feed (REQ-RT-7).
+
 The source is set in `extraSources` in [pipeline/cities.json](../pipeline/cities.json). If
 the server is down or blocks GitHub's runners, the build logs a warning and continues
 without these lines. There is no timetable, so the "5 minutes before your stop" zoom uses

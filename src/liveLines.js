@@ -1,6 +1,6 @@
 // Draws the chosen lines and their live buses on a map, and keeps the buses fresh.
 // Used by both the editor and the commute screen, so they behave the same (REQ-COMM-1).
-// @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-COMM-1
+// @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
 
 import { realtime } from './config.js';
 import { fetchLiveBuses, classifyBuses, ageLabel } from './realtime.js';
@@ -66,10 +66,13 @@ export class LiveLines {
       const [incoming, outbound] = idx.length ? splitPath(path, pos[Math.min(...idx)]) : [[], path];
       const color = this.colorOf(id);
       const offset = (i - (n - 1) / 2) * gap; // pixels (src/lib/offsetLine.js)
-      const tip = `Line ${route.short} → ${route.dest}`;
+      // Lines without live buses (weekend service) are dashed, so they are never mistaken
+      // for a line that simply has no bus on the way.
+      const dashArray = route.live ? null : `${weight * 2} ${weight * 1.6}`;
+      const tip = `Line ${route.short} → ${route.dest}${route.live ? '' : ` · ${route.agency} (weekend line, no live tracking)`}`;
       const layers = [
-        new OffsetPolyline(outbound, { color: lighten(color, 0.3), weight, opacity: 0.6, offset, lineCap: 'butt' }),
-        new OffsetPolyline(incoming, { color, weight, opacity: 0.95, offset, lineCap: 'butt' }),
+        new OffsetPolyline(outbound, { color: lighten(color, 0.3), weight, opacity: 0.6, offset, lineCap: 'butt', dashArray }),
+        new OffsetPolyline(incoming, { color, weight, opacity: 0.95, offset, lineCap: 'butt', dashArray }),
       ];
       layers.filter((l) => l.getLatLngs().length > 1).forEach((l) => l.bindTooltip(tip, { sticky: true }).addTo(this.map));
       this.lineLayers.set(id, layers);

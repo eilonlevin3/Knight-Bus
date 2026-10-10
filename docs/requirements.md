@@ -94,6 +94,8 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | REQ-RT-2 | Live positions come from the government SIRI real-time feed of the Ministry of Transport, read through the public Open Bus Stride mirror (ADR-0002). They refresh every 30 seconds while the screen is visible. | Done |
 | REQ-RT-3 | Each bus shows how old its position is, and how many stops it is from the chosen stop. | Done |
 | REQ-RT-5 | Lines without live data (from outside the government feed) say so, with their service hours, instead of "No bus on the way". | Done |
+| REQ-RT-6 | Lines without live data are **marked clearly wherever they appear**: a *Weekend · no live tracking* tag and a dashed ring on the line number in every list (home stop list, editor, commute, summary), a **dashed line on the map**, a dashed entry in the map key, and the note in the report. | Done |
+| REQ-RT-7 | Live positions for the weekend *Naaim BeSofash* lines. Blocked: no public source exists (see data-pipeline.md). Needs an agreement with the operator, or a feed they publish. | Planned |
 | REQ-RT-4 | Read the Ministry of Transport SIRI SM service directly, through our own proxy, for lower latency and arrival predictions. | Planned |
 
 ## Using a favorite commute
