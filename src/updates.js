@@ -8,6 +8,7 @@
 // the new version starts the next time the app is fully closed and opened.
 
 import { h } from './lib/dom.js';
+import { track } from './analytics.js';
 
 let reloading = false;
 
@@ -39,7 +40,7 @@ function offerUpdate(worker) {
   if (document.querySelector('.update-banner')) return;
   const banner = h('div', { class: 'update-banner', role: 'status' },
     h('span', {}, 'A new version of Knight Bus is ready.'),
-    h('button', { class: 'primary', onclick: () => worker.postMessage('SKIP_WAITING') }, 'Update'),
+    h('button', { class: 'primary', onclick: () => { track('update_applied'); worker.postMessage('SKIP_WAITING'); } }, 'Update'),
     h('button', { class: 'link small', onclick: () => banner.remove(), 'aria-label': 'Later' }, 'Later'));
   document.body.append(banner);
 }

@@ -46,6 +46,7 @@ flowchart LR
 | Line geometry | Positions along a line, incoming/outbound split, "5 min before the stop" | [src/lib/routeGeometry.js](../src/lib/routeGeometry.js) | [user-flows.md](user-flows.md#4-using-a-favorite) |
 | Side-by-side lines | Shifted lines without knots, recomputed per zoom | [src/lib/offsetLine.js](../src/lib/offsetLine.js) | [ADR-0007](adr/0007-address-search.md) |
 | Draggable panel | Bottom panel you drag for more map or more list | [src/lib/sheetDrag.js](../src/lib/sheetDrag.js) | [user-flows.md](user-flows.md#4-using-a-favorite) |
+| Usage insights | Consent, safe events, debug-only details | [src/analytics.js](../src/analytics.js), [src/views/privacy.js](../src/views/privacy.js) | [privacy.md](privacy.md) |
 | Extra line sources | Weekend lines outside the government feed | [pipeline/sources/](../pipeline/sources/) | [data-pipeline.md](data-pipeline.md#weekend-lines-outside-the-government-feed) |
 | Address search | Start point / destination search, street names for tapped points | [src/geocode.js](../src/geocode.js) | [ADR-0007](adr/0007-address-search.md) |
 | Live lines | Draws chosen lines and their live buses | [src/liveLines.js](../src/liveLines.js), [src/realtime.js](../src/realtime.js) | [realtime.md](realtime.md) |
@@ -69,6 +70,7 @@ The URL hash picks the screen:
 | `#/login` | Sign in / create account | [views/login.js](../src/views/login.js) |
 | `#/city` | Choose metropolitan area | [views/city.js](../src/views/city.js) |
 | `#/menu` | Main menu, three favorites | [views/menu.js](../src/views/menu.js) |
+| `#/privacy` | Privacy notice, usage-sharing switch | [views/privacy.js](../src/views/privacy.js) |
 | `#/edit/1` … `#/edit/3` | Edit a favorite | [views/editor.js](../src/views/editor.js) |
 | `#/commute/1` … `#/commute/3` | Use a favorite | [views/commute.js](../src/views/commute.js) |
 
@@ -124,4 +126,4 @@ The reasons behind these choices are in [adr/](adr/):
 - [ADR-0005](adr/0005-docs-as-code.md) Docs as code, with requirement IDs checked in CI
 - [ADR-0006](adr/0006-release-channels.md) A debug version in a sub-folder of the same site
 - [ADR-0007](adr/0007-address-search.md) Address search with OpenStreetMap Nominatim; side-by-side lines
-- [ADR-0008](adr/0008-usage-insights.md) Usage insights (proposed, not built)
+- [ADR-0008](adr/0008-usage-insights.md) Usage insights: consent first, safe data for users, details for debug only

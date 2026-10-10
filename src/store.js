@@ -5,7 +5,7 @@
 // The debug version uses users/{uid}/favoritesDebug/{slot} instead (@req REQ-REL-2).
 // Local demo mode keeps the same shape in localStorage.
 
-import { FIREBASE_SDK, FAVORITE_SLOTS, storagePrefix, favoritesCollection } from './config.js';
+import { FIREBASE_SDK, FAVORITE_SLOTS, storagePrefix, favoritesCollection, channel } from './config.js';
 import { firebaseConfigured, getFirebaseApp } from './auth.js';
 
 let fs = null;
@@ -52,6 +52,16 @@ export async function saveFavorite(user, slot, favorite) {
   }
   const d = await firestore();
   await fs.setDoc(fs.doc(d, 'users', user.uid, favoritesCollection, String(slot)), fav);
+}
+
+// Detailed usage events of the debug version (src/analytics.js). Saved under the person's own
+// account at users/{uid}/debugEvents, never in the user version. @req REQ-ANL-4
+export async function logDebugEvent(user, name, detail) {
+  if (!firebaseConfigured || user.local) return;
+  const d = await firestore();
+  await fs.addDoc(fs.collection(d, 'users', user.uid, 'debugEvents'), {
+    name, channel, at: new Date().toISOString(), detail: JSON.parse(JSON.stringify(detail)),
+  });
 }
 
 // The first time someone signs in on a device where they used demo mode, copy the commutes

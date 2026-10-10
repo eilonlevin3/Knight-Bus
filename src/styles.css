@@ -215,3 +215,8 @@ body::before {
 .legend-help + .legend-help { border-top: none; padding-top: 0; }
 .legend-bus { width: 12px; height: 12px; border-radius: 50%; background: #7b2cbf; border: 2px solid #fff; box-shadow: 0 0 0 1px #0003; }
 .legend-bus.passed { opacity: 0.55; border-style: dashed; }
+
+/* Usage-sharing question and privacy screen */
+.consent { border-color: var(--purple-2); }
+.consent small.notice { padding: 8px; }
+ul.plain { margin: 0; padding-inline-start: 18px; display: flex; flex-direction: column; gap: 6px; }

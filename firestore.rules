@@ -16,5 +16,13 @@ service cloud.firestore {
         && request.resource.data.stops.size() >= 1
         && request.resource.data.stops.size() <= 2;
     }
+    // Detailed usage events of the DEBUG version only (docs/privacy.md). Each person can add
+    // to, read and delete their own; nobody can edit an event after it is written.
+    match /users/{uid}/debugEvents/{id} {
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'channel', 'at', 'detail'])
+        && request.resource.data.channel != 'main';
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+    }
   }
 }

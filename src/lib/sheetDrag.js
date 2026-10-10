@@ -8,7 +8,7 @@
 
 import { h } from './dom.js';
 
-export function draggableSheet(screen, sheet, { snaps = [0.2, 0.5, 0.82], start = 0.5, onResize = () => {} } = {}) {
+export function draggableSheet(screen, sheet, { snaps = [0.2, 0.5, 0.82], start = 0.5, onResize = () => {}, onSnap = () => {} } = {}) {
   const handle = h('div', { class: 'sheet-handle', role: 'separator', 'aria-orientation': 'horizontal', 'aria-label': 'Drag to resize the panel' });
   screen.insertBefore(handle, sheet);
 
@@ -37,6 +37,7 @@ export function draggableSheet(screen, sheet, { snaps = [0.2, 0.5, 0.82], start 
       if (velocity > 0 && smaller.length) target = smaller.at(-1); // finger moving down = shrink
     }
     set(target, true);
+    onSnap(['small', 'half', 'large'][sizes.indexOf(target)] || 'other');
   }
 
   // Track finger speed (px/ms, positive = moving down).

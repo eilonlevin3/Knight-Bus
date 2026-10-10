@@ -14,6 +14,8 @@ import * as cityView from './views/city.js';
 import * as menu from './views/menu.js';
 import * as editor from './views/editor.js';
 import * as commute from './views/commute.js';
+import * as privacy from './views/privacy.js';
+import * as analytics from './analytics.js';
 
 const root = document.getElementById('app');
 const CITY_KEY = `${storagePrefix}cityId`;
@@ -66,13 +68,15 @@ async function route() {
   const [, name = 'menu', param] = location.hash.match(/^#\/(\w+)(?:\/(\d))?/) || [];
 
   // Guards: signed in -> city chosen -> requested screen.
-  if (!ctx.user) return login.render(root, ctx);
-  if (name === 'city' || !ctx.city) return cityView.render(root, ctx);
+  if (!ctx.user) { analytics.screen('login'); return login.render(root, ctx); }
+  if (name === 'city' || !ctx.city) { analytics.screen('city'); return cityView.render(root, ctx); }
+  if (name === 'privacy') { analytics.screen('privacy'); return privacy.render(root, ctx); }
 
   const views = { menu, edit: editor, commute };
   const view = views[name] || menu;
   const slot = Number(param);
   if (view !== menu && ![1, 2, 3].includes(slot)) return ctx.go('#/menu');
+  analytics.screen(view === menu ? 'menu' : view === editor ? 'editor' : 'commute');
 
   // Render into a container that is already in the page (the map needs its size),
   // with a loading overlay on top until the screen is ready.
@@ -125,10 +129,13 @@ window.addEventListener('hashchange', route);
 watchUser((user) => {
   const changed = user?.uid !== ctx.user?.uid;
   ctx.user = user;
+  analytics.setAnalyticsUser(user);
+  if (changed && user) analytics.track('signed_in', { method: user.local ? 'demo' : user.provider || 'unknown' });
   if (changed || !ctx.cityIndex) start();
 });
 
 registerServiceWorker();
+analytics.track('app_open', { display: analytics.displayMode(), hour: analytics.hourOfDay(), weekday: analytics.weekday() });
 
 // Test versions wear a badge, so you always know which one you are looking at.
 // @req REQ-REL-2

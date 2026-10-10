@@ -10,6 +10,7 @@ import { LiveLines } from '../liveLines.js';
 import { saveFavorite, deleteFavorite } from '../store.js';
 import { liveSummary, lineBadge } from './liveInfo.js';
 import { commuteName } from '../lib/names.js';
+import { track, trackDetail, bucket } from '../analytics.js';
 
 export async function render(root, ctx, { slot }) {
   const existing = ctx.favorites[slot];
@@ -69,6 +70,7 @@ export async function render(root, ctx, { slot }) {
   // While setting a start point or destination, a tap anywhere on the map places it.
   map.on('click', (e) => {
     if (state.mode !== 'place') return;
+    track('place_set', { kind: state.placeKind, how: 'tap' });
     setPlace(state.placeKind, { lat: e.latlng.lat, lon: e.latlng.lng, label: 'Pinned point' }, true);
   });
 
@@ -83,7 +85,8 @@ export async function render(root, ctx, { slot }) {
     }
   }
 
-  function pickStop(s) {
+  function pickStop(s, how = 'map') {
+    if (state.mode === 'pick') track('stop_picked', { how });
     const saved = draft.stops[state.index];
     state.stop = s;
     // Default: no lines shown, unless re-editing the same stop (keep what was saved).
@@ -130,7 +133,7 @@ export async function render(root, ctx, { slot }) {
       placeholder: 'Search stop name or code',
       oninput: () => {
         results.replaceChildren(...city.searchStops(search.value).map((s) =>
-          h('button', { class: 'result', onclick: () => { map.setView([s.lat, s.lon], 17); pickStop(s); } },
+          h('button', { class: 'result', onclick: () => { map.setView([s.lat, s.lon], 17); pickStop(s, 'search'); } },
             h('b', {}, s.name), h('span', { class: 'muted' }, ` · ${s.code} · ${s.routeIds.length} lines`))));
       },
     });
@@ -195,7 +198,7 @@ export async function render(root, ctx, { slot }) {
     const input = h('input', { type: 'search', placeholder: 'Address or place', enterKeyHint: 'search' });
     const status = h('p', { class: 'muted small', role: 'status' }, state.placeStatus || '');
     const results = h('div', { class: 'results' }, ...state.placeResults.map((r) =>
-      h('button', { class: 'result', onclick: () => { map.setView([r.lat, r.lon], 16); setPlace(kind, r); } }, r.label)));
+      h('button', { class: 'result', onclick: () => { map.setView([r.lat, r.lon], 16); track('place_set', { kind, how: 'search' }); setPlace(kind, r); } }, r.label)));
     const form = h('form', {
       class: 'row',
       onsubmit: async (e) => {
@@ -223,6 +226,7 @@ export async function render(root, ctx, { slot }) {
               e.target.disabled = true;
               try {
                 const p = await getPosition();
+                track('place_set', { kind: 'origin', how: 'my_location' });
                 setPlace('origin', { ...p, label: 'My location' }, true);
               } catch (err) {
                 toast(err.message);
@@ -288,6 +292,13 @@ export async function render(root, ctx, { slot }) {
             e.target.disabled = true;
             try {
               await saveFavorite(ctx.user, slot, { ...draft, name: commuteName(draft, slot) });
+              const lineIds = draft.stops.flatMap((st) => st.routeIds);
+              track('commute_saved', {
+                slot, city: city.id, is_new: existing ? 0 : 1, stops: draft.stops.length, lines: bucket(lineIds.length),
+                has_start: draft.origin ? 1 : 0, has_destination: draft.destination ? 1 : 0,
+                weekend_lines: lineIds.filter((id) => city.routes.get(id)?.source).length ? 1 : 0,
+              });
+              trackDetail('commute_saved', { slot, commute: draft });
               await ctx.reloadFavorites();
               toast('Commute saved');
               ctx.go('#/menu');
@@ -302,6 +313,7 @@ export async function render(root, ctx, { slot }) {
             class: 'link small danger',
             onclick: async () => {
               await deleteFavorite(ctx.user, slot);
+              track('commute_cleared', { slot });
               await ctx.reloadFavorites();
               toast('Commute cleared');
               ctx.go('#/menu');

@@ -8,6 +8,7 @@ import { LiveLines } from '../liveLines.js';
 import { approachPath } from '../lib/routeGeometry.js';
 import { draggableSheet } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
+import { track, trackDetail, bucket, hourOfDay, weekday } from '../analytics.js';
 import { liveSummary, lineBadge } from './liveInfo.js';
 
 export async function render(root, ctx, { slot }) {
@@ -36,8 +37,25 @@ export async function render(root, ctx, { slot }) {
 
   let rows = [];
   let updatedAt = null;
+  let reportedLive = false;
   const lines = new LiveLines(map, city, {
-    onUpdate: (r) => { rows = r; updatedAt = new Date(); paint(); },
+    onUpdate: (r) => {
+      rows = r;
+      updatedAt = new Date();
+      paint();
+      // Once per visit: did the live data have an answer?
+      if (!reportedLive && r.length) {
+        reportedLive = true;
+        const withLive = r.filter((x) => !x.noLive);
+        track('live_seen', {
+          city: city.id, lines: bucket(r.length),
+          next_buses: bucket(withLive.reduce((n, x) => n + x.next.length, 0)),
+          lines_with_bus: bucket(withLive.filter((x) => x.next.length).length),
+          errors: withLive.some((x) => x.error) ? 1 : 0,
+        });
+        trackDetail('live_seen', { slot, rows: r.map((x) => ({ stop: x.stop.id, line: x.route.id, next: x.next.map((b) => b.stopsAway), passed: x.passed.map((b) => b.stopsAway), noLive: x.noLive })) });
+      }
+    },
   });
   all.forEach((e) => lines.colorOf(e.routeId)); // fixed colors, even while some are hidden
 
@@ -98,7 +116,12 @@ export async function render(root, ctx, { slot }) {
             type: 'checkbox',
             checked: on,
             'aria-label': `Show line ${route.short} on the map`,
-            onchange: (e) => { if (e.target.checked) hidden.delete(k); else hidden.add(k); show(); },
+            onchange: (e) => {
+              if (e.target.checked) hidden.delete(k); else hidden.add(k);
+              track('line_toggled', { on: e.target.checked ? 1 : 0 });
+              trackDetail('line_toggled', { slot, stop: st.stopId, line: id, on: e.target.checked });
+              show();
+            },
           }),
           lineBadge(route, on ? lines.colorOf(id) : null),
           h('span', { class: 'line-text' },
@@ -129,10 +152,18 @@ export async function render(root, ctx, { slot }) {
   }
 
   // Drag the panel down for more map, up for more list.
-  const panel = draggableSheet(screen, sheet, { onResize: () => map.invalidateSize({ pan: false }) });
+  const panel = draggableSheet(screen, sheet, {
+    onResize: () => map.invalidateSize({ pan: false }),
+    onSnap: (size) => track('panel_dragged', { size }),
+  });
 
   show();
   setTimeout(() => { map.invalidateSize(); fitCommute(); }, 0);
+  track('commute_opened', {
+    slot, city: city.id, hour: hourOfDay(), weekday: weekday(), stops: fav.stops.length, lines: bucket(all.length),
+    has_start: fav.origin ? 1 : 0, has_destination: fav.destination ? 1 : 0,
+  });
+  trackDetail('commute_opened', { slot, commute: fav, position: ctx.position });
 
   return () => {
     panel.destroy();

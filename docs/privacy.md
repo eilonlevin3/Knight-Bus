@@ -1,0 +1,94 @@
+# Privacy and usage data
+
+Requirements: REQ-ANL-1, REQ-ANL-3, REQ-ANL-4. Decision: [ADR-0008](adr/0008-usage-insights.md).
+Code: [src/analytics.js](../src/analytics.js), [src/views/privacy.js](../src/views/privacy.js),
+[src/views/menu.js](../src/views/menu.js), [firestore.rules](../firestore.rules).
+
+This is the source for what the app tells people on its *Privacy & usage data* screen. If
+you change what is collected, change this file, the screen text and the code together.
+
+## The rules
+
+1. **Nothing is recorded until the person agrees.** The menu asks once: *Help improve Knight
+   Bus?* with *Share usage* and *No thanks*. No answer means off.
+2. **It can be turned off any time**: *Menu → Privacy & usage data*.
+3. **The user version collects only "safe" data** (table below): no names, emails, account
+   ids, stop or line ids, addresses or coordinates.
+4. **The debug version is counted apart and also keeps details**, and says so in its own
+   words before the person agrees.
+
+## What the app keeps in order to work (not analytics)
+
+| Data | Where | Who can read it |
+|------|-------|-----------------|
+| Sign-in: email or Google account | Firebase Authentication | The account owner; project admins |
+| Saved commutes: stops, lines, start/destination | Firestore `users/{uid}/favorites` | The account owner; project admins |
+| Location | Used on the phone to pick the city and draw "you are here" | Not saved, not sent |
+
+## Safe usage data: everyone who agreed (user and debug versions)
+
+Sent to **Google Analytics for Firebase** with `track()`. Each phone is a random Analytics
+id; the account is never attached.
+
+| Event | What is recorded |
+|-------|------------------|
+| `app_open` | installed app or browser, hour, weekday |
+| `signed_in` | method: google / password |
+| `screen_view`, `screen_time` | screen name (login, city, menu, editor, commute, privacy), seconds on it (background time not counted) |
+| `city_chosen` | city, how: GPS or list |
+| `stop_picked` | how: map or search |
+| `place_set` | start or destination, how: tap / search / my location |
+| `commute_saved` | slot, city, new or edited, number of stops, lines (as a range: 1–2, 3–5, 6+), has start, has destination, includes a weekend line |
+| `commute_opened` | slot, city, **hour and weekday**, number of stops, lines (range), has start/destination |
+| `live_seen` | city, lines (range), buses on the way (range), any error |
+| `line_toggled` | on or off |
+| `panel_dragged` | small / half / large |
+| `commute_cleared`, `update_applied`, `usage_sharing_on` | that it happened |
+
+Google Analytics also records, by itself: device type, operating system, browser, language,
+and country/city from the internet address.
+
+**Physical places:** only the **city** and the **hour**. No coordinates, no stops, no lines.
+
+## Detailed data: debug version only
+
+Recorded with `trackDetail()` **only when the app runs as the debug (or local) version**
+and the person agreed. Saved in **our own Firestore**, at `users/{uid}/debugEvents`, not in
+Google Analytics. Google's rules forbid precise locations there.
+
+| Event | Extra detail |
+|-------|--------------|
+| `city_chosen` | exact location, if GPS was used |
+| `commute_saved` | the whole commute: stop ids and names, line ids, start and destination coordinates |
+| `commute_opened` | the whole commute, plus the phone's exact location at that moment |
+| `live_seen` | per stop and line: how many stops away each bus was |
+| `line_toggled` | which stop and line |
+
+Each person can read and delete their own detail events; the rules do not allow editing
+them, and refuse any event that claims to come from the user version.
+
+## Keeping test use apart
+
+- Debug and local versions send their Analytics events with `debug_mode`. Google Analytics
+  keeps those **out of the normal reports**; they appear in *Analytics → DebugView*.
+- Every event also carries `channel` (`main` / `debug` / `local`).
+- Debug has its own answer to the sharing question: saying yes in one app does not turn it
+  on in the other.
+
+## Where to look
+
+| Question | Where |
+|----------|-------|
+| How many users, how often, which screens, how long | Firebase console → **Analytics** (Dashboard, Events, Realtime). New data takes up to a day to reach the reports. |
+| Debug testing as it happens | Firebase console → **Analytics → DebugView** |
+| Detailed debug events | Firebase console → **Firestore → users → (your id) → debugEvents** |
+| What commutes people save (REQ-ANL-2, planned) | A report over `users/*/favorites`, counts only |
+
+## Before a public launch
+
+- Have a lawyer check this notice against Israel's Privacy Protection Law (Amendment 13)
+  and, if you expect visitors from Europe, GDPR.
+- Set Analytics data retention (Admin → Data settings) to the shortest period that works:
+  2 or 14 months.
+- The debug address is public. Share it only with testers who should be asked for the
+  detailed data.

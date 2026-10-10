@@ -31,6 +31,16 @@ a user can read and write only their own favorites, and a favorite has 1–2 sto
 
 In local demo mode the same objects are stored in `localStorage` under `kb.favorites.local`.
 
+## Debug detail events
+
+Only written by the debug version, after the tester agreed ([privacy.md](privacy.md)).
+`users/{uid}/debugEvents/{auto id}`:
+
+```json
+{ "name": "commute_opened", "channel": "debug", "at": "2026-10-10T07:30:00.000Z",
+  "detail": { "slot": 1, "commute": { "…": "the saved commute" }, "position": { "lat": 32.08, "lon": 34.78, "accuracy": 12 } } }
+```
+
 ## City index
 
 `data/cities/index.json`, written by the pipeline:

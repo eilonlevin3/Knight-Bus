@@ -102,10 +102,11 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | REQ-COMM-8 | The panel can be **dragged**: down (by its handle, or swiping down while the list is at its top) for more map, up for more list. It settles at small, half or large. | Done |
 | REQ-COMM-9 | On installed phone apps, nothing is drawn under the status bar (clock/battery): the map, its key and buttons start below it, so they are sharp and can be tapped. | Done |
 
-## Usage insights (proposal: see ADR-0008)
+## Usage insights (see privacy.md and ADR-0008)
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| REQ-ANL-1 | Count users and how they use the app (active users per day/week, screens opened, time on each screen, which features are used), with **privacy-first** tracking: consent first, no names/emails/precise location in analytics. | Planned |
+| REQ-ANL-1 | With the person's agreement, record **safe, anonymous** usage: app opens, sign-in method, screens and time on each, features used, city and hour. Never names, emails, account ids, stop or line ids, addresses or coordinates. The exact list is in privacy.md. | Done |
 | REQ-ANL-2 | Report what commutes people save: cities, lines, number of stops, start/destination set or not, as aggregate counts only. | Planned |
-| REQ-ANL-3 | A privacy notice in the app and the option to turn usage tracking off at any time. | Planned |
+| REQ-ANL-3 | Nothing is recorded until the person agrees. The menu asks once; a *Privacy & usage data* screen explains what is kept and lets them turn sharing on or off at any time. | Done |
+| REQ-ANL-4 | The **debug** version is counted apart from real users (kept out of the normal reports), and, with agreement to its own clearer notice, also records details: the stops and lines of commutes, start/destination points, and exact location when a commute is opened. Details are stored in our own database under the tester's account, never in Google Analytics. | Done |

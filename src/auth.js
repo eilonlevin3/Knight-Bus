@@ -32,7 +32,7 @@ export async function watchUser(onChange) {
   // Finishes a Google sign-in that went through a full-page redirect (see signInGoogle).
   fa.getRedirectResult(auth).catch((e) => { lastRedirectError = e; });
   fa.onAuthStateChanged(auth, (u) =>
-    onChange(u ? { uid: u.uid, email: u.email, displayName: u.displayName, local: false } : null),
+    onChange(u ? { uid: u.uid, email: u.email, displayName: u.displayName, local: false, provider: u.providerData[0]?.providerId || 'unknown' } : null),
   );
 }
 

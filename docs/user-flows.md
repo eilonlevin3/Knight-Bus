@@ -38,7 +38,10 @@ Code: [views/login.js](../src/views/login.js), [views/city.js](../src/views/city
   stops. An empty one says *Tap to set up*.
 - A **✎** button next to each opens the editor (REQ-FAV-2).
 - Top right: the current city. Tap it to change city.
-- Bottom: the signed-in email and *Sign out* (REQ-AUTH-3).
+- Bottom: the signed-in email, *Sign out* (REQ-AUTH-3) and *Privacy & usage data*.
+- The first time, a card asks **Help improve Knight Bus?** (REQ-ANL-3): *Share usage* or
+  *No thanks*. Until answered, nothing is recorded. The *Privacy & usage data* screen
+  explains what is kept and has the on/off switch. What is recorded: [privacy.md](privacy.md).
 
 Code: [views/menu.js](../src/views/menu.js).
 

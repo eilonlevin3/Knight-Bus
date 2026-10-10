@@ -1,7 +1,19 @@
-# ADR-0008: Usage insights (proposed)
+# ADR-0008: Usage insights
 
-**Status:** Proposed · 2026-10-10 · not built. Waiting for the owner's choice of tool and
-location detail (questions at the end). Requirements REQ-ANL-1 to REQ-ANL-3 are *Planned*.
+**Status:** Accepted · 2026-10-10 · built ([src/analytics.js](../../src/analytics.js)).
+What is collected, exactly, is in [privacy.md](../privacy.md).
+
+**Decisions by the owner (2026-10-10):**
+1. *Tool:* Firebase Analytics (GA4), the recommendation. The Firebase project already has it.
+2. *Location:* play it safe for all users: **city and hour only**. Collect as much *safe*
+   data as possible.
+3. *Debug:* counted separately, and it records the sensitive details on top of the safe data.
+
+**How the debug decision is built.** Google Analytics forbids precise location, so the
+debug details go to our own Firestore (`users/{uid}/debugEvents`), and the safe events
+still go to Analytics, marked `debug_mode`. Analytics keeps those out of the normal reports
+and shows them in DebugView. The debug address is public, so the debug app asks its own
+question with a plain warning about the details before anything is recorded.
 
 ## What we want to learn
 
@@ -60,11 +72,3 @@ with these events:
 
 If funnels and path analysis turn out to matter more than a free tool in the same
 project, move to PostHog EU. Only `src/analytics.js` would change.
-
-## Questions for the owner
-
-1. Tool: **Firebase Analytics** (recommended), or PostHog EU?
-2. Location: **city + hour only** (recommended), or something finer? A finer level needs
-   explicit opt-in and a stronger privacy notice.
-3. Should test (debug) usage be counted separately, so your own testing doesn't skew the
-   numbers? (Recommended: yes, tagged `channel=debug`.)

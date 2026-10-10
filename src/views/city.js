@@ -3,15 +3,18 @@
 
 import { h } from '../lib/dom.js';
 import { getPosition, cityForPosition } from '../location.js';
+import { track, trackDetail } from '../analytics.js';
 
 export function render(root, ctx) {
   const status = h('p', { class: 'muted', role: 'status' });
   const list = h('div', { class: 'stack' });
 
-  const choose = async (meta) => {
+  const choose = async (meta, how = 'list') => {
     root.querySelectorAll('button').forEach((b) => (b.disabled = true));
     try {
       await ctx.setCity(meta, (msg) => (status.textContent = msg));
+      track('city_chosen', { city: meta.id, how });
+      trackDetail('city_chosen', { city: meta.id, how, position: ctx.position });
       ctx.go('#/menu');
     } catch (e) {
       status.textContent = e.message;
@@ -36,7 +39,7 @@ export function render(root, ctx) {
       const city = cityForPosition(ctx.cityIndex.cities, pos);
       if (city) {
         status.textContent = `You are in ${city.name}.`;
-        await choose(city);
+        await choose(city, 'gps');
       } else {
         status.textContent = 'You seem to be outside the areas we cover so far.';
         showList();
