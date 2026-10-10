@@ -43,6 +43,7 @@ id; the account is never attached.
 | `commute_opened` | slot, city, **hour and weekday**, number of stops, lines (range), has start/destination |
 | `live_seen` | city, lines (range), buses on the way (range), any error |
 | `line_toggled` | on or off |
+| `stop_info_opened` | how many stops share the number, whether platforms tell them apart. Not which stop |
 | `line_info_opened`, `line_map_opened`, `line_stop_tapped`, `schedule_opened` | that it happened, the number of route patterns, whether a timetable existed. Not which line or stop |
 | `panel_dragged` | small / half / large |
 | `commute_cleared`, `update_applied`, `usage_sharing_on` | that it happened |

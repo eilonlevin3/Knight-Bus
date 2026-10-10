@@ -11,6 +11,7 @@ import { commuteName } from '../lib/names.js';
 import { track, trackDetail, bucket, hourOfDay, weekday } from '../analytics.js';
 import { liveSummary, lineBadge, lineTitle, isWeekendLine } from './liveInfo.js';
 import { showLineInfo } from './lineInfo.js';
+import { platformText, stopHazard } from './stopInfo.js';
 
 export async function render(root, ctx, { slot }) {
   const fav = ctx.favorites[slot];
@@ -127,10 +128,12 @@ export async function render(root, ctx, { slot }) {
             on ? liveSummary(live) : h('small', { class: 'muted' }, 'Hidden from the map')));
       });
       return h('div', { class: 'stop-section' },
-        h('button', {
-          class: 'stop-title',
-          onclick: () => stop && map.setView([stop.lat, stop.lon], 17),
-        }, `🚏 ${st.stopName}`, h('span', { class: 'muted' }, ` · ${st.stopCode}`)),
+        h('span', { class: 'stop-head' },
+          h('button', {
+            class: 'stop-title',
+            onclick: () => stop && map.setView([stop.lat, stop.lon], 17),
+          }, `🚏 ${st.stopName}`, h('span', { class: 'muted' }, ` · ${st.stopCode}${platformText(stop) ? ` · ${platformText(stop)}` : ''}`)),
+          stop ? stopHazard(city, stop) : null),
         ...stopRows);
     });
 

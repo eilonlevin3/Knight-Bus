@@ -9,6 +9,7 @@ import { draggableSheet } from '../lib/sheetDrag.js';
 import { track, trackDetail } from '../analytics.js';
 import { lineBadge, weekendTag } from './liveInfo.js';
 import { patternName, patternDifference } from './lineInfo.js';
+import { stopSuffix, stopHazard } from './stopInfo.js';
 import { timesAtStop } from '../lib/schedule.js';
 
 const PATTERN_COLORS = ['#7b2cbf', '#e85d04', '#0077b6', '#2a9d8f'];
@@ -79,7 +80,7 @@ export async function render(root, ctx, { cityId, routeId, stopId }) {
     for (const [id, m] of markers) m.setStyle(stopStyle(city.stops.get(id)));
     markers.get(s.id)?.bringToFront();
     const content = h('div', { class: 'stop-popup' },
-      h('b', {}, s.name), s.code ? h('span', { class: 'muted' }, ` · ${s.code}`) : null,
+      h('b', {}, s.name), h('span', { class: 'muted' }, stopSuffix(s)),
       servedText(s) ? h('small', { class: 'block' }, servedText(s)) : null,
       h('button', { class: 'link', onclick: () => { map.closePopup(); openSchedule(); } }, 'Full schedule at this stop →'));
     L.popup({ offset: [0, -6] }).setLatLng([s.lat, s.lon]).setContent(content).openOn(map);
@@ -151,8 +152,10 @@ export async function render(root, ctx, { cityId, routeId, stopId }) {
     if (!s) return h('p', { class: 'muted' }, 'Tap a stop on the map to see its full schedule.');
     return h('div', { class: 'card stack' },
       h('div', { class: 'row between' },
-        h('button', { class: 'stop-title', onclick: () => map.setView([s.lat, s.lon], 17) },
-          `🚏 ${s.name}`, s.code ? h('span', { class: 'muted' }, ` · ${s.code}`) : null),
+        h('span', { class: 'stop-head' },
+          h('button', { class: 'stop-title', onclick: () => map.setView([s.lat, s.lon], 17) },
+            `🚏 ${s.name}`, h('span', { class: 'muted' }, stopSuffix(s))),
+          stopHazard(city, s)),
         state.showSchedule ? null : h('button', { class: 'link', onclick: openSchedule }, 'Full schedule →')),
       servedText(s) ? h('small', { class: 'muted' }, servedText(s)) : null,
       state.showSchedule ? scheduleBlock() : null);

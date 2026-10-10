@@ -9,7 +9,7 @@ For what the app does and how it is built, start at [README.md](README.md) (docs
 changed open item, update the matching section and the "Last updated" line. Remove things
 that stop being true. Do not copy what the docs already say; link to them.
 
-Last updated: 2026-10-10 (line variants, schedules, Sababus; `debug` is ahead of main, which is still `34aad5a`).
+Last updated: 2026-10-10 (stops sharing a number, Sababus follows Moovit; `debug` is ahead of main, which is still `34aad5a`).
 
 ## The owner and how to work with them
 
@@ -22,6 +22,8 @@ Last updated: 2026-10-10 (line variants, schedules, Sababus; `debug` is ahead of
 - They want **docs as code for everything**: change `docs/requirements.md` first (stable
   `REQ-…` ids), tag code with `@req`, keep `npm run check:docs` green. Decisions go in
   `docs/adr/`.
+- **Sababus rule (their words): "decide like Moovit unless I say otherwise".** When the
+  operator's map and Moovit disagree about a stop or a line, follow what Moovit shows.
 - Privacy stance (their words): "play it safe with all users and collect as much safe data
   as possible"; sensitive detail only in the debug version.
 
@@ -149,9 +151,9 @@ Claude could not do these in this setup; ask the owner, with exact steps:
   variants; the pipeline keeps them all (REQ-DATA-8). Code that needs "the stops of a
   line from this stop" must use `city.patternsAt(route, stopId)[0]`, not `route.stops`.
 - **Stop codes are not unique:** at terminals several platform stops share one code and
-  one position (236 codes nationally, e.g. 20277 Reading terminal ×3). Each platform is a
-  separate stop with its own lines, so a tap or a search hits only one of them. Not fixed;
-  raise it with the owner (merging platforms that share code and position is the likely fix).
+  one position (236 codes nationally, e.g. 20277 Reading terminal ×3), each with its own
+  lines. They are shown with platform/floor and a ⚠ pop-up (REQ-STOP-1/2). Never pick "the
+  stop with code X": there may be several, plus a station record (`location_type` 1).
 - **A background browser tab is not a frozen app.** When the test tab is hidden, Chrome
   stops `requestAnimationFrame` (no map drawing, screenshots time out) and slows timers,
   so scripts hit the 45 s limit. Check `document.visibilityState` before debugging a
@@ -173,6 +175,8 @@ Claude could not do these in this setup; ask the owner, with exact steps:
 - **Sababus data:** the operator's Google My Map, KML export
   (`mid=1zUQK4dHqJ4srilKzhYJM6t5vQfGkfo8`). The same map also has all Naaim BeSofash
   lines with direction per stop; switching Busofash to it was offered, not requested.
+  Stops the map places where no bus stop exists are snapped to the nearest real stop on
+  the line's path (so green and blue are at 25778, as in Moovit).
 
 ## Decisions and why (short; details in docs/adr/)
 

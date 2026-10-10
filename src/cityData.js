@@ -82,9 +82,17 @@ export class CityData {
     this.sources = raw.sources || {}; // lines from outside the government feed: { id: { name, hours, info } }
 
     this.stops = new Map();
-    this.stopList = raw.stops.map(([id, code, name, lat, lon]) => {
-      const s = { id, code, name, lat, lon, routeIds: [] };
+    // The optional 6th entry is "platform/floor", given for stops that share their stop
+    // number with others (the platforms of a terminal) (REQ-STOP-1).
+    this.byCode = new Map(); // stop number -> [stop, ...]
+    this.stopList = raw.stops.map(([id, code, name, lat, lon, place = '']) => {
+      const [platform = '', floor = ''] = place.split('/');
+      const s = { id, code, name, lat, lon, platform, floor, routeIds: [] };
       this.stops.set(id, s);
+      if (code) {
+        if (!this.byCode.has(code)) this.byCode.set(code, []);
+        this.byCode.get(code).push(s);
+      }
       return s;
     });
 
@@ -117,6 +125,13 @@ export class CityData {
     const p = patternOrRoute.patterns ? patternOrRoute.patterns[0] : patternOrRoute;
     if (!p._shape) p._shape = decode(p.encodedShape);
     return p._shape;
+  }
+
+  // All stops that carry this stop's number, itself included, in platform order.
+  // More than one = a terminal with several platforms under one number.
+  sameCodeStops(stop) {
+    const group = (stop?.code && this.byCode.get(stop.code)) || (stop ? [stop] : []);
+    return [...group].sort((a, b) => a.platform.localeCompare(b.platform, 'en', { numeric: true }) || a.id.localeCompare(b.id));
   }
 
   // The patterns of a line that pass a stop, most common first.

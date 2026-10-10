@@ -1,5 +1,5 @@
 // Builds one transit bundle per city from the national GTFS feed.
-// @req REQ-DATA-2 @req REQ-SCOPE-1 @req REQ-DATA-5 @req REQ-DATA-6 @req REQ-DATA-7 @req REQ-DATA-8 @req REQ-DATA-9
+// @req REQ-STOP-1 @req REQ-DATA-2 @req REQ-SCOPE-1 @req REQ-DATA-5 @req REQ-DATA-6 @req REQ-DATA-7 @req REQ-DATA-8 @req REQ-DATA-9
 // Docs: docs/data-pipeline.md (how it works), docs/data-model.md (output format).
 //
 // Usage:  npm run build:data
@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import yauzl from 'yauzl';
 import { parse } from 'csv-parse';
 import { encode } from '../src/lib/polyline.js';
-import { loadBusofash } from './sources/busofash.mjs';
+import { loadBusofash, placeOnPath } from './sources/busofash.mjs';
 import { loadNoatKml } from './sources/noat.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -245,14 +245,25 @@ async function main() {
   log('Reading stops');
   const stops = new Map();
   await readCsv(z, 'stops.txt', (g) => {
+    // stop_desc looks like "רחוב: ... עיר: ... רציף: 12 קומה: 6" (street, city, platform, floor).
+    // Platform and floor tell apart the stops of a terminal that share one stop code (REQ-STOP-1).
+    const desc = g('stop_desc');
+    const platform = ((desc.match(/רציף:\s*([^\s]+)/) || [])[1] || '').replace(/^.*:$/, ''); // empty platform: the next label is not a value
+    const floor = (desc.match(/קומה:\s*([^\s]+)/) || [])[1] || '';
     stops.set(g('stop_id'), {
       id: g('stop_id'),
       code: g('stop_code'),
       name: g('stop_name'),
       lat: Number(g('stop_lat')),
       lon: Number(g('stop_lon')),
+      station: g('location_type') === '1', // a whole terminal, not a place where buses stop
+      platform: platform === '0' ? '' : platform,
+      floor: floor === '0' ? '' : floor,
     });
   });
+  // How many real stops use each stop code (terminals: one code, many platforms).
+  const stopsPerCode = new Map();
+  for (const s of stops.values()) if (s.code && !s.station) stopsPerCode.set(s.code, (stopsPerCode.get(s.code) || 0) + 1);
 
   log('Reading shapes');
   const neededShapes = new Map();
@@ -276,6 +287,7 @@ async function main() {
   const grid = new Map(); // ~200 m cells -> national stops, for matching by position
   const cell = (lat, lon) => `${Math.floor(lat * 500)},${Math.floor(lon * 500)}`;
   for (const s of stops.values()) {
+    if (s.station) continue; // match to places where buses actually stop
     if (s.code && !stopIdByCode.has(s.code)) stopIdByCode.set(s.code, s.id);
     const k = cell(s.lat, s.lon);
     if (!grid.has(k)) grid.set(k, []);
@@ -301,6 +313,22 @@ async function main() {
     }
     return close || named;
   };
+  // A stop the source places where no national stop is: use the nearest real bus stop that
+  // lies on the line's own path, on the side buses stop on. This is how other apps (Moovit)
+  // show these lines, and the owner's rule is to follow them when sources disagree.
+  const snapToPath = (lat, lon, linePath, maxMeters) => {
+    let best = null;
+    let bestD = maxMeters;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      for (const s of grid.get(`${Math.floor(lat * 500) + dy},${Math.floor(lon * 500) + dx}`) || []) {
+        const d = Math.hypot((s.lon - lon) * Math.cos(lat * Math.PI / 180), s.lat - lat) * 111320;
+        if (d >= bestD) continue;
+        const fit = placeOnPath(s.lat, s.lon, linePath);
+        if (fit.meters <= 20 && (fit.side === 'right' || fit.meters <= 6)) { bestD = d; best = s; }
+      }
+    }
+    return best;
+  };
   const loaders = { 'busofash-arcgis': loadBusofash, 'noat-kml': loadNoatKml };
   for (const src of config.extraSources || []) {
     try {
@@ -311,7 +339,8 @@ async function main() {
       let added = 0;
       for (const x of extra) {
         const ids = x.stops.map((s) => {
-          const known = (s.code && stopIdByCode.get(s.code)) || (!s.code && nearestStop(s.lat, s.lon, s.name)?.id);
+          const known = (s.code && stopIdByCode.get(s.code)) || (!s.code && nearestStop(s.lat, s.lon, s.name)?.id) ||
+            (!s.code && src.snapMeters && snapToPath(s.lat, s.lon, x.path, src.snapMeters)?.id);
           if (known) { matched++; return known; }
           const id = `${src.id}-${s.code || `${Math.round(s.lat * 1e5)}_${Math.round(s.lon * 1e5)}`}`;
           if (!stops.has(id)) { stops.set(id, { id, code: s.code || '', name: s.name, lat: s.lat, lon: s.lon }); added++; }
@@ -358,7 +387,10 @@ async function main() {
       const times = kept.every(([, t]) => t != null) ? kept.map(([, t]) => t) : null;
       const seq = kept.map(([sid]) => {
         const s = stops.get(sid);
-        return idxOf(stopIdx, stopRows, sid, [s.id, s.code, s.name, +s.lat.toFixed(6), +s.lon.toFixed(6)]);
+        const row = [s.id, s.code, s.name, +s.lat.toFixed(6), +s.lon.toFixed(6)];
+        // Optional 6th entry "platform/floor", only for stops that share their code with others.
+        if (stopsPerCode.get(s.code) > 1 && (s.platform || s.floor)) row.push(`${s.platform}${s.floor ? `/${s.floor}` : ''}`);
+        return idxOf(stopIdx, stopRows, sid, row);
       });
       const shape = p.encoded || (p.shapeId && encodedShapes.get(p.shapeId)) ||
         encode(seq.map((i) => [stopRows[i][3], stopRows[i][4]]));

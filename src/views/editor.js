@@ -10,6 +10,7 @@ import { LiveLines } from '../liveLines.js';
 import { saveFavorite, deleteFavorite } from '../store.js';
 import { liveSummary, lineBadge, lineTitle } from './liveInfo.js';
 import { showLineInfo } from './lineInfo.js';
+import { stopSuffix, stopHazard, platformText } from './stopInfo.js';
 import { commuteName } from '../lib/names.js';
 import { track, trackDetail, bucket } from '../analytics.js';
 
@@ -136,7 +137,7 @@ export async function render(root, ctx, { slot }) {
       oninput: () => {
         results.replaceChildren(...city.searchStops(search.value).map((s) =>
           h('button', { class: 'result', onclick: () => { map.setView([s.lat, s.lon], 17); pickStop(s, 'search'); } },
-            h('b', {}, s.name), h('span', { class: 'muted' }, ` · ${s.code} · ${s.routeIds.length} lines`))));
+            h('b', {}, s.name), h('span', { class: 'muted' }, `${stopSuffix(s)} · ${s.routeIds.length} lines`))));
       },
     });
     return [
@@ -177,7 +178,8 @@ export async function render(root, ctx, { slot }) {
     });
     return [
       h('h2', {}, `Stop ${state.index + 1}: ${s.name}`),
-      h('p', { class: 'muted' }, `Stop code ${s.code} · ${routes.length} lines. Check the lines you want to see.`,
+      h('p', { class: 'muted' }, `Stop code ${s.code}${platformText(s) ? ` · ${platformText(s)}` : ''} `, stopHazard(city, s, (other) => pickStop(other, 'platform')),
+        ` · ${routes.length} lines. Check the lines you want to see.`,
         ' ', h('button', { class: 'link small', onclick: () => go('pick') }, 'Change stop')),
       h('div', { class: 'line-list' }, ...rows),
       h('div', { class: 'row sticky' },

@@ -279,3 +279,8 @@ ul.plain { margin: 0; padding-inline-start: 18px; display: flex; flex-direction:
 .hour-row b { min-width: 2.6ch; }
 .minutes { display: flex; flex-wrap: wrap; gap: 2px 10px; font-variant-numeric: tabular-nums; }
 .variant-time { text-decoration: underline dotted; text-underline-offset: 3px; color: #e85d04; }
+
+/* Stops that share a number (platforms of a terminal) */
+.stop-head { display: flex; align-items: center; gap: 2px; min-width: 0; }
+.same-code li { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.same-code li.current { font-weight: 600; }

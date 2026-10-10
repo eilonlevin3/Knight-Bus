@@ -125,14 +125,29 @@ and stops labelled with **line and direction**, but no stop codes. So:
    within 100 m ("דיזנגוף/שד' נורדאו" = "שדרות נורדאו/דיזנגוף"). On 2026-10-10: 294
    matched, 11 became stops of their own.
 
-The operator's map and other apps do not always agree on which stop a line uses. Near
-Dizengoff/Sheinkin (25778) the map puts the green and blue lines at Dizengoff/Ben Gurion
-and Dizengoff/Gordon, about 140 m either side; we follow the operator's map.
+4. **Follow Moovit where the map and Moovit disagree** (the owner's rule, 2026-10-10). A
+   stop the operator's map places where no national stop exists is attached to the
+   nearest real bus stop within 200 m that lies on the line's own path, on the side buses
+   stop on (`snapMeters` in `cities.json`). Example: the map puts the green and blue lines
+   at "Dizengoff/Ben Gurion" and "Dizengoff/Gordon", where there is no stop; Moovit shows
+   them at Dizengoff/Sheinkin (25778) between the two, and so do we. After this step 306
+   stops are matched and 4 remain stops of their own.
 
 Both sources are set in `extraSources` in [pipeline/cities.json](../pipeline/cities.json). If
 a server is down or blocks GitHub's runners, the build logs a warning and continues
 without these lines. There is no timetable, so the "5 minutes before your stop" zoom uses
 the ~1.5 km fallback.
+
+## Platforms: stops that share a number
+
+At a terminal the feed has one "station" record and one stop record per platform, all with
+the same `stop_code` and position (236 codes nationally). The pipeline:
+- reads the platform and floor out of `stop_desc` ("… רציף: 12 קומה: 6"); a platform or
+  floor of `0` means "none";
+- writes them as the stop's optional 6th entry, only for stops whose code is shared
+  (REQ-STOP-1);
+- ignores the station record when matching stops by code or position, so weekend lines
+  attach to a real platform.
 
 ## Adding a city
 

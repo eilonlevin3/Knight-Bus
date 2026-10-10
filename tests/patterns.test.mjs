@@ -63,3 +63,27 @@ test('weekday filter', () => {
   assert.deepEqual(timesAtStop(schedule, 'A', 6).map((t) => t.minute), [600]);
   assert.deepEqual(timesAtStop(schedule, 'A', 3), []);
 });
+
+// A terminal: three stops share the number 500, told apart by platform (REQ-STOP-1, REQ-STOP-2).
+const terminal = new CityData({
+  cityId: 't', agencies: ['Dan'], sources: {},
+  stops: [['p3', '500', 'Terminal', 32, 34.8, '3'], ['p1', '500', 'Terminal', 32, 34.8, '1'], ['p10', '500', 'Terminal', 32, 34.8, '10/6'], ['x', '777', 'Street', 32.01, 34.8]],
+  routes: [['1', '1', 'A', 0, 3, [0, 3], shape([0, 3]), [0, 5]], ['2', '2', 'B', 0, 3, [1, 3], shape([1, 3]), [0, 5]]],
+}, { version: 'x' });
+
+test('stops sharing a number are grouped, in platform order', () => {
+  const group = terminal.sameCodeStops(terminal.stops.get('p3'));
+  assert.deepEqual(group.map((s) => s.platform), ['1', '3', '10']);
+  assert.equal(terminal.stops.get('p10').floor, '6');
+});
+
+test('an ordinary stop is alone in its group and has no platform', () => {
+  const x = terminal.stops.get('x');
+  assert.deepEqual(terminal.sameCodeStops(x).map((s) => s.id), ['x']);
+  assert.equal(x.platform, '');
+});
+
+test('each platform keeps only its own lines', () => {
+  assert.deepEqual(terminal.routesAtStop('p3').map((r) => r.short), ['1']);
+  assert.deepEqual(terminal.routesAtStop('p1').map((r) => r.short), ['2']);
+});

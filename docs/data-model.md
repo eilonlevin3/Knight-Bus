@@ -82,9 +82,11 @@ downloads small. It is read by [src/cityData.js](../src/cityData.js).
 
 | Field | Row layout |
 |-------|------------|
-| `stops[i]` | `[stopId, stopCode, name, lat, lon]` |
+| `stops[i]` | `[stopId, stopCode, name, lat, lon, place?]` |
 | `routes[j]` | `[routeId, lineNumber, destination, agencyIndex, routeType, stopIndexes[], shape, minutes[], source?, variants?]` |
 
+- `place` (optional) is `"platform/floor"`, for example `"634/6"` or `"2"`. It is given only
+  for stops that share their stop code with other stops (REQ-STOP-1).
 - `stopIndexes` are positions in `stops[]`, in travel order, from first stop to last.
 - `minutes[]` (REQ-DATA-6) has one entry per stop: scheduled minutes from the first stop,
   from the line's representative trip. It may be `null`. Older apps ignore it.

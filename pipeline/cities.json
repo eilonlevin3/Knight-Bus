@@ -19,7 +19,8 @@
       "folder": "סבבוס",
       "hours": "Fri evening · Sat daytime",
       "info": "https://www.noat.co.il/routes",
-      "kmlUrl": "https://www.google.com/maps/d/kml?mid=1zUQK4dHqJ4srilKzhYJM6t5vQfGkfo8&forcekml=1"
+      "kmlUrl": "https://www.google.com/maps/d/kml?mid=1zUQK4dHqJ4srilKzhYJM6t5vQfGkfo8&forcekml=1",
+      "snapMeters": 200
     }
   ],
   "cities": [

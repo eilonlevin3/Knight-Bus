@@ -15,6 +15,7 @@ import { consent, setConsent, detailed, track, trackDetail, bucket } from '../an
 import { SAFE_SUMMARY, DEBUG_SUMMARY } from './privacy.js';
 import { liveSummary, lineBadge, lineTitle } from './liveInfo.js';
 import { showLineInfo } from './lineInfo.js';
+import { stopSuffix, stopHazard } from './stopInfo.js';
 
 const MAX_LINES_SHOWN_AT_FIRST = 30; // very busy stops: the rest start unchecked
 const LAST_POSITION_KEY = `${storagePrefix}lastPosition`; // kept on this phone only, for a quick start
@@ -162,8 +163,10 @@ export async function render(root, ctx) {
     });
     return h('div', { class: 'stop-section' },
       h('div', { class: 'row between' },
-        h('button', { class: 'stop-title', onclick: () => map.setView([s.lat, s.lon], 17) },
-          `🚏 ${s.name}`, h('span', { class: 'muted' }, ` · ${s.code}`)),
+        h('span', { class: 'stop-head' },
+          h('button', { class: 'stop-title', onclick: () => map.setView([s.lat, s.lon], 17) },
+            `🚏 ${s.name}`, h('span', { class: 'muted' }, stopSuffix(s))),
+          stopHazard(city, s, selectStop)),
         h('button', { class: 'link', 'aria-label': 'Close this stop', onclick: closeStop }, '✕ Close')),
       h('p', { class: 'muted small' },
         `${routes.length} line${routes.length === 1 ? '' : 's'} stop here. Solid = coming to this stop, lighter = after it. Uncheck a line to hide it.`,

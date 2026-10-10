@@ -184,6 +184,25 @@ Code: [views/commute.js](../src/views/commute.js), [liveLines.js](../src/liveLin
 [lib/sheetDrag.js](../src/lib/sheetDrag.js), [map.js](../src/map.js).
 
 
+## Stops that share a number
+
+At terminals, several stops carry the same stop number: one per platform, all at the same
+spot on the map (81 such groups in the Tel Aviv data, for example Reading terminal 20277
+with three). Each has its own lines.
+
+- **Told apart** (REQ-STOP-1): the platform, and the floor where there is one, follow the
+  number everywhere: "מסוף רדינג/רציפים · 20277 · Platform 2". Searching 20277 lists the
+  three platforms as three results.
+- **⚠ sign** (REQ-STOP-2) next to the stop's name. Pressing it opens:
+  *"3 bus stops share the number 20277. Make sure you are at the right one."* and a list:
+  each platform with the lines that stop there, the current one marked.
+- On the home screen and in the editor each other platform has **Show this one**, which
+  switches to it. In a saved commute the pop-up only informs.
+- When the data gives no platform for some of them, the pop-up says so and tells you to
+  compare the line numbers with the sign at the stop.
+
+Code: [views/stopInfo.js](../src/views/stopInfo.js), [cityData.js](../src/cityData.js).
+
 ## Lines with more than one route
 
 About 1–2% of lines do not always drive the same way: some trips skip a street, take a
