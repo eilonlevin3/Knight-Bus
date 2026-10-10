@@ -40,7 +40,7 @@ The first screen after sign-in (REQ-HOME-1). It used to be called the main menu.
 ```
 ┌──────────────────────────────┐
 │            MAP               │  centered on you (blue dot); ◎ returns to you
-│   ○  ○   ○ ← bus stops       │  tap a stop → its lines + live buses
+│   ○  ○   ○ ← bus stops       │  tap a stop → its routes + live buses
 │        ◉ you                 │
 ├───────────── ▬ ──────────────┤  drag the handle: more map / more list
 │ Knight Bus        📍 city    │
@@ -56,17 +56,17 @@ The first screen after sign-in (REQ-HOME-1). It used to be called the main menu.
 position remembered on this phone, or the city center. The **◎** button brings you back.
 
 **Tap a bus stop** (REQ-HOME-2). Zoom in if no stops show. The stop is highlighted, the map
-zooms to it and to where its buses are in their last ~5 minutes, and **every line through
+zooms to it and to where its buses are in their last ~5 minutes, and **every route through
 the stop is drawn**: solid where it comes to the stop, lighter after it, side by side where
-lines share a street. Live buses appear as in a commute: the next two and the last that
-passed, per line. The panel shows the stop first, with one row per line and its live status.
+routes share a street. Live buses appear as in a commute: the next two and the last that
+passed, per route. The panel shows the stop first, with one row per route and its live status.
 
-**Line checkboxes** (REQ-HOME-3). All lines start checked; at a very busy stop, the first
-30. Uncheck a line to hide it and its buses. **✕ Close** returns to the plain map.
+**Route checkboxes** (REQ-HOME-3). All routes start checked; at a very busy stop, the first
+30. Uncheck a route to hide it and its buses. **✕ Close** returns to the plain map.
 
 **My commutes** (REQ-FAV-1, REQ-FAV-2, REQ-FAV-4). Only commutes you saved are shown, each
 as a button with the **name you gave it** ("Commute N" if you gave none), its stops and
-number of lines. Tap it to open the commute; **✎** opens the editor.
+number of routes. Tap it to open the commute; **✎** opens the editor.
 
 **＋ New commute**, bottom right, appears while fewer than three are saved. If a stop is
 open on the map, the new commute starts at that stop.
@@ -87,11 +87,11 @@ The map fills the top half. A panel below guides you through three steps.
 stateDiagram-v2
   [*] --> Pick: new favorite
   [*] --> Summary: existing favorite
-  Pick --> Lines: tap a stop / search result
-  Lines --> Pick: Change stop
-  Lines --> Summary: Save stop
+  Pick --> Routes: tap a stop / search result
+  Routes --> Pick: Change stop
+  Routes --> Summary: Save stop
   Summary --> Pick: + Add stop 2
-  Summary --> Lines: Edit a stop
+  Summary --> Routes: Edit a stop
   Summary --> Place: Set start / destination
   Place --> Summary: tap map / pick address / my location
   Summary --> [*]: Save commute → home
@@ -100,18 +100,18 @@ stateDiagram-v2
 **Pick a stop** (REQ-EDIT-1). Zoom in to see stops as white dots, then tap one. You can also
 search by stop name or by the stop code printed on the sign.
 
-**Choose lines** (REQ-EDIT-2 to REQ-EDIT-4, REQ-COMM-4, REQ-COMM-5). The panel lists **every line that serves the
-stop**, each with a checkbox. **None is checked at first.** Checking a line:
+**Choose routes** (REQ-EDIT-2 to REQ-EDIT-4, REQ-COMM-4, REQ-COMM-5). The panel lists **every route that serves the
+stop**, each with a checkbox. **None is checked at first.** Checking a route:
 
-- draws the whole line on the map in its own color, from its first stop to its last;
-- shows up to three live buses on that line: the **next two coming to your stop** (solid,
+- draws the whole route on the map as a line in its own color, from its first stop to its last;
+- shows up to three live buses on that route: the **next two coming to your stop** (solid,
   pulsing) and **the last one that passed it** (faded, dashed);
-- adds a live line to the panel, for example *Next: 3 stops away, 9 stops away · Passed 2
+- adds a live status row to the panel, for example *Next: 3 stops away, 9 stops away · Passed 2
   stops ago · 40s ago*.
 
-Unchecking removes the line and its buses.
+Unchecking removes the route and its buses.
 
-**Save stop** (REQ-EDIT-5) stores the stop with its checked lines and opens the summary.
+**Save stop** (REQ-EDIT-5) stores the stop with its checked routes and opens the summary.
 From there, *+ Add stop 2* repeats the steps for a second stop (up to 2 per favorite).
 
 **Summary** (REQ-FAV-4, REQ-EDIT-6). **Name the commute**: the name becomes the text of its
@@ -131,48 +131,48 @@ Code: [views/editor.js](../src/views/editor.js), [liveLines.js](../src/liveLines
 ## 4. Using a favorite
 
 Tapping a saved favorite opens the **commute view** (REQ-COMM-1). It shows the same map and
-bus markers as the editor, for all saved stops and lines together. Buses refresh every
+bus markers as the editor, for all saved stops and routes together. Buses refresh every
 30 seconds while the screen is visible (REQ-RT-2). Tap a bus for its details, or tap a stop
 name to zoom to it.
 
 **Where the map starts** (REQ-COMM-2). It zooms to fit:
 - the start point and destination flags, if set;
 - the chosen stops;
-- for each chosen line, the stretch it drives in the **5 minutes before reaching your
+- for each chosen route, the stretch it drives in the **5 minutes before reaching your
   stop**. That is where the bus you are waiting for is now. The stretch uses the timetable
   ([data-pipeline.md](data-pipeline.md)), so it is short in traffic-heavy centers and longer
   on fast roads.
 
-**How lines are drawn** (REQ-COMM-4, REQ-COMM-5):
+**How routes are drawn** (REQ-COMM-4, REQ-COMM-5):
 
 ```
    incoming: where your bus comes from (solid)    outbound (lighter, see-through)
-  ███████████████████████████████████ 🚏 ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  line 5
-  ███████████████████████████████████ 🚏 ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  line 408   ← side by side
+  ███████████████████████████████████ 🚏 ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  route 5
+  ███████████████████████████████████ 🚏 ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  route 408   ← side by side
 ```
 
-Each line is split at its chosen stop. Where several lines share a street, each is drawn
-slightly shifted, so all of them stay visible. A line chosen at both stops is split at the
+Each route's line is split at its chosen stop. Where several routes share a street, each line is drawn
+slightly shifted, so all of them stay visible. A route chosen at both stops is split at the
 first one.
 
-**Map key** (REQ-COMM-6), top-left: the color, number and destination of each line, the
+**Map key** (REQ-COMM-6), top-left: the color, number and destination of each route, the
 flags, and the bus symbols. Tap *Key* to fold it away.
 
-**Panel** (REQ-COMM-7, REQ-COMM-8). Each stop lists its lines with a checkbox, all checked.
-Uncheck a line to hide it, its buses and its key entry. This is only for this visit; the
-saved commute is unchanged, and the line is back next time.
+**Panel** (REQ-COMM-7, REQ-COMM-8). Each stop lists its routes with a checkbox, all checked.
+Uncheck a route to hide it, its buses and its key entry. This is only for this visit; the
+saved commute is unchanged, and the route is back next time.
 
 To see more map, **drag the panel down**: either by the grey handle at its top, or by
 swiping down on the list while it's scrolled to the top. Swipe up for more list. The panel
 settles at small (about a fifth of the screen), half, or large.
 
-Lines from outside the government feed, such as the weekend *Naaim BeSofash* lines, have
+Routes from outside the government feed, such as the weekend *Naaim BeSofash* routes, have
 no live buses (REQ-RT-5), and are marked the same way everywhere (REQ-RT-6):
 
 - in every list: a yellow **Weekend · no live tracking** tag next to the destination, and
-  a dashed yellow ring around the line number;
+  a dashed yellow ring around the route number;
 - on the map: a **dashed** line instead of a solid one, and a dashed entry in the map key;
-- under the line: "נעים בסופ"ש: buses on this line cannot be tracked. Runs Fri
+- under the route's name: "נעים בסופ"ש: buses on this line cannot be tracked. Runs Fri
   16:30–02:00 · Sat 09:00–17:30".
 
 **Top of the screen** (REQ-COMM-9). In the installed iPhone app, the status bar (clock,
@@ -188,59 +188,60 @@ Code: [views/commute.js](../src/views/commute.js), [liveLines.js](../src/liveLin
 
 At terminals, several stops carry the same stop number: one per platform, all at the same
 spot on the map (81 such groups in the Tel Aviv data, for example Reading terminal 20277
-with three). Each has its own lines.
+with three). Each has its own routes.
 
 - **Told apart** (REQ-STOP-1): the platform, and the floor where there is one, follow the
   number everywhere: "מסוף רדינג/רציפים · 20277 · Platform 2". Searching 20277 lists the
   three platforms as three results.
 - **⚠ sign** (REQ-STOP-2) next to the stop's name. Pressing it opens:
   *"3 bus stops share the number 20277. Make sure you are at the right one."* and a list:
-  each platform with the lines that stop there, the current one marked.
+  each platform with the routes that stop there, the current one marked.
 - On the home screen and in the editor each other platform has **Show this one**, which
   switches to it. In a saved commute the pop-up only informs.
 - When the data gives no platform for some of them, the pop-up says so and tells you to
-  compare the line numbers with the sign at the stop.
+  compare the route numbers with the sign at the stop.
 
 Code: [views/stopInfo.js](../src/views/stopInfo.js), [cityData.js](../src/cityData.js).
 
-## Lines with more than one route
+## Routes with more than one stop pattern
 
-About 1–2% of lines do not always drive the same way: some trips skip a street, take a
-detour or run a longer evening route. Each way is a *stop pattern* (REQ-DATA-8).
+About 1–2% of routes do not always drive the same way: some trips skip a street, take a
+detour or continue further in the evening. Each way is a *stop pattern* (REQ-DATA-8).
 
-**What is drawn** (REQ-LINE-1). It depends on the stop the line is opened from:
+**What is drawn** (REQ-LINE-1). It depends on the stop the route is opened from:
 
 ```
 only ONE pattern passes your stop          SEVERAL patterns pass your stop
-────────────────🚏───────────────          ────────────🚏──────┬───────────   usual route: normal line
-(just that pattern, even if it is                              ┊· · · · ·     variant: dotted, only
- not the usual one)                                                             visible where it leaves
+────────────────🚏───────────────          ────────────🚏──────┬───────────   most common pattern: normal line
+(just that pattern, even if it is                              ┊· · · · ·     other pattern: dotted line, only
+ not the most common one)                                                       visible where it leaves
 ```
 
-**The ⚠ sign** (REQ-LINE-2). Every such line has a small ⚠ next to its destination, in the
-home stop list, the editor and the commute. Pressing it opens a pop-up:
+**The ⚠ sign** (REQ-LINE-2). Every such route has a small ⚠ next to its destination, in the
+home stop list, the editor and the commute. Pressing it opens a pop-up. On screen, the most
+common pattern is called "Usual route" and each other pattern "Variant":
 
 - *Usual route: 51% of trips · 36 stops · stops here*
 - *Variant: 49% of trips · 35 stops · does not stop here*, with *Skips: …* and *Also stops at: …*
 - one sentence saying what the map shows from this stop,
-- **Show the full line on the map**.
+- the button **Show the full line on the map**.
 
 Pressing ⚠ inside a checkbox row does not tick the box.
 
-## 5. A line in full
+## 5. A route in full
 
-Opened from the ⚠ pop-up (REQ-LINE-3). Address: `#/line/<city>/<line>/<stop>`.
+Opened from the ⚠ pop-up (REQ-LINE-3). Address: `#/line/<city>/<route>/<stop>`.
 
-- **Map:** the whole line. The usual route is a solid purple line; each variant is dotted in
-  its own color. All stops are shown; a stop that only one pattern serves has that
-  pattern's color. The stop you came from is highlighted.
-- **Panel:** the line, its operator, and the list of patterns with their share of trips and
+- **Map:** the whole route. Its most common stop pattern is drawn as a solid purple line;
+  each other pattern as a dotted line in its own color. All stops are shown; a stop that
+  only one pattern serves has that pattern's color. The stop you came from is highlighted.
+- **Panel:** the route, its operator, and the list of patterns with their share of trips and
   differences.
 - **Press a stop** (REQ-LINE-4): a pop-up with its name and **Full schedule at this stop →**.
   The schedule shows in the panel: weekday tabs (today first selected) and the times by
-  hour, for example `07  :00 :15 :35 :55`. Times of a variant route have a dotted
-  underline; `⁺` marks times after midnight. These are timetable times, not live.
-- Weekend-service lines have no timetable; the panel says so and gives their hours.
+  hour, for example `07  :00 :15 :35 :55`. Times of trips on a less common pattern have a
+  dotted underline; `⁺` marks times after midnight. These are timetable times, not live.
+- Weekend-service routes have no timetable; the panel says so and gives their hours.
 - **← Back** returns to where you came from.
 
 Code: [views/lineInfo.js](../src/views/lineInfo.js), [views/line.js](../src/views/line.js),

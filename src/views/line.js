@@ -1,5 +1,5 @@
 // One line in full: every route it takes, all its stops, and the schedule at any stop.
-// Docs: docs/user-flows.md#5-a-line-in-full
+// Docs: docs/user-flows.md#5-a-route-in-full
 // @req REQ-LINE-3 @req REQ-LINE-4
 
 import { h } from '../lib/dom.js';

@@ -1,7 +1,7 @@
 // Sababus (סבבוס): Ramat Gan's free weekend buses, four colour-named lines. They are not in
 // the government GTFS feed. Read from the operator's public Google map ("נוע תנוע | רשת
 // הקווים", https://www.noat.co.il/routes), exported as KML.
-// Docs: docs/data-pipeline.md#weekend-lines-outside-the-government-feed
+// Docs: docs/data-pipeline.md#weekend-routes-outside-the-government-feed
 // @req REQ-DATA-7
 //
 // The map has, per line: one or two route shapes per direction, and stops labelled with

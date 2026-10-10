@@ -43,15 +43,15 @@ flowchart LR
 | Location | GPS and choosing the city | [src/location.js](../src/location.js) | [user-flows.md](user-flows.md#1-first-launch) |
 | City data | Downloads and caches one city's bundle | [src/cityData.js](../src/cityData.js) | [data-model.md](data-model.md#city-bundle) |
 | Map | Leaflet map, stops, user dot, bus icons, flags, map key | [src/map.js](../src/map.js) | this file |
-| Line geometry | Positions along a line, incoming/outbound split, "5 min before the stop" | [src/lib/routeGeometry.js](../src/lib/routeGeometry.js) | [user-flows.md](user-flows.md#4-using-a-favorite) |
+| Route geometry | Positions along a route's path, incoming/outbound split, "5 min before the stop" | [src/lib/routeGeometry.js](../src/lib/routeGeometry.js) | [user-flows.md](user-flows.md#4-using-a-favorite) |
 | Side-by-side lines | Shifted lines without knots, recomputed per zoom | [src/lib/offsetLine.js](../src/lib/offsetLine.js) | [ADR-0007](adr/0007-address-search.md) |
 | Draggable panel | Bottom panel you drag for more map or more list | [src/lib/sheetDrag.js](../src/lib/sheetDrag.js) | [user-flows.md](user-flows.md#4-using-a-favorite) |
 | Usage insights | Consent, safe events, debug-only details | [src/analytics.js](../src/analytics.js), [src/views/privacy.js](../src/views/privacy.js) | [privacy.md](privacy.md) |
 | Stops sharing a number | Platform labels, the stop ⚠ pop-up | [src/views/stopInfo.js](../src/views/stopInfo.js) | [user-flows.md](user-flows.md#stops-that-share-a-number) |
-| Line variants | The ⚠ pop-up, the full-line screen, schedules | [src/views/lineInfo.js](../src/views/lineInfo.js), [src/views/line.js](../src/views/line.js), [src/lib/schedule.js](../src/lib/schedule.js) | [user-flows.md](user-flows.md#lines-with-more-than-one-route) |
-| Extra line sources | Weekend lines outside the government feed | [pipeline/sources/](../pipeline/sources/) | [data-pipeline.md](data-pipeline.md#weekend-lines-outside-the-government-feed) |
+| Stop patterns of a route | The ⚠ pop-up, the full-route screen, schedules | [src/views/lineInfo.js](../src/views/lineInfo.js), [src/views/line.js](../src/views/line.js), [src/lib/schedule.js](../src/lib/schedule.js) | [user-flows.md](user-flows.md#routes-with-more-than-one-stop-pattern) |
+| Extra route sources | Weekend routes outside the government feed | [pipeline/sources/](../pipeline/sources/) | [data-pipeline.md](data-pipeline.md#weekend-routes-outside-the-government-feed) |
 | Address search | Start point / destination search, street names for tapped points | [src/geocode.js](../src/geocode.js) | [ADR-0007](adr/0007-address-search.md) |
-| Live lines | Draws chosen lines and their live buses | [src/liveLines.js](../src/liveLines.js), [src/realtime.js](../src/realtime.js) | [realtime.md](realtime.md) |
+| Live routes | Draws the chosen routes as lines, with their live buses | [src/liveLines.js](../src/liveLines.js), [src/realtime.js](../src/realtime.js) | [realtime.md](realtime.md) |
 | Offline | Caches app files and map tiles | [sw.js](../sw.js) | [#offline](#offline) |
 | Install | Name, icon, full-screen mode | [manifest.webmanifest](../manifest.webmanifest), [icons/](../icons/) | [ADR-0001](adr/0001-pwa.md) |
 | Data pipeline | National GTFS → one small file per city | [pipeline/](../pipeline/) | [data-pipeline.md](data-pipeline.md) |
@@ -74,7 +74,7 @@ The URL hash picks the screen:
 | `#/home` (old name `#/menu` still works) | Home screen: map around you, stop explorer, saved commutes | [views/home.js](../src/views/home.js) |
 | `#/privacy` | Privacy notice, usage-sharing switch | [views/privacy.js](../src/views/privacy.js) |
 | `#/report` | Commute report (admins only) | [views/report.js](../src/views/report.js) |
-| `#/line/<city>/<line>/<stop>` | A line in full: all its routes, stops, schedule per stop | [views/line.js](../src/views/line.js) |
+| `#/line/<city>/<route>/<stop>` | A route in full: all its stop patterns, stops, schedule per stop | [views/line.js](../src/views/line.js) |
 | `#/edit/1` … `#/edit/3` | Edit a favorite | [views/editor.js](../src/views/editor.js) |
 | `#/commute/1` … `#/commute/3` | Use a favorite | [views/commute.js](../src/views/commute.js) |
 

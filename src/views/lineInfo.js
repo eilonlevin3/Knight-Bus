@@ -1,5 +1,5 @@
 // The ⚠ pop-up: what is special about a line that does not always take the same route.
-// Docs: docs/user-flows.md#lines-with-more-than-one-route
+// Docs: docs/user-flows.md#routes-with-more-than-one-stop-pattern
 // @req REQ-LINE-1 @req REQ-LINE-2
 
 import { h } from '../lib/dom.js';

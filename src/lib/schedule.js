@@ -1,4 +1,4 @@
-// Reading a line's timetable file (data/schedules/<line>.json). Docs: docs/data-model.md#line-timetable
+// Reading a route's timetable file (data/schedules/<route id>.json). Docs: docs/data-model.md#route-timetable
 // @req REQ-LINE-4
 
 // Scheduled times of a line at one stop on one weekday. schedule: the line's timetable file.

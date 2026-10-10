@@ -23,7 +23,12 @@ Last updated: 2026-10-10 (stops sharing a number, Sababus follows Moovit; `debug
   `REQ-…` ids), tag code with `@req`, keep `npm run check:docs` green. Decisions go in
   `docs/adr/`.
 - **Sababus rule (their words): "decide like Moovit unless I say otherwise".** When the
-  operator's map and Moovit disagree about a stop or a line, follow what Moovit shows.
+  operator's map and Moovit disagree about a stop or a route, follow what Moovit shows.
+- **Words (the owner's rule, 2026-10-10):** a **route** is the bus service and its path
+  ("route 62"); a **line** is only something drawn on the map (solid, dashed, dotted). A
+  route's different stop lists are **stop patterns**, never "routes" or "variants". The
+  glossary is at the top of docs/requirements.md. Docs follow this; the app's on-screen
+  text and file names still say "line" for a route (see Open items).
 - Privacy stance (their words): "play it safe with all users and collect as much safe data
   as possible"; sensitive detail only in the debug version.
 
@@ -107,7 +112,7 @@ Claude could not do these in this setup; ask the owner, with exact steps:
   test page report results to the local server (a request the server logs, or a POST).
 - **Line drawings** can be captured from the map's `<canvas>` (`toDataURL`) for a visual check.
 - **Live buses:** Israel has almost no buses from Friday afternoon to Saturday night. "No
-  bus on the way" on a weekend is normal, not a bug. To find a line that is live right
+  bus on the way" on a weekend is normal, not a bug. To find a route that is live right
   now, query Stride for the last 5 minutes and match `siri_route__line_ref` to route ids.
 - Nothing above replaces the iPhone: touch gestures, the status-bar area and installed-app
   sign-in can only be confirmed by the owner.
@@ -120,12 +125,12 @@ Claude could not do these in this setup; ask the owner, with exact steps:
 - **Placing buses:** use the nearest point on the route *shape*, not the nearest stop.
   Nearest-stop dropped real buses (a bus can be 600 m from any stop yet on the road).
   Limit: 250 m from the path.
-- **Line 708 and other weekend lines** (705–729) are the municipal *Naaim BeSofash*
+- **Route 708 and other weekend routes** (705–729) are the municipal *Naaim BeSofash*
   service. They are **not** in the government GTFS and have **no live positions** anywhere
   we can read. The owner sees them live in other apps (Moovit / Rav-Pass / Google Maps get
   private feeds) and expected the same here; checked three times, see
   docs/data-pipeline.md. Do not re-investigate without a new lead (REQ-RT-7). They are
-  marked as weekend lines everywhere instead (REQ-RT-6). Routes and stops come from the Tel Aviv municipality map server
+  marked as weekend routes everywhere instead (REQ-RT-6). Routes and stops come from the Tel Aviv municipality map server
   (`pipeline/sources/busofash.mjs`). GitHub's runners can reach it.
 - **Side-by-side lines:** the Leaflet.PolylineOffset plugin drew little circles at corners
   when zoomed out. Replaced by `src/lib/offsetLine.js`. Some loops are real route geometry
@@ -147,12 +152,12 @@ Claude could not do these in this setup; ask the owner, with exact steps:
 - **GitHub Pages:** one site per repo, so debug lives in `/debug/`. The `github-pages`
   environment must allow both branches. Main and debug share one origin, so storage keys,
   caches and Firestore collections are namespaced per channel (`src/config.js`).
-- **Stop patterns:** never assume a GTFS `route_id` has one stop list. 2% of lines have
-  variants; the pipeline keeps them all (REQ-DATA-8). Code that needs "the stops of a
-  line from this stop" must use `city.patternsAt(route, stopId)[0]`, not `route.stops`.
+- **Stop patterns:** never assume a GTFS `route_id` has one stop list. 2% of routes have
+  more than one stop pattern; the pipeline keeps them all (REQ-DATA-8). Code that needs "the stops of a
+  route from this stop" must use `city.patternsAt(route, stopId)[0]`, not `route.stops`.
 - **Stop codes are not unique:** at terminals several platform stops share one code and
   one position (236 codes nationally, e.g. 20277 Reading terminal ×3), each with its own
-  lines. They are shown with platform/floor and a ⚠ pop-up (REQ-STOP-1/2). Never pick "the
+  routes. They are shown with platform/floor and a ⚠ pop-up (REQ-STOP-1/2). Never pick "the
   stop with code X": there may be several, plus a station record (`location_type` 1).
 - **A background browser tab is not a frozen app.** When the test tab is hidden, Chrome
   stops `requestAnimationFrame` (no map drawing, screenshots time out) and slows timers,
@@ -160,7 +165,7 @@ Claude could not do these in this setup; ask the owner, with exact steps:
   "hang". Headless Chrome always renders: use it for visual checks.
 - **Docs check:** every *Done* requirement needs an `@req` tag in code, including CSS-only
   ones; every relative link in docs must resolve.
-- **Bidi text:** stop and line names are Hebrew inside an English UI; text containers use
+- **Bidi text:** stop and route names are Hebrew inside an English UI; text containers use
   `unicode-bidi: plaintext`.
 
 ## Weekend services and live data (state on 2026-10-10)
@@ -174,9 +179,9 @@ Claude could not do these in this setup; ask the owner, with exact steps:
   was drafted for the owner on 2026-10-10 (see Open items for whether it was sent).
 - **Sababus data:** the operator's Google My Map, KML export
   (`mid=1zUQK4dHqJ4srilKzhYJM6t5vQfGkfo8`). The same map also has all Naaim BeSofash
-  lines with direction per stop; switching Busofash to it was offered, not requested.
+  routes with direction per stop; switching Busofash to it was offered, not requested.
   Stops the map places where no bus stop exists are snapped to the nearest real stop on
-  the line's path (so green and blue are at 25778, as in Moovit).
+  the route's path (so green and blue are at 25778, as in Moovit).
 
 ## Decisions and why (short; details in docs/adr/)
 
@@ -190,27 +195,30 @@ Claude could not do these in this setup; ask the owner, with exact steps:
 - Usage insights: opt-in; safe anonymous events for everyone; detail only in debug; an
   admin report with counts only, stops listed from 3 people up (ADR-0008, docs/privacy.md).
 - The first screen is the **home screen** (the owner renamed it from "main menu"): map
-  around the user on top, tap any stop to explore its lines, saved commutes below. Route
+  around the user on top, tap any stop to explore its routes, saved commutes below. Address
   `#/home`; `#/menu` is kept as an alias for apps installed earlier.
 - Only saved commutes get a button, labeled with the user's own name for it; new ones are
   made with the small ＋ New commute button (bottom right).
 - UI wording: saved items are "Commute 1/2/3" on screen. The code and data still say
   `favorite` (collections `favorites`, `favoritesDebug`): do not rename stored data.
-- "Lines show up when a stop is picked" was read as: listed with checkboxes, none checked,
+- "Routes show up when a stop is picked" was read as: listed with checkboxes, none checked,
   drawn only when checked. The owner has not objected.
 
 ## Open items
 
 - Email to contact@noat.co.il asking for a live-location feed: drafted in the owner's
   Gmail on 2026-10-10, waiting for their go-ahead to send. Update this line when sent/answered.
-- Owner to confirm on the iPhone: the ⚠ pop-up, the full-line screen and schedules, Sababus
-  lines, and that the first visit no longer reloads by itself.
+- Owner to confirm on the iPhone: the ⚠ pop-up, the full-route screen and schedules, Sababus
+  routes, and that the first visit no longer reloads by itself.
 - Owner to confirm on the iPhone: the new home screen (map around them, tapping a stop,
   named commute buttons, ＋ New commute). And from the round of 2026-10-10: top of screen not blurred, map key
   tappable, panel drags, incoming lines solid, no circles, 708 listed at their stop, the
   usage question card, the privacy screen.
 - Owner to publish the latest Firestore rules and create their `admins` document (above).
 - Google sign-in is confirmed in the debug app; not yet confirmed in the main app.
+- **Wording in the app:** the docs now say "route" for the bus service, but the app's
+  screens still say "Line 62", "Show the full line on the map", "Usual route", "Variant".
+  Offered to the owner on 2026-10-10: change the on-screen text to match. Not decided.
 - Planned requirements: fully offline city maps (REQ-DATA-4), direct ministry SIRI with
   arrival times through a proxy (REQ-RT-4).
 - Before a public launch: a lawyer should review docs/privacy.md; set Analytics data

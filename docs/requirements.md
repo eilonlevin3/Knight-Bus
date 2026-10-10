@@ -11,6 +11,24 @@ To change behaviour, change this file first (in the same pull request as the cod
 
 Status values: **Done** = implemented in MVP · **Planned** = agreed, not built yet.
 
+## Words we use
+
+These words mean one thing each, in every doc.
+
+| Word | Means |
+|------|-------|
+| **Route** | A bus service: a number, a direction, and the path it drives. "Route 62 to Ramat Gan." In the timetable data this is a `route_id`. |
+| **Stop pattern** | One exact list of stops that a route's trips serve. Most routes have one. Some have several, because some trips skip or add stops. The **most common pattern** is the one most trips use. |
+| **Line** | Something **drawn on the map** to show a route: a solid, dashed or dotted line. A line is never the bus service itself. |
+| **Stop** | A place where buses stop, with a stop number. A terminal can have several stops that share one number (its platforms). |
+| **Commute** | A saved set of up to two stops and the routes chosen at each. Stored as a "favorite". |
+
+Three places still say "line" for a route, on purpose:
+
+- **Requirement IDs** `REQ-LINE-1` to `REQ-LINE-4` keep their names, because IDs never change. They are about routes with more than one stop pattern.
+- **On-screen text** in the app ("Line 62", "Show the full line on the map", "Usual route", "Variant"). Where a doc quotes the screen, the quote is exact.
+- **File and address names** (`views/line.js`, `lineInfo.js`, `#/line/…`). `liveLines.js` and `offsetLine.js` really are about drawn lines.
+
 ## Scope
 
 | ID | Requirement | Status |
@@ -50,22 +68,22 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | REQ-LOC-1 | The app asks for GPS permission and uses the device location. | Done |
 | REQ-LOC-2 | The app picks the user's metropolitan area from the location. If the user is outside every area, or denies GPS, they pick a city from a list. The user can change city from the menu. | Done |
 | REQ-DATA-1 | The app downloads transit data **only for the selected city**, keeps it on the device, and downloads again only when a newer version is published. | Done |
-| REQ-DATA-2 | A pipeline turns the national GTFS feed of the Ministry of Transport into one small file per city. The file holds stops, lines, the stop order of each line, and its route shape. The pipeline runs every night. | Done |
+| REQ-DATA-2 | A pipeline turns the national GTFS feed of the Ministry of Transport into one small file per city. The file holds stops, routes, the stop order of each route, and the shape of its path. The pipeline runs every night. | Done |
 | REQ-DATA-3 | Base map tiles are cached on the device as they are viewed, so areas already seen work with a weak connection. | Done |
 | REQ-DATA-4 | Download the whole city base map ahead of time for full offline use (vector tiles, see ADR-0003). | Planned |
-| REQ-DATA-5 | Every bus line in the government feed is included, whatever days it runs: weekdays, Friday, Saturday, Saturday night. There is no filter by day. | Done |
-| REQ-DATA-6 | Each line in a city bundle carries its scheduled travel minutes from the first stop to each stop, so the app knows where a bus is "5 minutes before your stop". | Done |
-| REQ-DATA-7 | Include bus lines that are **not** in the government feed: the municipal weekend services *Naaim BeSofash* (lines 705–729, from the Tel Aviv municipality's map server) and *Sababus* (Ramat Gan's green, blue, red and white lines, from the operator's public map). They appear at the same stops as other lines. Where the operator's map and Moovit disagree on a stop, the app follows Moovit: a stop the map places where no bus stop exists is attached to the nearest real stop on the line's path. | Done |
-| REQ-DATA-8 | A line whose trips do not all serve the same stops keeps **every stop pattern** (the usual route and up to three variants), each with its share of the week's trips. The line is listed at every stop any pattern serves. | Done |
-| REQ-DATA-9 | The pipeline writes one small **timetable file per line** for the coming week (start times per weekday and pattern, minutes to each stop). The app loads a file only when a stop's schedule is opened. | Done |
+| REQ-DATA-5 | Every bus route in the government feed is included, whatever days it runs: weekdays, Friday, Saturday, Saturday night. There is no filter by day. | Done |
+| REQ-DATA-6 | Each route in a city bundle carries its scheduled travel minutes from the first stop to each stop, so the app knows where a bus is "5 minutes before your stop". | Done |
+| REQ-DATA-7 | Include bus routes that are **not** in the government feed: the municipal weekend services *Naaim BeSofash* (routes 705–729, from the Tel Aviv municipality's map server) and *Sababus* (Ramat Gan's green, blue, red and white routes, from the operator's public map). They appear at the same stops as other routes. Where the operator's map and Moovit disagree on a stop, the app follows Moovit: a stop the map places where no bus stop exists is attached to the nearest real stop on the route's path. | Done |
+| REQ-DATA-8 | A route whose trips do not all serve the same stops keeps **every stop pattern** (the most common one and up to three others), each with its share of the week's trips. The route is listed at every stop any pattern serves. | Done |
+| REQ-DATA-9 | The pipeline writes one small **timetable file per route** for the coming week (start times per weekday and pattern, minutes to each stop). The app loads a file only when a stop's schedule is opened. | Done |
 
 ## Home screen
 
 | ID | Requirement | Status |
 |----|-------------|--------|
 | REQ-HOME-1 | The first screen after sign-in is the **home screen** (formerly "main menu"). Its upper half is a map centered on the user's location, with a button to return to it. | Done |
-| REQ-HOME-2 | Tapping a bus stop on the home map selects it: the map zooms to the stop and the last ~5 minutes of every line before it, **all lines through the stop are drawn** (incoming solid, outbound lighter) with their **live buses**, and the panel lists them with live status, the same as in a commute. | Done |
-| REQ-HOME-3 | In the stop's line list every line has a checkbox, all checked (for very busy stops, the first 30). Unchecking hides a line. Closing the stop returns to the plain map. **＋ New commute** with a stop selected starts the new commute at that stop. | Done |
+| REQ-HOME-2 | Tapping a bus stop on the home map selects it: the map zooms to the stop and the last ~5 minutes of every route before it, **all routes through the stop are drawn** (each as a line: solid where it comes to the stop, lighter after it) with their **live buses**, and the panel lists them with live status, the same as in a commute. | Done |
+| REQ-HOME-3 | In the stop's route list every route has a checkbox, all checked (for very busy stops, the first 30). Unchecking hides a route. Closing the stop returns to the plain map. **＋ New commute** with a stop selected starts the new commute at that stop. | Done |
 
 ## Favorite commutes
 
@@ -82,35 +100,35 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | ID | Requirement | Status |
 |----|-------------|--------|
 | REQ-EDIT-1 | A favorite has up to **2** bus stops. The user picks a stop by tapping it on the map or by searching its name or code. | Done |
-| REQ-EDIT-2 | When a stop is picked, the app lists all bus lines that serve it. | Done |
-| REQ-EDIT-3 | Each line has a checkbox. **By default none are checked.** The user checks the lines they want. | Done |
-| REQ-EDIT-4 | A checked line is drawn on the map along its whole route, from its first stop to its last. | Done |
-| REQ-EDIT-5 | "Save stop" stores the stop and its checked lines. The user then adds the next stop or finishes. | Done |
+| REQ-EDIT-2 | When a stop is picked, the app lists all bus routes that serve it. | Done |
+| REQ-EDIT-3 | Each route has a checkbox. **By default none are checked.** The user checks the routes they want. | Done |
+| REQ-EDIT-4 | A checked route is drawn on the map as a line along its whole path, from its first stop to its last. | Done |
+| REQ-EDIT-5 | "Save stop" stores the stop and its checked routes. The user then adds the next stop or finishes. | Done |
 | REQ-EDIT-6 | "Save commute" saves the commute and returns to the home screen. | Done |
 
 ## Live buses
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| REQ-RT-1 | For every line shown, the app shows up to three live buses relative to the chosen stop: **the next two approaching buses and the one that passed most recently**, when they exist. | Done |
+| REQ-RT-1 | For every route shown, the app shows up to three live buses relative to the chosen stop: **the next two approaching buses and the one that passed most recently**, when they exist. | Done |
 | REQ-RT-2 | Live positions come from the government SIRI real-time feed of the Ministry of Transport, read through the public Open Bus Stride mirror (ADR-0002). They refresh every 30 seconds while the screen is visible. | Done |
 | REQ-RT-3 | Each bus shows how old its position is, and how many stops it is from the chosen stop. | Done |
-| REQ-RT-5 | Lines without live data (from outside the government feed) say so, with their service hours, instead of "No bus on the way". | Done |
-| REQ-RT-6 | Lines without live data are **marked clearly wherever they appear**: a *Weekend · no live tracking* tag and a dashed ring on the line number in every list (home stop list, editor, commute, summary), a **dashed line on the map**, a dashed entry in the map key, and the note in the report. | Done |
-| REQ-RT-7 | Live positions for the weekend *Naaim BeSofash* lines. Blocked: no public source exists (see data-pipeline.md). Needs an agreement with the operator, or a feed they publish. | Planned |
+| REQ-RT-5 | Routes without live data (from outside the government feed) say so, with their service hours, instead of "No bus on the way". | Done |
+| REQ-RT-6 | Routes without live data are **marked clearly wherever they appear**: a *Weekend · no live tracking* tag and a dashed ring on the route number in every list (home stop list, editor, commute, summary), a **dashed line on the map**, a dashed entry in the map key, and the note in the report. | Done |
+| REQ-RT-7 | Live positions for the weekend *Naaim BeSofash* routes. Blocked: no public source exists (see data-pipeline.md). Needs an agreement with the operator, or a feed they publish. | Planned |
 | REQ-RT-4 | Read the Ministry of Transport SIRI SM service directly, through our own proxy, for lower latency and arrival predictions. | Planned |
 
 ## Using a favorite commute
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| REQ-COMM-1 | Opening a favorite shows its stops and selected lines with live buses, the same as in the editor. | Done |
-| REQ-COMM-2 | The commute view opens zoomed so that the start point, destination and chosen stops are all visible, plus each chosen line's last **~5 minutes of travel before** its stop (by timetable, or ~1.5 km when the timetable is missing). | Done |
+| REQ-COMM-1 | Opening a favorite shows its stops and selected routes with live buses, the same as in the editor. | Done |
+| REQ-COMM-2 | The commute view opens zoomed so that the start point, destination and chosen stops are all visible, plus each chosen route's last **~5 minutes of travel before** its stop (by timetable, or ~1.5 km when the timetable is missing). | Done |
 | REQ-COMM-3 | The start point is marked with a **green flag**, the destination with a **checkered flag**, on the map and in the editor. | Done |
-| REQ-COMM-4 | Each line is drawn in two parts: before the chosen stop (incoming) **solid**; after the stop (outbound) lighter and partly transparent, but still clearly visible. | Done |
-| REQ-COMM-5 | Where lines share a street, they are drawn **side by side**, so every line passing there is visible. Shifting must not create loops or knots at corners at any zoom. | Done |
-| REQ-COMM-6 | A **map key** in the top-left corner lists each line's color, number and destination, the flags, and the bus symbols. It can be collapsed. | Done |
-| REQ-COMM-7 | The panel lists every line of every stop in the favorite with a **checkbox, all checked** when the view opens. Unchecking hides that line from the current view (map, buses, key) but does **not** change the favorite. | Done |
+| REQ-COMM-4 | Each route's line is drawn in two parts: before the chosen stop (incoming) **solid**; after the stop (outbound) lighter and partly transparent, but still clearly visible. | Done |
+| REQ-COMM-5 | Where routes share a street, their lines are drawn **side by side**, so every route passing there is visible. Shifting the lines must not create loops or knots at corners at any zoom. | Done |
+| REQ-COMM-6 | A **map key** in the top-left corner lists each route's color, number and destination, the flags, and the bus symbols. It can be collapsed. | Done |
+| REQ-COMM-7 | The panel lists every route of every stop in the favorite with a **checkbox, all checked** when the view opens. Unchecking hides that route from the current view (map, buses, key) but does **not** change the favorite. | Done |
 | REQ-COMM-8 | The panel can be **dragged**: down (by its handle, or swiping down while the list is at its top) for more map, up for more list. It settles at small, half or large. | Done |
 | REQ-COMM-9 | On installed phone apps, nothing is drawn under the status bar (clock/battery): the map, its key and buttons start below it, so they are sharp and can be tapped. | Done |
 
@@ -119,23 +137,23 @@ Status values: **Done** = implemented in MVP · **Planned** = agreed, not built 
 | ID | Requirement | Status |
 |----|-------------|--------|
 | REQ-STOP-1 | Where several stops share one stop number (the platforms of a terminal), each is shown with what tells it apart, when the data has it: its **platform** and **floor** ("20277 · Platform 2"), in search results, stop titles and pop-ups. | Done |
-| REQ-STOP-2 | Such a stop always shows a **⚠ hazard sign**. Pressing it says how many bus stops share the number and to make sure you are at the right one, and lists each stop with its platform (if known) and its lines. Where a stop is being chosen (home screen, editor), the pop-up can switch to another of them. | Done |
+| REQ-STOP-2 | Such a stop always shows a **⚠ hazard sign**. Pressing it says how many bus stops share the number and to make sure you are at the right one, and lists each stop with its platform (if known) and its routes. Where a stop is being chosen (home screen, editor), the pop-up can switch to another of them. | Done |
 
-## Lines with more than one route
+## Routes with more than one stop pattern
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| REQ-LINE-1 | When a line is shown from a stop: (a) if only **one** of its stop patterns passes that stop, only that pattern is drawn; (b) if **several** pass it, the most common is drawn as the normal line and the others as **dotted** lines. Live buses are placed on the pattern that passes the stop. | Done |
-| REQ-LINE-2 | A line with more than one stop pattern shows a small **⚠ hazard sign** next to it in every list. Pressing it opens a pop-up about the line: each pattern's share of trips, how it differs (stops skipped or added), whether it stops at this stop, and what is drawn. | Done |
-| REQ-LINE-3 | The pop-up links to a **full-line screen**: the line on the map with all its stop patterns (usual route solid, variants dotted, each in its own color) and all their stops. | Done |
-| REQ-LINE-4 | On the full-line screen, pressing a stop shows a link to that stop's **full schedule**: every scheduled time of the line at the stop, by weekday, with variant-route trips marked. Lines without a published timetable say so. | Done |
+| REQ-LINE-1 | When a route is shown from a stop: (a) if only **one** of its stop patterns passes that stop, only that pattern is drawn; (b) if **several** pass it, the most common is drawn as the normal line and the others as **dotted** lines. Live buses are placed on the pattern that passes the stop. | Done |
+| REQ-LINE-2 | A route with more than one stop pattern shows a small **⚠ hazard sign** next to it in every list. Pressing it opens a pop-up about the route: each pattern's share of trips, how it differs (stops skipped or added), whether it stops at this stop, and what is drawn. | Done |
+| REQ-LINE-3 | The pop-up links to a **full-route screen**: the route on the map with all its stop patterns (the most common as a solid line, the others as dotted lines, each in its own color) and all their stops. | Done |
+| REQ-LINE-4 | On the full-route screen, pressing a stop shows a link to that stop's **full schedule**: every scheduled time of the route at the stop, by weekday, with trips of the less common patterns marked. Routes without a published timetable say so. | Done |
 
 ## Usage insights (see privacy.md and ADR-0008)
 
 | ID | Requirement | Status |
 |----|-------------|--------|
-| REQ-ANL-1 | With the person's agreement, record **safe, anonymous** usage: app opens, sign-in method, screens and time on each, features used, city and hour. Never names, emails, account ids, stop or line ids, addresses or coordinates. The exact list is in privacy.md. | Done |
-| REQ-ANL-2 | A report of what commutes people save, as **counts only**: people and commutes, commutes per person, by city, 1 or 2 stops, start/destination set or not, most saved lines, by month. A stop is listed only when at least 3 different people saved it. Real users and debug testers are shown separately. | Done |
+| REQ-ANL-1 | With the person's agreement, record **safe, anonymous** usage: app opens, sign-in method, screens and time on each, features used, city and hour. Never names, emails, account ids, stop or route ids, addresses or coordinates. The exact list is in privacy.md. | Done |
+| REQ-ANL-2 | A report of what commutes people save, as **counts only**: people and commutes, commutes per person, by city, 1 or 2 stops, start/destination set or not, most saved routes, by month. A stop is listed only when at least 3 different people saved it. Real users and debug testers are shown separately. | Done |
 | REQ-ANL-3 | Nothing is recorded until the person agrees. The home screen asks once; a *Privacy & usage data* screen explains what is kept and lets them turn sharing on or off at any time. | Done |
 | REQ-ANL-5 | The report is open only to **admins**. Admins are listed by hand in the database (`admins/{uid}`); the app cannot add one. The database rules refuse the report's query to anyone else. | Done |
-| REQ-ANL-4 | The **debug** version is counted apart from real users (kept out of the normal reports), and, with agreement to its own clearer notice, also records details: the stops and lines of commutes, start/destination points, and exact location when a commute is opened. Details are stored in our own database under the tester's account, never in Google Analytics. | Done |
+| REQ-ANL-4 | The **debug** version is counted apart from real users (kept out of the normal reports), and, with agreement to its own clearer notice, also records details: the stops and routes of commutes, start/destination points, and exact location when a commute is opened. Details are stored in our own database under the tester's account, never in Google Analytics. | Done |

@@ -1,7 +1,7 @@
 # 🚌 Knight Bus
 
 **Live buses for your favorite commutes.** You save up to three commutes, each with up to two
-bus stops and the lines you care about. Open one, and the map shows those lines with the
+bus stops and the routes you care about. Open one, and the map shows those routes with the
 **next two buses coming to your stop and the last one that passed it**, live from the
 Ministry of Transport feed.
 
@@ -81,19 +81,19 @@ Knight Bus/
 │   ├── auth.js              Email + Google sign-in (Firebase Auth), local demo mode
 │   ├── store.js             Save/load favorites (Firestore)
 │   ├── location.js          GPS, which city am I in
-│   ├── cityData.js          Download + cache the city bundle; stop/line lookups
+│   ├── cityData.js          Download + cache the city bundle; stop/route lookups
 │   ├── realtime.js          Live bus positions; next two + last passed
-│   ├── liveLines.js         Draw chosen lines + live buses; refresh every 30 s
+│   ├── liveLines.js         Draw the chosen routes as lines + live buses; refresh every 30 s
 │   ├── map.js               Leaflet map, stop dots, bus icons, flags, map key
 │   ├── geocode.js           Address search (start point / destination)
 │   ├── analytics.js         Usage insights: consent first, safe events, debug-only details
 │   ├── styles.css
-│   ├── lib/                 dom.js (UI helper), polyline.js (shape encoding), routeGeometry.js (positions along a line)
+│   ├── lib/                 dom.js (UI helper), polyline.js (shape encoding), routeGeometry.js (positions along a route's path)
 │   └── views/               One file per screen: login, city, home, editor, commute, line, privacy, report
 ├── pipeline/
 │   ├── cities.json          Which cities exist and their boundaries
-│   ├── build-city-data.mjs  National GTFS → data/cities/<city>.json + data/schedules/<line>.json
-│   └── sources/             Weekend lines from outside the government feed (Busofash, Sababus)
+│   ├── build-city-data.mjs  National GTFS → data/cities/<city>.json + data/schedules/<route>.json
+│   └── sources/             Weekend routes from outside the government feed (Busofash, Sababus)
 ├── scripts/
 │   ├── build-site.sh        Builds one version (main or debug) for publishing
 │   ├── check-docs.mjs       Docs-as-code check (runs in CI)

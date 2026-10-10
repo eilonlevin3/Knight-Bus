@@ -1,6 +1,6 @@
 // Weekend lines run by municipalities ("Naaim BeSofash", https://busofash.co.il/), which are
 // NOT in the government GTFS feed. Read from the Tel Aviv municipality's public map server.
-// Docs: docs/data-pipeline.md#weekend-lines-outside-the-government-feed
+// Docs: docs/data-pipeline.md#weekend-routes-outside-the-government-feed
 // @req REQ-DATA-7
 //
 // The server has one shape per line direction ("מכפר סבא אל תל אביב" = from Kfar Saba to Tel Aviv)

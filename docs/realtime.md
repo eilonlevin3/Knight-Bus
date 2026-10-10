@@ -22,7 +22,7 @@ GET https://open-bus-stride-api.hasadna.org.il/siri_vehicle_locations/list
     &limit=300
 ```
 
-The SIRI `LineRef` is the same number as the GTFS `route_id`, so a line from the city bundle
+The SIRI `LineRef` is the same number as the GTFS `route_id`, so a route from the city bundle
 maps straight to its live buses. When this was written, positions were about 1–2 minutes old.
 
 The upper time bound matters: the feed has some rows with wrong future timestamps (year
@@ -30,12 +30,12 @@ The upper time bound matters: the feed has some rows with wrong future timestamp
 
 ## The "next two + last passed" rule
 
-For one line and one chosen stop:
+For one route and one chosen stop:
 
-1. Fetch the newest position of each ride (`siri_ride__id`) on the line in the last 7 minutes.
-2. **Place every stop on the line's path** (the route shape), walking forward from the
-   first stop. This keeps the stops in order even where a line comes back along the same
-   street. The result is cached per line.
+1. Fetch the newest position of each ride (`siri_ride__id`) on the route in the last 7 minutes.
+2. **Place every stop on the route's path** (its shape), walking forward from the
+   first stop. This keeps the stops in order even where a route comes back along the same
+   street. The result is cached per route.
 3. **Place each bus on the path:** take the nearest point on the path. Buses more than
    250 m from the path are dropped (depot, detour or bad GPS). In a test on 2026-10-09,
    most live buses were within 30 m.
@@ -48,20 +48,20 @@ For one line and one chosen stop:
 Unit tests: [tests/core.test.mjs](../tests/core.test.mjs) (`npm test`).
 
 On the map, approaching buses are solid and pulse; the passed bus is faded and dashed. Each
-popup and panel line shows how old the position is.
+popup and panel row shows how old the position is.
 
-When a favorite has two stops on the same line, one bus can be "passed" for stop 1 and
+When a favorite has two stops on the same route, one bus can be "passed" for stop 1 and
 "next" for stop 2. It gets one marker that shows both facts.
 
 ## Refresh
 
 Every 30 seconds (`realtime.refreshMs` in [src/config.js](../src/config.js)) while the screen
 is visible. Updates pause when the app goes to the background and resume when it returns.
-The app sends one request per line, all in parallel.
+The app sends one request per route, all in parallel.
 
 ## Limits and next steps
 
-- **Loops:** a *bus* is placed at its nearest point on the path. Where a line passes the
+- **Loops:** a *bus* is placed at its nearest point on the path. Where a route passes the
   same street twice, the bus can be put on the wrong leg. Using the previous position, or
   the feed's `distance_from_journey_start`, would fix it.
 - **No arrival times yet.** REQ-RT-4 (Planned) adds a small proxy, for example a Cloudflare

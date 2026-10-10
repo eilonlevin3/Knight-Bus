@@ -20,7 +20,7 @@ question with a plain warning about the details before anything is recorded.
 - How many people use Knight Bus: new users, and active per day, week and month.
 - How they use it: which screens, how long on each, which features (flags, toggles, panel
   drag, search).
-- What they save: cities, lines, one or two stops, start/destination or not.
+- What they save: cities, routes, one or two stops, start/destination or not.
 - Whether it works for them: does the live data answer their question, do they come back.
 
 ## Good practice
@@ -40,7 +40,7 @@ question with a plain warning about the details before anything is recorded.
      **not** record it. If needed, record only the **city/area** and **hour of day** when
      a commute is opened. That still answers "when and where is the app used?".
 4. **Aggregate what's already there.** Saved commutes are already in Firestore. A small
-   report script (admin only, run on demand) can count lines, cities and stops per commute
+   report script (admin only, run on demand) can count routes, cities and stops per commute
    without new tracking.
 5. **Keep it short.** Raw events for 14 months at most, then aggregates only.
 6. **Say it.** A one-page privacy notice linked from the menu.
@@ -63,9 +63,9 @@ with these events:
 | Event | Fields (nothing personal) |
 |-------|---------------------------|
 | `screen_view` | screen (`menu`, `editor`, `commute`, …), time on screen |
-| `commute_saved` | city, number of stops, number of lines, has start/destination |
+| `commute_saved` | city, number of stops, number of routes, has start/destination |
 | `commute_opened` | slot, city, hour of day |
-| `line_toggled` | on/off (no line ids) |
+| `line_toggled` | on/off (no route ids) |
 | `panel_dragged` | to small / half / large |
 | `place_set` | how: tap / search / my location (no coordinates) |
 | `live_seen` | buses shown: 0 / 1–2 / 3 |

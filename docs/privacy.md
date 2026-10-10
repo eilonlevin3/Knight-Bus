@@ -13,7 +13,7 @@ you change what is collected, change this file, the screen text and the code tog
    Bus?* with *Share usage* and *No thanks*. No answer means off.
 2. **It can be turned off any time**: *Menu → Privacy & usage data*.
 3. **The user version collects only "safe" data** (table below): no names, emails, account
-   ids, stop or line ids, addresses or coordinates.
+   ids, stop or route ids, addresses or coordinates.
 4. **The debug version is counted apart and also keeps details**, and says so in its own
    words before the person agrees.
 
@@ -22,7 +22,7 @@ you change what is collected, change this file, the screen text and the code tog
 | Data | Where | Who can read it |
 |------|-------|-----------------|
 | Sign-in: email or Google account | Firebase Authentication | The account owner; project admins |
-| Saved commutes: stops, lines, start/destination | Firestore `users/{uid}/favorites` | The account owner; project admins |
+| Saved commutes: stops, routes, start/destination | Firestore `users/{uid}/favorites` | The account owner; project admins |
 | Location | Used on the phone to pick the city, center the home map and draw "you are here". The last position is remembered **on the phone only** (`kb.lastPosition`), for a quick start | Never sent |
 
 ## Safe usage data: everyone who agreed (user and debug versions)
@@ -37,21 +37,21 @@ id; the account is never attached.
 | `screen_view`, `screen_time` | screen name (login, city, home, editor, commute, privacy, report), seconds on it (background time not counted) |
 | `city_chosen` | city, how: GPS or list |
 | `stop_picked` | how: map, search, or from the home map |
-| `stop_explored` | city, number of lines at the stop (as a range). Not which stop |
+| `stop_explored` | city, number of routes at the stop (as a range). Not which stop |
 | `place_set` | start or destination, how: tap / search / my location |
-| `commute_saved` | slot, city, new or edited, number of stops, lines (as a range: 1–2, 3–5, 6+), has start, has destination, includes a weekend line |
-| `commute_opened` | slot, city, **hour and weekday**, number of stops, lines (range), has start/destination |
-| `live_seen` | city, lines (range), buses on the way (range), any error |
+| `commute_saved` | slot, city, new or edited, number of stops, routes (as a range: 1–2, 3–5, 6+), has start, has destination, includes a weekend route |
+| `commute_opened` | slot, city, **hour and weekday**, number of stops, routes (range), has start/destination |
+| `live_seen` | city, routes (range), buses on the way (range), any error |
 | `line_toggled` | on or off |
 | `stop_info_opened` | how many stops share the number, whether platforms tell them apart. Not which stop |
-| `line_info_opened`, `line_map_opened`, `line_stop_tapped`, `schedule_opened` | that it happened, the number of route patterns, whether a timetable existed. Not which line or stop |
+| `line_info_opened`, `line_map_opened`, `line_stop_tapped`, `schedule_opened` | that it happened, the number of stop patterns, whether a timetable existed. Not which route or stop |
 | `panel_dragged` | small / half / large |
 | `commute_cleared`, `update_applied`, `usage_sharing_on` | that it happened |
 
 Google Analytics also records, by itself: device type, operating system, browser, language,
 and country/city from the internet address.
 
-**Physical places:** only the **city** and the **hour**. No coordinates, no stops, no lines.
+**Physical places:** only the **city** and the **hour**. No coordinates, no stops, no routes.
 
 ## Detailed data: debug version only
 
@@ -63,11 +63,11 @@ Google Analytics. Google's rules forbid precise locations there.
 |-------|--------------|
 | `city_chosen` | exact location, if GPS was used |
 | `stop_explored` | which stop was opened on the home map |
-| `commute_saved` | the whole commute: stop ids and names, line ids, start and destination coordinates |
+| `commute_saved` | the whole commute: stop ids and names, route ids, start and destination coordinates |
 | `commute_opened` | the whole commute, plus the phone's exact location at that moment |
-| `live_seen` | per stop and line: how many stops away each bus was |
-| `line_toggled` | which stop and line |
-| `line_map_opened`, `schedule_opened` | which line and stop |
+| `live_seen` | per stop and route: how many stops away each bus was |
+| `line_toggled` | which stop and route |
+| `line_map_opened`, `schedule_opened` | which route and stop |
 
 Each person can read and delete their own detail events; the rules do not allow editing
 them, and refuse any event that claims to come from the user version.
@@ -96,12 +96,12 @@ them, and refuse any event that claims to come from the user version.
 
 It reads every saved commute and shows **counts only**: people with a saved commute,
 commutes per person, by city, one or two stops, with start/destination, the most saved
-lines, and commutes by month. It has two tabs: *Real users* and *Debug testers*.
+routes, and commutes by month. It has two tabs: *Real users* and *Debug testers*.
 
 - **No person is shown.** Account ids are used only to count "different people" and never
   leave the counting function. A unit test checks this.
 - **Stops are places**, so a stop is listed only when at least **3 different people** saved
-  it. Lines are listed from 1, since a line alone does not locate anyone.
+  it. Routes are listed from 1, since a route alone does not locate anyone.
 - **Who can open it:** people with a document at `admins/{their uid}` in Firestore. That
   document can only be created in the Firebase console. The rules refuse the query to
   everyone else, so hiding the menu link is not what protects it.

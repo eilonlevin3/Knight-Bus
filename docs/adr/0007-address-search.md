@@ -19,7 +19,7 @@ If use grows, switch to a hosted geocoder with a key, or run our own Nominatim. 
 
 ## Lines side by side (REQ-COMM-5)
 
-Where several lines share a street, drawn normally they would sit on top of each other and
+Where several routes share a street, drawn normally they would sit on top of each other and
 only the last one would show. Each line is shifted sideways by a few screen pixels,
 recalculated at every zoom.
 
@@ -33,12 +33,12 @@ replaced it with our own [src/lib/offsetLine.js](../../src/lib/offsetLine.js), w
 
 Unit tests: [tests/offsetLine.test.mjs](../../tests/offsetLine.test.mjs). Loops that are
 **real** stay visible, for example a bus going around a terminal or a block to turn back:
-line 115 has two.
+route 115 has two.
 
 Each line shown gets its own shift: lines are `weight + 1` pixels apart, centered on the
 road.
 
-**Trade-off.** The shift applies along the whole line, so a line that runs alone is drawn a
+**Trade-off.** The shift applies along the whole line, so the line of a route that runs alone is drawn a
 few pixels off the road center. Shifting only where lines actually overlap needs
 segment-by-segment bundling. That is much more work, and we revisit it only if the simple
 version looks wrong on real commutes.
