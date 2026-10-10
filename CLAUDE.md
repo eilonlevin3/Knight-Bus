@@ -9,7 +9,7 @@ For what the app does and how it is built, start at [README.md](README.md) (docs
 changed open item, update the matching section and the "Last updated" line. Remove things
 that stop being true. Do not copy what the docs already say; link to them.
 
-Last updated: 2026-10-10 (home screen round, on `debug` only; main is still `34aad5a`).
+Last updated: 2026-10-10 (research round; `debug` is ahead of main, which is still `34aad5a`).
 
 ## The owner and how to work with them
 
@@ -149,6 +149,36 @@ Claude could not do these in this setup; ask the owner, with exact steps:
   ones; every relative link in docs must resolve.
 - **Bidi text:** stop and line names are Hebrew inside an English UI; text containers use
   `unicode-bidi: plaintext`.
+
+## Research findings awaiting the owner's decision (2026-10-10)
+
+Nothing below is implemented. The owner asked for findings first and will say what to build.
+
+1. **Pipeline bug: lines missing at some stops (e.g. 62 and 445 at stop 25778).**
+   `pipeline/build-city-data.mjs` assumes every trip of a GTFS `route_id` has the same
+   stops and keeps only the first trip. False for 142 of 6,596 bus routes (2%): 141 have
+   two stop patterns, 1 has three. 92 routes lose stops (167 line-stop pairs); 38 of them
+   are in the Tel Aviv file. For 63 routes the kept trip is not even the most common
+   pattern. Which trip is "first" changes between daily feeds, so a line can appear at a
+   stop one day and vanish the next (445 did). Fix options: keep every distinct pattern as
+   a variant; or keep the most common pattern and list the line at all stops any pattern serves.
+2. **Live positions for weekend lines: no usable public API.**
+   - Moovit: has them, but its Transit APIs are enterprise-only (no self-service signup,
+     credentials by helpdesk@moovit.com, priced per customer). Its app/web API is private.
+   - Bus Nearby (אוטובוס קרוב): has them; API `api.busnearby.co.il` is behind a Cloudflare
+     bot challenge (403). Not open. Do not try to get around it.
+   - Government SIRI via Stride: does not carry them (checked three times).
+   - Operator: **"נוע תנוע" (noat.co.il)** runs both Naaim BeSofash and Sababus for the
+     municipalities. Contact for data: contact@noat.co.il, phone *10930 / 03-6753495.
+     Asking them (or Moovit) for a feed is the only real path.
+3. **Sababus (סבבוס): found, static only.** Ramat Gan's free weekend buses: four lines
+   (green, blue, red, white), Fri evening and Sat. Not in government GTFS/SIRI. The
+   operator's Google My Map (`mid=1zUQK4dHqJ4srilKzhYJM6t5vQfGkfo8`, KML export works,
+   "last update 05/10/2026") has 12 route shapes and 331 stops **with line and direction
+   per stop**, plus all 36 Naaim BeSofash shapes and 1,421 stops with stop codes. It could
+   replace the Tel Aviv GIS source (direction is given instead of guessed). Sababus stops
+   have names and coordinates but no national stop codes: match to national stops by distance.
+   Older copy: shabat.open.org.il geojson (2022–2023, stale).
 
 ## Decisions and why (short; details in docs/adr/)
 
