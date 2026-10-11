@@ -13,7 +13,8 @@ only its own city, in a few MB.
 
 ## What it keeps
 
-For each bus route (GTFS `route_id`; in Israel this is one direction and one alternative of a route number):
+For each bus route (one route number of one operator in one direction; in the GTFS this can be
+several `route_id`s, see [Alternatives](#alternatives-one-route-several-entries)):
 
 - route number, destination, operator;
 - the **ordered list of stops** from first to last, for **every stop pattern** the route has
@@ -51,9 +52,34 @@ trips of a GTFS `route_id` serve the same stops. They don't: in that day's feed 
 
 Now (REQ-DATA-8) every trip is read. Trips with the same stop list form a **pattern**, and
 a route keeps its patterns sorted by how many trips of the **coming week** use them (up to
-four). The most common is the route's main pattern; the others carry their share in percent. The
-route is listed at every stop any pattern serves. In the feed of 2026-10-10: 68 routes had
-more than one stop pattern this week, 36 of them in the Tel Aviv file.
+six). The most common is the route's main pattern; the others carry their share in percent. The
+route is listed at every stop any pattern serves.
+
+## Alternatives: one route, several entries
+
+The ministry publishes every "alternative" (חלופה) of a route as its own `route_id`. The
+`route_desc` column reads `code-direction-alternative`, for example `45006-2-#` and
+`45006-2-2`: route 6 in Yavne, direction 2, two alternatives. They have the same operator,
+number and direction, and differ in a few stops. Kept apart, a stop listed route 6 two or
+three times; on 2026-10-11 that happened at 5,621 of the 12,161 stops in the Tel Aviv file.
+
+So (REQ-DATA-10) entries with the same **operator, code, direction and route number** are
+merged into one route:
+
+- the entry with the most trips this week gives the route its id, name and destination;
+- the stop patterns and timetable trips of all of them are put together, so an alternative
+  becomes a stop pattern of the route (with the ⚠ sign and its share of trips);
+- the other entries' ids are kept in the route row (12th entry). Live buses report under
+  those ids, so the app asks for each; a Favorite Commute saved with such an id is read as
+  the merged route.
+- A circular route published as two "directions" whose most common pattern has exactly the
+  same stops is merged the same way.
+- An alternative with **its own number on the bus** (62א beside 62) is not merged.
+
+In the feed of 2026-10-11: 1,022 entries were merged, leaving 5,574 routes, 810 of them
+with more than one stop pattern (281 of 1,960 in the Tel Aviv file). A number can still
+appear twice at a stop when both directions stop there or two operators use it; the app
+then frames the icon in the company's color (REQ-HOME-3).
 
 ## Opposite directions
 
@@ -61,13 +87,12 @@ A bus service that runs both ways is two routes in the timetable data, one per d
 The pipeline pairs them, so the app can list the service once and offer **Switch
 direction** (REQ-ROUTE-2). Each route row gets the id of its opposite as its 11th entry.
 
-- **Government routes:** the `route_desc` column reads `code-direction-alternative`
-  (for example `10062-1-#`). Two routes with the same code and alternative but a different
-  direction are a pair.
+- **Government routes:** after the alternatives are merged, two routes of the same
+  operator with the same code and number but a different direction are a pair.
 - **Weekend routes:** two routes of the same source with the same number are a pair.
 - A route with no partner (circular, one-way) gets no entry and no Switch button.
 
-In the Tel Aviv bundle 1,966 of 2,295 routes have an opposite (2026-10-10).
+In the Tel Aviv bundle 1,764 of 1,960 routes have an opposite (2026-10-11).
 
 ## Timetable files
 

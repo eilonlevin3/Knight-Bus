@@ -9,8 +9,8 @@ import { watchPosition, getPosition } from '../location.js';
 import { searchPlaces, placeName } from '../geocode.js';
 import { LiveLines } from '../liveLines.js';
 import { saveFavorite, deleteFavorite } from '../store.js';
-import { liveSummary, routeBadge, routeTitle } from './liveInfo.js';
-import { showRouteInfo } from './lineInfo.js';
+import { routeBadge, routeChip, repeatedNumbers } from './liveInfo.js';
+import { showRouteCard } from './lineInfo.js';
 import { stopSuffix, stopHazard, platformText } from './stopInfo.js';
 import { commuteName, isDefaultName } from '../lib/names.js';
 import { track, trackDetail, bucket } from '../analytics.js';
@@ -23,6 +23,7 @@ export async function render(root, ctx, { slot }) {
   const draft = existing
     ? structuredClone(existing)
     : { name: '', cityId: city.id, stops: [] };
+  for (const st of draft.stops) st.routeIds = city.currentRouteIds(st.routeIds); // REQ-DATA-10
   // A default name ("Favorite Commute 2", in either language) shows as an empty box with a hint.
   if (isDefaultName(draft.name)) draft.name = '';
   // Optional start point and destination: { lat, lon, label } or null.
@@ -154,35 +155,32 @@ export async function render(root, ctx, { slot }) {
   function paintLines() {
     const s = state.stop;
     const routes = city.routesAtStop(s.id);
-    // Same number + destination twice = two routes of one number; show where each starts to tell them apart.
-    const seen = {};
-    for (const r of routes) seen[`${r.short}|${r.dest}`] = (seen[`${r.short}|${r.dest}`] || 0) + 1;
+    // The same small icons as on the home screen: a checkbox and the route number; the
+    // number opens more about the route (REQ-EDIT-2).
+    const repeated = repeatedNumbers(routes);
     const rows = routes.map((r) => {
-      const variant = seen[`${r.short}|${r.dest}`] > 1 ? t(' · from {stop}, {n} stops', { stop: r.stops[0].name, n: r.stops.length }) : '';
       const on = state.checked.has(r.id);
-      const live = on ? state.live.get(`${s.id}|${r.id}`) : null;
-      return h('label', { class: `line-row ${on ? 'on' : ''}` },
-        h('input', {
-          type: 'checkbox',
-          checked: on,
-          onchange: (e) => {
-            if (e.target.checked) state.checked.add(r.id);
-            else state.checked.delete(r.id);
-            update();
-          },
+      return routeChip(r, {
+        on,
+        color: lines.colorOf(r.id),
+        repeated: repeated.has(r.short),
+        onToggle: (checked) => {
+          if (checked) state.checked.add(r.id); else state.checked.delete(r.id);
+          update();
+        },
+        onInfo: () => showRouteCard(ctx, city, r, s, {
+          live: on ? state.live.get(`${s.id}|${r.id}`) : null, shown: on,
+          // Leaving for the full-route screen would drop what was not saved yet.
+          confirmLeave: t('Open the full route? What you have not saved in this Favorite Commute will be lost.'),
         }),
-        routeBadge(r, on ? lines.colorOf(r.id) : null),
-        h('span', { class: 'line-text' },
-          routeTitle(r, () => showRouteInfo(ctx, city, r, s.id)),
-          h('small', { class: 'muted' }, r.agency + (r.hours ? ` · ${t(r.hours)}` : '') + variant),
-          on ? liveSummary(live) : null));
+      });
     });
     return [
       h('h2', {}, t('Stop {n}: {name}', { n: state.index + 1, name: s.name })),
       h('p', { class: 'muted' }, `${t('Stop code {code}', { code: s.code })}${platformText(s) ? ` · ${platformText(s)}` : ''} `, stopHazard(city, s, (other) => pickStop(other, 'platform')),
-        ` · ${tn(routes.length, '1 route.', '{n} routes.')} ${t('Check the routes you want to see.')}`,
+        ` · ${tn(routes.length, '1 route.', '{n} routes.')} ${t('Check the routes you want to see. Tap a number for details.')}`,
         ' ', h('button', { class: 'link small', onclick: () => go('pick') }, t('Change stop'))),
-      h('div', { class: 'line-list' }, ...rows),
+      h('div', { class: 'route-chips' }, ...rows),
       h('div', { class: 'row sticky' },
         h('button', { onclick: () => (draft.stops.length ? go('summary') : ctx.go('#/home')) }, t('Cancel')),
         h('button', {

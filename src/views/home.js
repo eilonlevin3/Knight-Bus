@@ -1,6 +1,6 @@
 // Home screen: a map around you, tap any stop to see its routes and live buses, and your
 // Favorite Commutes. Docs: docs/user-flows.md#2-home-screen
-// @req REQ-HOME-1 @req REQ-HOME-2 @req REQ-HOME-3 @req REQ-FAV-1 @req REQ-FAV-2 @req REQ-AUTH-3 @req REQ-ANL-3 @req REQ-ROUTE-1 @req REQ-LANG-2
+// @req REQ-HOME-1 @req REQ-HOME-2 @req REQ-HOME-3 @req REQ-HOME-4 @req REQ-FAV-1 @req REQ-FAV-2 @req REQ-AUTH-3 @req REQ-ANL-3 @req REQ-ROUTE-1 @req REQ-LANG-2
 
 import { h, toast } from '../lib/dom.js';
 import { t, tn, locale, cityName } from '../i18n.js';
@@ -14,7 +14,7 @@ import { draggableSheet } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { consent, setConsent, detailed, track, trackDetail, bucket } from '../analytics.js';
 import { safeSummary, debugSummary } from './privacy.js';
-import { isWeekendRoute } from './liveInfo.js';
+import { routeChip, repeatedNumbers } from './liveInfo.js';
 import { showRouteCard } from './lineInfo.js';
 import { stopSuffix, stopHazard } from './stopInfo.js';
 import { showOptions } from './options.js';
@@ -102,6 +102,7 @@ export async function render(root, ctx) {
     lines.set(shownEntries());
     stops.refresh();
     paint();
+    dockButtons(true);
     sheet.scrollTop = 0;
     // Zoom to the stop and where its buses are in their last ~5 minutes before it.
     const pts = [[stop.lat, stop.lon], ...approachPoints(city, shownEntries())];
@@ -116,6 +117,7 @@ export async function render(root, ctx) {
     lines.set([]);
     stops.refresh();
     paint();
+    dockButtons(false);
   }
 
   const saved = () => FAVORITE_SLOTS.filter((slot) => ctx.favorites[slot]);
@@ -146,25 +148,20 @@ export async function render(root, ctx) {
     const routes = city.routesAtStop(s.id);
     // One small icon per route: a checkbox (show on the map or not) and the route number.
     // Tapping the number opens more about the route (REQ-HOME-3).
+    const repeated = repeatedNumbers(routes);
     const rows = routes.map((r) => {
       const on = !state.hidden.has(r.id);
-      return h('div', { class: `route-chip ${on ? 'on' : 'off'}` },
-        h('input', {
-          type: 'checkbox',
-          checked: on,
-          'aria-label': t('Show route {n} on the map', { n: r.short }),
-          onchange: (e) => {
-            if (e.target.checked) state.hidden.delete(r.id); else state.hidden.add(r.id);
-            lines.set(shownEntries());
-            paint();
-          },
-        }),
-        h('button', {
-          class: `chip-number${isWeekendRoute(r) ? ' weekend' : ''}`,
-          style: on ? `--c:${lines.colorOf(r.id)}` : '',
-          'aria-label': t('About route {n}', { n: r.short }),
-          onclick: () => showRouteCard(ctx, city, r, s, on ? state.rows.find((x) => x.route.id === r.id) : null, on),
-        }, r.short, r.multi ? h('span', { class: 'chip-mark' }, '⚠') : null));
+      return routeChip(r, {
+        on,
+        color: lines.colorOf(r.id),
+        repeated: repeated.has(r.short),
+        onToggle: (checked) => {
+          if (checked) state.hidden.delete(r.id); else state.hidden.add(r.id);
+          lines.set(shownEntries());
+          paint();
+        },
+        onInfo: () => showRouteCard(ctx, city, r, s, { live: on ? state.rows.find((x) => x.route.id === r.id) : null, shown: on }),
+      });
     });
     return h('div', { class: 'stop-section' },
       h('div', { class: 'row between' },
@@ -226,8 +223,37 @@ export async function render(root, ctx) {
   }
 
   // Bottom right, one under the other: New Favorite Commute (while a slot is free),
-  // Search routes, Options.
-  screen.append(h('div', { class: 'fab-stack' },
+  // Search routes, Options. While a stop is open they are tucked against the right edge so
+  // they do not cover the route numbers: swipe them left to bring them out, right to tuck
+  // them away again (the small handle does the same when tapped) (REQ-HOME-4).
+  const handle = h('button', { class: 'fab-handle', type: 'button', onclick: () => tuckButtons(!fabs.classList.contains('min')) });
+  function tuckButtons(min) {
+    fabs.classList.toggle('min', min);
+    handle.textContent = min ? '‹' : '›';
+    handle.setAttribute('aria-label', min ? t('Show the buttons') : t('Hide the buttons'));
+    handle.setAttribute('aria-expanded', String(!min));
+  }
+  function dockButtons(docked) {
+    fabs.classList.toggle('docked', docked);
+    tuckButtons(docked);
+  }
+  let swipeStart = null;
+  let swiped = false;
+  const fabs = h('div', {
+    class: 'fab-stack',
+    onpointerdown: (e) => { swipeStart = e.clientX; swiped = false; },
+    onpointerup: (e) => {
+      if (swipeStart === null || !fabs.classList.contains('docked')) return;
+      const dx = e.clientX - swipeStart;
+      swipeStart = null;
+      if (Math.abs(dx) < 24) return;
+      swiped = true; // a swipe is not a tap on the button under the finger
+      tuckButtons(dx > 0);
+    },
+    onpointercancel: () => { swipeStart = null; },
+  },
+    handle,
+    h('div', { class: 'fab-column' },
     freeSlot()
       ? h('button', {
           class: 'fab',
@@ -240,6 +266,9 @@ export async function render(root, ctx) {
       : null,
     h('button', { class: 'fab small', onclick: () => ctx.go('#/routes') }, t('🔍 Search routes')),
     h('button', { class: 'fab small', onclick: () => showOptions(ctx) }, t('⚙ Options'))));
+  fabs.addEventListener('click', (e) => { if (swiped) { swiped = false; e.stopPropagation(); e.preventDefault(); } }, true);
+  screen.append(fabs);
+  dockButtons(false);
 
   const panel = draggableSheet(screen, sheet, { onResize: () => map.invalidateSize({ pan: false }) });
   paint();

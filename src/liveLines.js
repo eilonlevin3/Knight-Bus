@@ -4,7 +4,7 @@
 
 import { realtime } from './config.js';
 import { t, tn, arrow } from './i18n.js';
-import { fetchLiveBuses, classifyBuses, ageLabel } from './realtime.js';
+import { fetchLiveBuses, classifyBuses, ageLabel, dropFinishedRides } from './realtime.js';
 import { LINE_COLORS, busIcon, lighten } from './map.js';
 import { stopPositions, splitPath, samePath } from './lib/routeGeometry.js';
 import { makeOffsetPolyline } from './lib/offsetLine.js';
@@ -119,8 +119,10 @@ export class LiveLines {
     }
     const routeIds = [...new Set(this.entries.map((e) => e.routeId))];
     // Lines outside the government feed have no live positions: don't ask for them.
+    // A route can report under several ids (REQ-DATA-10): ask for each and put them together.
+    const fetchRoute = (route) => Promise.all(route.liveIds.map(fetchLiveBuses)).then((lists) => dropFinishedRides(lists.flat()));
     const results = await Promise.all(routeIds.map((id) => (this.city.routes.get(id).live
-      ? fetchLiveBuses(id).then((buses) => [id, { buses }], (error) => [id, { error }])
+      ? fetchRoute(this.city.routes.get(id)).then((buses) => [id, { buses }], (error) => [id, { error }])
       : [id, { buses: [], noLive: true }])));
     if (gen !== this.generation || this.destroyed) return;
     const byRoute = new Map(results);

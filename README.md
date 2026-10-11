@@ -5,6 +5,10 @@ bus stops and the routes you care about. Open one, and the map shows those route
 **next two buses coming to your stop and the last one that passed it**, live from the
 Ministry of Transport feed.
 
+Also in the app: a **home map** where you tap any bus stop to see its routes and live buses,
+a **search of every route** with its map, both directions, stops and timetable, and
+**English and Hebrew**.
+
 MVP: **Israel** (Tel Aviv–Gush Dan, Jerusalem, Haifa & Krayot, Be'er Sheva).
 
 ---
@@ -62,7 +66,8 @@ a broken doc link. Why and how: [ADR-0005](docs/adr/0005-docs-as-code.md).
 | [setup.md](docs/setup.md) | Deploying, turning on Firebase, installing on a phone, local development | [.github/workflows/](.github/workflows/), [src/config.js](src/config.js), [firebase.json](firebase.json) |
 | [privacy.md](docs/privacy.md) | **What is recorded about use, and what never is:** consent, the safe event list, debug-only details, where to see the numbers | [src/analytics.js](src/analytics.js), [src/views/privacy.js](src/views/privacy.js), [firestore.rules](firestore.rules) |
 | [release-process.md](docs/release-process.md) | **Test on your phone first:** the debug version, releasing to users, how updates reach phones, rollback | [deploy.yml](.github/workflows/deploy.yml), [scripts/build-site.sh](scripts/build-site.sh), [sw.js](sw.js), [src/updates.js](src/updates.js) |
-| [adr/](docs/adr/) | Why we chose what we chose ([PWA](docs/adr/0001-pwa.md), [live data](docs/adr/0002-realtime-source.md), [maps](docs/adr/0003-maps.md), [Firebase](docs/adr/0004-firebase.md), [docs as code](docs/adr/0005-docs-as-code.md), [debug version](docs/adr/0006-release-channels.md), [address search](docs/adr/0007-address-search.md), [usage insights](docs/adr/0008-usage-insights.md)) | — |
+| [fun-facts/](docs/fun-facts/README.md) | Curiosities found in the bus data (for example: the same route stopping both ways at one stop) | [pipeline/build-city-data.mjs](pipeline/build-city-data.mjs) |
+| [adr/](docs/adr/) | Why we chose what we chose ([PWA](docs/adr/0001-pwa.md), [live data](docs/adr/0002-realtime-source.md), [maps](docs/adr/0003-maps.md), [Firebase](docs/adr/0004-firebase.md), [docs as code](docs/adr/0005-docs-as-code.md), [debug version](docs/adr/0006-release-channels.md), [address search](docs/adr/0007-address-search.md), [usage insights](docs/adr/0008-usage-insights.md), [languages](docs/adr/0009-languages.md), [routes and alternatives](docs/adr/0010-one-route-many-entries.md)) | — |
 
 ### Where the code sits
 
@@ -87,9 +92,13 @@ Knight Bus/
 │   ├── map.js               Leaflet map, stop dots, bus icons, flags, map key
 │   ├── geocode.js           Address search (start point / destination)
 │   ├── analytics.js         Usage insights: consent first, safe events, debug-only details
+│   ├── i18n.js              Languages: t('text') looks the text up in i18n/he.js when the app is in Hebrew
+│   ├── i18n/he.js           The Hebrew for every on-screen text
 │   ├── styles.css
-│   ├── lib/                 dom.js (UI helper), polyline.js (shape encoding), routeGeometry.js (positions along a route's path)
-│   └── views/               One file per screen: login, city, home, editor, commute, line, privacy, report
+│   ├── lib/                 dom.js (UI helper), polyline.js (shape encoding), routeGeometry.js (positions along a route's path),
+│   │                        patterns.js (stop-pattern summary), schedule.js (timetables), sheetDrag.js (the draggable panel), …
+│   └── views/               One file per screen: login, city, home, editor, commute, line (a route in full), routes (search),
+│                            privacy, report; and the pop-ups: options, lineInfo, stopInfo, busInfo
 ├── pipeline/
 │   ├── cities.json          Which cities exist and their boundaries
 │   ├── build-city-data.mjs  National GTFS → data/cities/<city>.json + data/schedules/<route>.json
@@ -98,7 +107,7 @@ Knight Bus/
 │   ├── build-site.sh        Builds one version (main or debug) for publishing
 │   ├── check-docs.mjs       Docs-as-code check (runs in CI)
 │   └── make-icons.ps1       Draws the PNG icons
-├── tests/                   Unit tests for the bus logic (npm test)
+├── tests/                   Unit tests for the bus logic and the translations (npm test)
 ├── docs/                    ← everything described in the docs map above
 ├── CLAUDE.md                Working memory for AI chat sessions: how we work, traps, open items
 ├── firestore.rules          Who can read/write Favorite Commutes

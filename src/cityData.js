@@ -1,5 +1,5 @@
 // Downloads and caches one city's transit bundle. Docs: docs/data-model.md#city-bundle
-// @req REQ-DATA-1 @req REQ-ROUTE-1 @req REQ-ROUTE-2
+// @req REQ-DATA-1 @req REQ-DATA-10 @req REQ-ROUTE-1 @req REQ-ROUTE-2
 
 import { dataBaseUrl, scheduleBaseUrl } from './config.js';
 import { t, cityName } from './i18n.js';
@@ -98,7 +98,13 @@ export class CityData {
     });
 
     this.routes = new Map();
-    for (const [id, short, dest, agencyIdx, type, seq, shape, times = null, source = null, alts = [], opposite = null] of raw.routes) {
+    // An older route id -> the route it is now part of (REQ-DATA-10). Favorite Commutes
+    // saved with such an id keep working.
+    this.aliases = new Map();
+    // Each company's place in the list of companies sorted by name: its color (REQ-HOME-3).
+    const agencyRank = new Map([...raw.agencies].sort((a, b) => a.localeCompare(b, 'he')).map((name, i) => [name, i]));
+    for (const [id, short, dest, agencyIdx, type, seq, shape, times = null, source = null, alts = [], opposite = null, members = []] of raw.routes) {
+      for (const m of members) this.aliases.set(m, id);
       // A route can have more than one stop pattern: the most common one, plus others that
       // skip or add stops (REQ-DATA-8). patterns[0] is the most common.
       //   times: scheduled minutes from the first stop (may be missing)
@@ -111,16 +117,25 @@ export class CityData {
       // source: set for routes outside the government feed; those have no live buses (REQ-RT-5).
       // opposite: id of the route that runs the same service the other way (REQ-ROUTE-2).
       const route = {
-        id, short, dest, agency: this.agencies[agencyIdx], type,
+        id, short, dest, agency: this.agencies[agencyIdx], agencyRank: agencyRank.get(this.agencies[agencyIdx]), type,
         patterns, multi: patterns.length > 1,
         stops: patterns[0].stops, times: patterns[0].times, // the most common pattern, for code that needs just one
         source, live: !source, hours: source ? this.sources[source]?.hours || null : null,
         opposite,
+        // Every id live buses of this route report under: its own, and those of the
+        // ministry's "alternatives" merged into it (REQ-DATA-10).
+        liveIds: [id, ...members],
       };
       this.routes.set(id, route);
       // The route is listed at every stop that any of its patterns serves.
       for (const s of new Set(patterns.flatMap((p) => p.stops))) s.routeIds.push(id);
     }
+  }
+
+  // Saved route ids as they are today: an id that was merged into another route becomes
+  // that route's id, and nothing is listed twice.
+  currentRouteIds(ids) {
+    return [...new Set((ids || []).map((id) => this.aliases.get(id) || id))];
   }
 
   // The path of a pattern (or of a route's most common pattern), decoded on first use.

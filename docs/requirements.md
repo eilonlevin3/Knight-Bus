@@ -77,16 +77,20 @@ Two places still say "line" for a route, on purpose:
 | REQ-DATA-5 | Every bus route in the government feed is included, whatever days it runs: weekdays, Friday, Saturday, Saturday night. There is no filter by day. | Done |
 | REQ-DATA-6 | Each route in a city bundle carries its scheduled travel minutes from the first stop to each stop, so the app knows where a bus is "5 minutes before your stop". | Done |
 | REQ-DATA-7 | Include bus routes that are **not** in the government feed: the municipal weekend services *Naaim BeSofash* (routes 705–729, from the Tel Aviv municipality's map server) and *Sababus* (Ramat Gan's green, blue, red and white routes, from the operator's public map). They appear at the same stops as other routes. Where the operator's map and Moovit disagree on a stop, the app follows Moovit: a stop the map places where no bus stop exists is attached to the nearest real stop on the route's path. | Done |
-| REQ-DATA-8 | A route whose trips do not all serve the same stops keeps **every stop pattern** (the most common one and up to three others), each with its share of the week's trips. The route is listed at every stop any pattern serves. | Done |
+| REQ-DATA-8 | A route whose trips do not all serve the same stops keeps **every stop pattern** (the most common one and up to five others), each with its share of the week's trips. The route is listed at every stop any pattern serves. | Done |
 | REQ-DATA-9 | The pipeline writes one small **timetable file per route** for the coming week (start times per weekday and pattern, minutes to each stop). The app loads a file only when a stop's schedule is opened. | Done |
+
+| REQ-DATA-10 | The ministry publishes each "alternative" of a route (same operator, number and direction, some stops skipped or added) as a separate entry. The pipeline **merges them into one route** with several stop patterns, so a stop never lists the same route twice for that reason. A circular route published as two directions with identical stops is merged too. Live buses and Favorite Commutes saved under a merged entry's id keep working. Entries with their own number on the bus (62א beside 62) stay separate. | Done |
 
 ## Home screen
 
 | ID | Requirement | Status |
 |----|-------------|--------|
 | REQ-HOME-1 | The first screen after sign-in is the **home screen** (formerly "main menu"). Its upper half is a map centered on the user's location, with a button to return to it. | Done |
-| REQ-HOME-2 | Tapping a bus stop on the home map selects it: the map zooms to the stop and the last ~5 minutes of every route before it, **all routes through the stop are drawn** (each as a line: solid where it comes to the stop, lighter after it) with their **live buses**, and the panel lists them with live status, the same as in a Favorite Commute. | Done |
-| REQ-HOME-3 | The stop's routes are shown as **small icons, not full rows**: each is a checkbox and the route number. All are checked (at a busy stop, the first 16). Unchecking hides a route. Pressing the **number** (not the box) opens a pop-up with more about the route and a link to its full-route screen. Closing the stop returns to the plain map. **＋ New Favorite Commute** with a stop selected starts the new Favorite Commute at that stop. | Done |
+| REQ-HOME-2 | Tapping a bus stop on the home map selects it: the map zooms to the stop and the last ~5 minutes of every route before it, **all routes through the stop are drawn** (each as a line: solid where it comes to the stop, lighter after it) with their **live buses**, and the panel lists the stop's routes (REQ-HOME-3). | Done |
+| REQ-HOME-3 | The stop's routes are shown as **small icons, not full rows**: each is a checkbox and the route number. All are checked (at a busy stop, the first 16). Unchecking hides a route. Pressing the **number** (not the box) opens a pop-up with more about the route (where it goes, its operator, its live buses at this stop) and a link to its full-route screen. A number that is listed more than once at the stop (both directions stop there, or two operators use the number) gets a frame in the **color of the company** that runs the route; where each goes is in the pop-up behind the number. Closing the stop returns to the plain map. **＋ New Favorite Commute** with a stop selected starts the new Favorite Commute at that stop. | Done |
+
+| REQ-HOME-4 | While a stop is open, the bottom-right buttons are **tucked against the right edge**, leaving a small handle, so they do not cover the route numbers. Swiping them left brings them out; swiping right tucks them away again. Tapping the handle does the same. Closing the stop brings them back. | Done |
 
 ## Favorite Commutes
 
@@ -103,7 +107,7 @@ Two places still say "line" for a route, on purpose:
 | ID | Requirement | Status |
 |----|-------------|--------|
 | REQ-EDIT-1 | A Favorite Commute has up to **2** bus stops. The user picks a stop by tapping it on the map or by searching its name or code. | Done |
-| REQ-EDIT-2 | When a stop is picked, the app lists all bus routes that serve it. | Done |
+| REQ-EDIT-2 | When a stop is picked, the app shows all bus routes that serve it, as the same **small icons** as on the home screen (REQ-HOME-3): a checkbox and the route number; pressing the number opens the pop-up about the route. | Done |
 | REQ-EDIT-3 | Each route has a checkbox. **By default none are checked.** The user checks the routes they want. | Done |
 | REQ-EDIT-4 | A checked route is drawn on the map as a line along its whole path, from its first stop to its last. | Done |
 | REQ-EDIT-5 | "Save stop" stores the stop and its checked routes. The user then adds the next stop or finishes. | Done |

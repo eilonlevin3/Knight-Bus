@@ -187,6 +187,23 @@ Claude could not do these in this setup; ask the owner, with exact steps:
   Stops the map places where no bus stop exists are snapped to the nearest real stop on
   the route's path (so green and blue are at 25778, as in Moovit).
 
+## Faster live data: what was found (2026-10-11, nothing built yet)
+
+The owner finds Stride too late (15–25 min that day) and asked for options, not code.
+
+- **Hasadna's raw snapshots** (best lead):
+  `https://openbus-stride-public.s3.eu-west-1.amazonaws.com/stride-siri-requester/YYYY/MM/DD/HH/MM.br`
+  (UTC). One file a minute, uploaded ~25 s after the minute, ~160 KB brotli (2.7 MB JSON),
+  the whole country (`Siri.ServiceDelivery.StopMonitoringDelivery[0].MonitoredStopVisit[]`,
+  with `LineRef` = route_id, position, `MonitoredCall.StopPointRef/Order/DistanceFromStop`).
+  Median position age 31 s. This is Stride's input, before the slow loading step.
+  **No CORS header** and no `Content-Encoding`, so a browser cannot read it directly:
+  needs a small relay (e.g. a free Cloudflare Worker that unpacks, filters by route, adds
+  CORS), or Hasadna enabling CORS plus a brotli decoder in the app.
+- **Ministry SIRI directly** (REQ-RT-4): registration, long approval, fixed IP on a
+  whitelist, so a paid server. Freshest, and gives arrival predictions.
+- Moovit: enterprise only. Bus Nearby: behind Cloudflare, do not work around.
+
 ## Decisions and why (short; details in docs/adr/)
 
 - Installable web app on GitHub Pages; no server of our own (ADR-0001).
@@ -225,8 +242,18 @@ Claude could not do these in this setup; ask the owner, with exact steps:
 - **Home stop list and bus details** (owner, 2026-10-11): a stop's routes are small icons
   (checkbox + number), not rows; the first 16 are checked; the number opens a route pop-up
   (`showRouteCard`) linking to the full-route screen. Tapping a live bus opens
-  `views/busInfo.js` with the last signal's time and every field of it (`bus.raw`). The
-  editor still lists routes as full rows; the owner asked only about the stop view.
+  `views/busInfo.js` with the last signal's time and every field of it (`bus.raw`).
+- **Doubled routes at a stop** (owner, 2026-10-11): the cause was the ministry's
+  "alternatives" (`route_desc` = `code-direction-alternative`, each its own `route_id`).
+  The pipeline now merges entries with the same operator, code, direction and number into
+  one route (REQ-DATA-10); `route.liveIds` holds every id to ask live buses for, and
+  `city.currentRouteIds()` maps old saved ids. Do not "fix" a number that still appears
+  twice at a stop: it is both directions or two operators. The owner chose (2026-10-12): no
+  destination on the icon, a frame in the company's color instead (`operatorColor`), the
+  destination in the pop-up. A side effect: about one route in seven now has the ⚠ sign (was 1–2%).
+- **Buttons while a stop is open** (owner, 2026-10-11): tucked to the right edge with a
+  handle; swipe left to show, right to hide (REQ-HOME-4). The editor shows routes as the
+  same icons as the home screen (`routeChip` in `views/liveInfo.js`).
 - **Route search and directions** (owner, 2026-10-10): `#/routes` lists each two-direction
   service once (`city.routePairs()`); the route screen shows one direction with
   ⇄ Switch direction (`route.opposite`, paired in the pipeline from `route_desc`) and a

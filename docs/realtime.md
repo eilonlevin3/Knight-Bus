@@ -57,6 +57,9 @@ Code: [views/busInfo.js](../src/views/busInfo.js), [liveLines.js](../src/liveLin
 
 For one route and one chosen stop:
 
+0. A route can report under several ids: its own and those of the alternatives merged into
+   it (REQ-DATA-10, [data-pipeline.md](data-pipeline.md#alternatives-one-route-several-entries)).
+   The app asks for each and puts the answers together.
 1. Fetch the newest position of each ride (`siri_ride__id`) on the route in the last 30
    minutes. Drop rides whose newest position is more than 7 minutes behind the newest
    position on the route: those buses finished their trip.

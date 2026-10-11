@@ -23,7 +23,8 @@ export function differenceLines(main, pattern, city, limit = 4) {
 // The small pop-up behind a route number in the home screen's stop list: where the route
 // goes, who runs it, its live buses at this stop, and a link to the full-route screen.
 // live: the route's row from LiveLines (null while loading); shown: is it on the map?
-export function showRouteCard(ctx, city, route, stop, live, shown) {
+// confirmLeave: a question to ask before leaving for the full-route screen (the editor).
+export function showRouteCard(ctx, city, route, stop, { live = null, shown = true, confirmLeave = null } = {}) {
   const close = () => overlay.remove();
   track('route_card_opened', { multi: route.multi ? 1 : 0 });
   const overlay = h('div', {
@@ -44,7 +45,11 @@ export function showRouteCard(ctx, city, route, stop, live, shown) {
         : null,
       h('button', {
         class: 'primary',
-        onclick: () => { close(); ctx.go(`#/line/${city.id}/${route.id}/${stop.id}`); },
+        onclick: () => {
+          if (confirmLeave && !window.confirm(confirmLeave)) return;
+          close();
+          ctx.go(`#/line/${city.id}/${route.id}/${stop.id}`);
+        },
       }, t('Full route: map, stops and timetable')),
       h('button', { onclick: close }, t('Close'))));
   document.body.append(overlay);

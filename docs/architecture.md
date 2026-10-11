@@ -37,7 +37,7 @@ flowchart LR
 | Part | What it does | Code | Doc |
 |------|--------------|------|-----|
 | App shell | The page, the screen router, start-up | [index.html](../index.html), [src/app.js](../src/app.js) | [user-flows.md](user-flows.md) |
-| Screens | Sign-in, choose city, home, editor, commute, privacy, report | [src/views/](../src/views/) | [user-flows.md](user-flows.md) |
+| Screens | Sign-in, choose city, home, editor, commute, a route in full, route search, privacy, report; pop-ups for options, a route, a stop, a bus | [src/views/](../src/views/) | [user-flows.md](user-flows.md) |
 | Accounts | Email and Google sign-in through Firebase Auth | [src/auth.js](../src/auth.js) | [ADR-0004](adr/0004-firebase.md) |
 | Favorite Commutes storage | Saves Favorite Commutes per user in Firestore | [src/store.js](../src/store.js), [firestore.rules](../firestore.rules) | [data-model.md](data-model.md#favorite-commute) |
 | Location | GPS and choosing the city | [src/location.js](../src/location.js) | [user-flows.md](user-flows.md#1-first-launch) |
@@ -134,3 +134,23 @@ The reasons behind these choices are in [adr/](adr/):
 - [ADR-0006](adr/0006-release-channels.md) A debug version in a sub-folder of the same site
 - [ADR-0007](adr/0007-address-search.md) Address search with OpenStreetMap Nominatim; side-by-side lines
 - [ADR-0008](adr/0008-usage-insights.md) Usage insights: consent first, safe data for users, details for debug only
+- [ADR-0009](adr/0009-languages.md) English and Hebrew, with the English text as the key
+- [ADR-0010](adr/0010-one-route-many-entries.md) One route for the rider: stop patterns, merged alternatives, opposite directions
+
+## Tests
+
+`npm test` runs these (no browser needed). CI runs them on every push.
+
+| Test file | What it checks |
+|-----------|----------------|
+| [core.test.mjs](../tests/core.test.mjs) | Next two + last passed, shape encoding, choosing the city |
+| [geometry.test.mjs](../tests/geometry.test.mjs) | Positions along a route's path, incoming/outbound split, same-path check |
+| [offsetLine.test.mjs](../tests/offsetLine.test.mjs) | Lines side by side without loops at corners |
+| [patterns.test.mjs](../tests/patterns.test.mjs) | The plain-language summary of a route's stop patterns |
+| [report.test.mjs](../tests/report.test.mjs) | The admin report's counts and the 3-people rule for stops |
+| [i18n.test.mjs](../tests/i18n.test.mjs) | Every on-screen text has a Hebrew line; switching language |
+| [late.test.mjs](../tests/late.test.mjs) | A late live feed: finished rides dropped, late positions flagged |
+| [chips.test.mjs](../tests/chips.test.mjs) | Route icons: repeated numbers; merged alternatives and old saved ids |
+
+Screens are checked by hand on the debug version before a release
+([release-process.md](release-process.md)).

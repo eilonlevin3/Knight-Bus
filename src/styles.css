@@ -103,6 +103,22 @@ input[type="email"], input[type="password"], input[type="text"], input[type="sea
   display: flex; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: none;
 }
 .fab-stack .fab { position: static; pointer-events: auto; }
+.fab-column { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+/* While a stop is open the buttons are tucked against the right edge, leaving a small
+   handle; swipe left (or tap the handle) to bring them out, right to tuck them away
+   (REQ-HOME-4). */
+.fab-handle { display: none; }
+.fab-stack.docked {
+  right: 0; flex-direction: row; align-items: center; gap: 4px; pointer-events: auto;
+  touch-action: pan-y; transition: transform 0.2s ease-out;
+}
+.fab-stack.docked .fab-handle {
+  display: block; pointer-events: auto; min-height: 64px; width: 20px; padding: 0; border: none;
+  border-radius: 10px 0 0 10px; background: var(--accent); color: var(--purple); font-weight: 800; font-size: 1.1rem;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.3);
+}
+.fab-stack.docked .fab-column { padding-right: 12px; }
+.fab-stack.docked.min { transform: translateX(calc(100% - 20px)); }
 .fab.small { min-height: 34px; padding: 6px 12px; font-weight: 600; background: var(--card); color: var(--text); border: 1px solid var(--line); }
 .fab-space { flex: none; height: 140px; } /* so the last lines of the panel are not under the buttons */
 .map-screen { position: relative; }
@@ -344,3 +360,7 @@ ul.plain { margin: 0; padding-inline-start: 18px; display: flex; flex-direction:
 .facts.raw dd { text-align: left; }
 details > summary { cursor: pointer; }
 .bus-marker { cursor: pointer; }
+/* A route number that is in the list more than once: a thick frame in the color of the
+   company that runs it. */
+.route-chip.by-operator, .route-chip.by-operator.off { border: 4px solid var(--op); padding: 2px 3px 2px 5px; }
+.route-chips { padding-right: 8px; } /* room for the tucked buttons' handle */

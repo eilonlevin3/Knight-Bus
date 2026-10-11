@@ -47,11 +47,16 @@ export async function render(root, ctx) {
     for (const { cityId } of r.byCity) {
       try { cities.set(cityId, await ctx.getCity(cityId)); } catch { /* city no longer published */ }
     }
+    // A saved id may since have been merged into another route (REQ-DATA-10).
+    const routeOf = (l) => {
+      const c = cities.get(l.cityId);
+      return c?.routes.get(c.aliases.get(l.routeId) || l.routeId);
+    };
     const lineLabel = (l) => {
-      const route = cities.get(l.cityId)?.routes.get(l.routeId);
+      const route = routeOf(l);
       return route ? `${route.short} ${arrow()} ${route.dest}${route.source ? t(' · weekend route') : ''}` : t('Route {id} (no longer runs)', { id: l.routeId });
     };
-    const weekend = r.topLines.filter((l) => cities.get(l.cityId)?.routes.get(l.routeId)?.source).reduce((n, l) => n + l.commutes, 0);
+    const weekend = r.topLines.filter((l) => routeOf(l)?.source).reduce((n, l) => n + l.commutes, 0);
 
     const topLines = r.topLines.slice(0, 20);
     body.replaceChildren(

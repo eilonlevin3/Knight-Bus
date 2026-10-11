@@ -18,6 +18,8 @@ export async function render(root, ctx, { slot }) {
   const fav = ctx.favorites[slot];
   if (!fav) return ctx.go(`#/edit/${slot}`);
   const city = await ctx.getCity(fav.cityId);
+  // Route ids saved before the data merged a route's alternatives still work (REQ-DATA-10).
+  for (const st of fav.stops) st.routeIds = city.currentRouteIds(st.routeIds);
 
   const mapEl = h('div', { class: 'map' });
   const sheet = h('section', { class: 'sheet' });

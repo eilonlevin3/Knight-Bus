@@ -54,6 +54,7 @@ The first screen after sign-in (REQ-HOME-1). It used to be called the main menu.
 │             (🔍 Search routes)│  below it: every route of the city
 │                  (⚙ Options) │  below that: language, city
 └──────────────────────────────┘
+   with a stop open, the three buttons are tucked to the right edge: ‹
 ```
 
 **The map** opens around your location. Until the phone has a fix, it uses the last
@@ -77,7 +78,21 @@ in the route's map color (⚠ = more than one stop pattern; dashed ring = weeken
   stop patterns, and **Full route: map, stops and timetable**, which opens
   [the route in full](#5-a-route-in-full).
 
-**✕ Close** returns to the plain map.
+A number can be in the list more than once: two companies use the same number, or both
+directions of a route stop at this stop (see
+[fun facts](fun-facts/README.md#the-same-route-both-ways-at-one-stop)). Those icons get a
+thick frame in the **color of the company** that runs the route, each company always the
+same color. Where each one goes is in the pop-up behind its number. Two icons of the same
+company look alike apart from the number's map color; press the number to tell them apart.
+(The same route listed twice for no reason was a data problem, fixed in the pipeline:
+REQ-DATA-10.)
+
+**The buttons step aside** (REQ-HOME-4). While a stop is open, *New Favorite Commute*,
+*Search routes* and *Options* are tucked against the right edge and only a small yellow
+handle **‹** shows, so they do not cover the route numbers. **Swipe them left** to bring
+them out, **swipe right** to tuck them away again; tapping the handle does the same.
+
+**✕ Close** returns to the plain map and brings the buttons back.
 
 **My Favorite Commutes** (REQ-FAV-1, REQ-FAV-2, REQ-FAV-4). Only Favorite Commutes you saved are shown, each
 as a button with the **name you gave it** ("Favorite Commute N" if you gave none), its stops and
@@ -120,16 +135,18 @@ stateDiagram-v2
 **Pick a stop** (REQ-EDIT-1). Zoom in to see stops as white dots, then tap one. You can also
 search by stop name or by the stop code printed on the sign.
 
-**Choose routes** (REQ-EDIT-2 to REQ-EDIT-4, REQ-COMM-4, REQ-COMM-5). The panel lists **every route that serves the
-stop**, each with a checkbox. **None is checked at first.** Checking a route:
+**Choose routes** (REQ-EDIT-2 to REQ-EDIT-4, REQ-COMM-4, REQ-COMM-5). The panel shows **every route that serves the
+stop** as the same small icons as on the home screen: a checkbox and the route number.
+**None is checked at first.** Checking a route:
 
 - draws the whole route on the map as a line in its own color, from its first stop to its last;
 - shows up to three live buses on that route: the **next two coming to your stop** (solid,
-  pulsing) and **the last one that passed it** (faded, dashed);
-- adds a live status row to the panel, for example *Next: 3 stops away, 9 stops away · Passed 2
-  stops ago · 40s ago*.
+  pulsing) and **the last one that passed it** (faded, dashed).
 
-Unchecking removes the route and its buses.
+Unchecking removes the route and its buses. **Pressing the number** opens the pop-up about
+the route: where it goes, its operator, its live status (*Next: 3 stops away, 9 stops away ·
+Passed 2 stops ago · 40s ago*) and **Full route: map, stops and timetable**. Opening the full
+route from the editor asks first, because it leaves the editor and unsaved changes are lost.
 
 **Save stop** (REQ-EDIT-5) stores the stop with its checked routes and opens the summary.
 From there, *+ Add stop 2* repeats the steps for a second stop (up to 2 per Favorite Commute).
@@ -152,8 +169,9 @@ Code: [views/editor.js](../src/views/editor.js), [liveLines.js](../src/liveLines
 
 Tapping a Favorite Commute opens the **Favorite Commute view** (REQ-COMM-1). It shows the same map and
 bus markers as the editor, for all saved stops and routes together. Buses refresh every
-30 seconds while the screen is visible (REQ-RT-2). Tap a bus for its details, or tap a stop
-name to zoom to it.
+30 seconds while the screen is visible (REQ-RT-2). Tap a bus to see everything known about
+it (REQ-RT-10, [realtime.md](realtime.md#what-a-bus-tells-us)), or tap a stop name to zoom
+to it. Here the routes are full rows with their live status, because there are only a few.
 
 **Where the map starts** (REQ-COMM-2). It zooms to fit:
 - the start point and destination flags, if set;
@@ -192,7 +210,7 @@ no live buses (REQ-RT-5), and are marked the same way everywhere (REQ-RT-6):
 - in every list: a yellow **Weekend · no live tracking** tag next to the destination, and
   a dashed yellow ring around the route number;
 - on the map: a **dashed** line instead of a solid one, and a dashed entry in the map key;
-- under the route's name: "נעים בסופ"ש: buses on this line cannot be tracked. Runs Fri
+- under the route's name: "נעים בסופ"ש: buses on this route cannot be tracked. Runs Fri
   16:30–02:00 · Sat 09:00–17:30".
 
 **Top of the screen** (REQ-COMM-9). In the installed iPhone app, the status bar (clock,
@@ -225,8 +243,9 @@ Code: [views/stopInfo.js](../src/views/stopInfo.js), [cityData.js](../src/cityDa
 
 ## Routes with more than one stop pattern
 
-About 1–2% of routes do not always drive the same way: some trips skip a street, take a
-detour or continue further in the evening. Each way is a *stop pattern* (REQ-DATA-8).
+About one route in seven does not always drive the same way: some trips skip a street, take
+a detour or continue further in the evening. Each way is a *stop pattern* (REQ-DATA-8). Most
+of these are what the ministry calls "alternatives" of a route (REQ-DATA-10).
 
 **What is drawn** (REQ-LINE-1a, REQ-LINE-1b). It depends on the stop the route is opened from:
 

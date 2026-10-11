@@ -1,5 +1,5 @@
 // Builds one transit bundle per city from the national GTFS feed.
-// @req REQ-ROUTE-2 @req REQ-STOP-1 @req REQ-DATA-2 @req REQ-SCOPE-1 @req REQ-DATA-5 @req REQ-DATA-6 @req REQ-DATA-7 @req REQ-DATA-8 @req REQ-DATA-9
+// @req REQ-ROUTE-2 @req REQ-STOP-1 @req REQ-DATA-2 @req REQ-SCOPE-1 @req REQ-DATA-5 @req REQ-DATA-6 @req REQ-DATA-7 @req REQ-DATA-8 @req REQ-DATA-9 @req REQ-DATA-10
 // Docs: docs/data-pipeline.md (how it works), docs/data-model.md (output format).
 //
 // Usage:  npm run build:data
@@ -144,7 +144,7 @@ function destinationFromLongName(longName) {
 // ---------- 4. Build ----------
 
 const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-const MAX_PATTERNS = 4; // per line: the usual route plus up to 3 variants
+const MAX_PATTERNS = 6; // per route: the most common stop pattern plus up to 5 others
 const ymd = (d) => Number(d.toISOString().slice(0, 10).replaceAll('-', ''));
 
 async function main() {
@@ -164,9 +164,11 @@ async function main() {
       longName: g('route_long_name'),
       agency: g('agency_id'),
       type: Number(g('route_type')),
-      // route_desc is "<line code>-<direction 1|2>-<alternative>", e.g. "10708-1-0". Two routes
-      // with the same code and alternative are the two directions of one bus line (REQ-ROUTE-2).
+      // route_desc is "<line code>-<direction>-<alternative>", e.g. "10708-1-0". Entries with
+      // the same code and direction are alternatives of one route and are merged below
+      // (REQ-DATA-10); the same code in another direction is the opposite route (REQ-ROUTE-2).
       desc: g('route_desc'),
+      members: [], // route_ids of the alternatives merged into this route
       patternsByKey: new Map(), // "stop,stop,..." -> pattern
       patterns: [], // filled below: most common first
       trips: [], // [dayMask, startMinute, pattern] for the schedule files
@@ -230,6 +232,64 @@ async function main() {
   });
   finishTrip();
   trips.clear();
+
+  // The ministry publishes every "alternative" (חלופה) of a route as its own route_id: the
+  // same operator, number and direction, with some stops skipped or added. To a rider that
+  // is one route with several stop patterns, so they are merged into one (REQ-DATA-10).
+  // Only entries with the same number are merged: an alternative with its own number on
+  // the bus (62א beside 62) stays a route of its own.
+  // Otherwise a stop lists the same route number two or three times. The entry with the
+  // most trips is kept; the others' ids are remembered, because live buses report them.
+  const families = new Map(); // "operator|code|direction" -> [route]
+  for (const r of routes.values()) {
+    const [code, direction] = r.desc.split('-');
+    if (!code || !direction) continue;
+    const k = `${r.agency}|${code}|${direction}|${r.short}`;
+    if (!families.has(k)) families.set(k, []);
+    families.get(k).push(r);
+  }
+  let mergedAway = 0;
+  const weight = (r) => [...r.patternsByKey.values()].reduce((n, p) => n + p.weekCount * 1e6 + p.count, 0);
+  const byWeight = (a, b) => weight(b) - weight(a) || Number(a.id) - Number(b.id);
+  const mergeInto = (keep, other) => {
+    const moved = new Map(); // the other's pattern -> the kept route's pattern
+    for (const [key, p] of other.patternsByKey) {
+      const mine = keep.patternsByKey.get(key);
+      if (mine) {
+        mine.count += p.count;
+        mine.weekCount += p.weekCount;
+        moved.set(p, mine);
+      } else {
+        keep.patternsByKey.set(key, p);
+      }
+    }
+    for (const trip of other.trips) keep.trips.push([trip[0], trip[1], moved.get(trip[2]) || trip[2]]);
+    keep.members.push(other.id, ...other.members);
+    routes.delete(other.id);
+    mergedAway++;
+  };
+  for (const list of families.values()) {
+    if (list.length < 2) continue;
+    list.sort(byWeight);
+    for (const other of list.slice(1)) mergeInto(list[0], other);
+  }
+  // A circular route is sometimes published as two "directions" that serve exactly the same
+  // stops in the same order. That is one route too.
+  const mainPattern = (r) => [...r.patternsByKey.entries()].sort((a, b) => (b[1].weekCount - a[1].weekCount) || (b[1].count - a[1].count))[0]?.[0];
+  const sameStops = new Map(); // "operator|code|stops of the most common pattern" -> [route]
+  for (const r of routes.values()) {
+    const [code] = r.desc.split('-');
+    if (!code) continue;
+    const k = `${r.agency}|${code}|${r.short}|${mainPattern(r)}`;
+    if (!sameStops.has(k)) sameStops.set(k, []);
+    sameStops.get(k).push(r);
+  }
+  for (const list of sameStops.values()) {
+    if (list.length < 2) continue;
+    list.sort(byWeight);
+    for (const other of list.slice(1)) mergeInto(list[0], other);
+  }
+  log(`  merged ${mergedAway} alternatives into their routes`);
 
   let multi = 0;
   for (const r of routes.values()) {
@@ -364,11 +424,11 @@ async function main() {
 
   // Pair every route with its opposite direction, so the app can offer "switch direction"
   // and list a bus line once instead of twice (REQ-ROUTE-2).
-  const groups = new Map(); // "code|alternative" (or "source|number") -> routes
+  const groups = new Map(); // "operator|code" (or "source|number") -> the route in each direction
   const groupKey = (r) => {
     if (r.source) return `${r.source}|${r.short}`;
-    const [code, , alt = ''] = (r.desc || '').split('-');
-    return code ? `${code}|${alt}` : null;
+    const [code] = (r.desc || '').split('-');
+    return code ? `${r.agency}|${code}|${r.short}` : null;
   };
   for (const r of routes.values()) {
     const k = groupKey(r);
@@ -440,11 +500,14 @@ async function main() {
         times,
       ];
       // Optional tail: [8] source (not from the government feed: no live buses), [9] other
-      // patterns, [10] the id of the same bus line in the opposite direction.
+      // patterns, [10] the id of the same route in the opposite direction, [11] the ids of
+      // the alternatives merged into this route (live buses report under those ids too).
       const opposite = r.opposite && routes.has(r.opposite) ? r.opposite : null;
-      if (r.source || alts.length || opposite) row.push(r.source || null);
-      if (alts.length || opposite) row.push(alts);
-      if (opposite) row.push(opposite);
+      const members = r.members || [];
+      if (r.source || alts.length || opposite || members.length) row.push(r.source || null);
+      if (alts.length || opposite || members.length) row.push(alts);
+      if (opposite || members.length) row.push(opposite);
+      if (members.length) row.push(members);
       return row;
     });
     const usedSources = Object.fromEntries([...new Set(cityRoutes.map((r) => r.source).filter(Boolean))].map((id) => [id, sourceInfo[id]]));
