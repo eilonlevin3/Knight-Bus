@@ -2,9 +2,10 @@
 // @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-8
 
 import { realtime } from './config.js';
+import { t } from './i18n.js';
 import { stopPositions, projectOnPath } from './lib/routeGeometry.js';
 
-// Latest position of every bus currently running on a line (GTFS route_id == SIRI LineRef).
+// Latest position of every bus currently running on a route (GTFS route_id == SIRI LineRef).
 // Returns [{ rideId, vehicle, lat, lon, recordedAt: Date }]
 export async function fetchLiveBuses(routeId) {
   const now = Date.now();
@@ -17,7 +18,7 @@ export async function fetchLiveBuses(routeId) {
     limit: '300',
   });
   const res = await fetch(`${realtime.baseUrl}/siri_vehicle_locations/list?${params}`);
-  if (!res.ok) throw new Error(`Live data HTTP ${res.status}`);
+  if (!res.ok) throw new Error(t('Live data error (HTTP {status})', { status: res.status }));
   const rows = await res.json();
 
   const latestByRide = new Map();
@@ -75,5 +76,5 @@ export function classifyBuses(buses, routeStops, stopId, shape, otherPaths = [])
 
 export function ageLabel(date) {
   const sec = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
-  return sec < 60 ? `${sec}s ago` : `${Math.round(sec / 60)} min ago`;
+  return sec < 60 ? t('{n}s ago', { n: sec }) : t('{n} min ago', { n: Math.round(sec / 60) });
 }

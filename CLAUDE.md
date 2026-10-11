@@ -176,7 +176,7 @@ Claude could not do these in this setup; ask the owner, with exact steps:
 - **Live positions:** no public source. Moovit's APIs are enterprise-only
   (helpdesk@moovit.com); Bus Nearby's API is behind a Cloudflare challenge (do not work
   around it); government SIRI does not carry these buses. An email asking noat for a feed
-  was drafted for the owner on 2026-10-10 (see Open items for whether it was sent).
+  was sent by the owner on 2026-10-10 (see Open items for the answer).
 - **Sababus data:** the operator's Google My Map, KML export
   (`mid=1zUQK4dHqJ4srilKzhYJM6t5vQfGkfo8`). The same map also has all Naaim BeSofash
   routes with direction per stop; switching Busofash to it was offered, not requested.
@@ -206,11 +206,32 @@ Claude could not do these in this setup; ask the owner, with exact steps:
   `favorites`, `favoritesDebug`): do not rename stored data.
 - "Routes show up when a stop is picked" was read as: listed with checkboxes, none checked,
   drawn only when checked. The owner has not objected.
+- **On-screen wording** (owner, 2026-10-10): the app says "route" for the bus service,
+  never "line"; "Most common pattern" / "Other pattern" for stop patterns. Internal names
+  keep "line" (`views/line.js`, `#/line/…`, CSS classes, usage events such as
+  `line_map_opened`): renaming them would break links and analytics history.
+- **Languages** (owner, 2026-10-10): English and Hebrew. Every on-screen text goes through
+  `t('English text')` / `tn(count, one, many)` from `src/i18n.js`; Hebrew lives in
+  `src/i18n/he.js`, keyed by the English text. `tests/i18n.test.mjs` fails on a missing,
+  unused or `{place}`-mismatched entry, so: write text as a plain quoted string inside
+  `t()` (no template strings, no variables), then add the Hebrew line. Hebrew words:
+  route = קו, stop = תחנה, stop pattern = מסלול, Favorite Commute = נסיעה מועדפת, a drawn
+  line = פס (because קו already means route). Changing language fires `kb-language` and
+  the router redraws. Outside a browser (tests) the language is English.
+- **Route search and directions** (owner, 2026-10-10): `#/routes` lists each two-direction
+  service once (`city.routePairs()`); the route screen shows one direction with
+  ⇄ Switch direction (`route.opposite`, paired in the pipeline from `route_desc`) and a
+  🕒 Timetable button. The home screen's bottom-right stack is: ＋ New Favorite Commute,
+  🔍 Search routes, ⚙ Options (language, city). It stays on the right in Hebrew too.
 
 ## Open items
 
-- Email to contact@noat.co.il asking for a live-location feed: drafted in the owner's
-  Gmail on 2026-10-10, waiting for their go-ahead to send. Update this line when sent/answered.
+- Email to contact@noat.co.il asking for a live-location feed: **sent by the owner on
+  2026-10-10**, no answer yet. If they offer a feed, weekend routes can get live buses.
+- Owner to confirm on the iPhone (round of 2026-10-11): Hebrew screens, Options → language,
+  Search routes, ⇄ Switch direction, 🕒 Timetable, the three buttons bottom right.
+- The Hebrew texts were written by Claude and not yet read through by the owner; expect
+  wording fixes (they are one line each in `src/i18n/he.js`).
 - Owner to confirm on the iPhone: the ⚠ pop-up, the full-route screen and schedules, Sababus
   routes, and that the first visit no longer reloads by itself.
 - Owner to confirm on the iPhone: the new home screen (map around them, tapping a stop,
@@ -219,12 +240,10 @@ Claude could not do these in this setup; ask the owner, with exact steps:
   usage question card, the privacy screen.
 - Owner to publish the latest Firestore rules and create their `admins` document (above).
 - Google sign-in is confirmed in the debug app; not yet confirmed in the main app.
-- **Wording in the app:** the docs now say "route" for the bus service, but the app's
-  screens still say "Line 62", "Show the full line on the map", "Usual route", "Variant".
-  Offered to the owner on 2026-10-10: change the on-screen text to match. Not decided.
+
 - Planned requirements: fully offline city maps (REQ-DATA-4), direct ministry SIRI with
   arrival times through a proxy (REQ-RT-4).
 - Before a public launch: a lawyer should review docs/privacy.md; set Analytics data
   retention; the workflow actions still warn about an old Node runtime (`@v4` actions).
-- Ideas not requested yet: Hebrew UI, more cities, light rail and trains (pipeline is
+- Ideas not requested yet: more cities, light rail and trains (pipeline is
   bus-only: `routeTypes: [3]`), a version line on the main app's home screen.

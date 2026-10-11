@@ -2,6 +2,7 @@
 // @req REQ-LOC-1 @req REQ-LOC-2
 
 import { h } from '../lib/dom.js';
+import { t, language, cityName } from '../i18n.js';
 import { getPosition, cityForPosition } from '../location.js';
 import { track, trackDetail } from '../analytics.js';
 
@@ -24,24 +25,25 @@ export function render(root, ctx) {
 
   const showList = () => {
     list.replaceChildren(
-      h('p', {}, 'Or pick your city:'),
+      h('p', {}, t('Or pick your city:')),
       ...ctx.cityIndex.cities.map((c) =>
         h('button', { class: 'choice', onclick: () => choose(c) },
-          h('b', {}, c.name), h('span', { class: 'muted', dir: 'rtl' }, c.nameHe))),
+          // The name in the app's language first, the other language beside it.
+          h('b', {}, cityName(c)), h('span', { class: 'muted', dir: 'auto' }, language() === 'he' ? c.name : c.nameHe))),
     );
   };
 
   const useGps = async () => {
-    status.textContent = 'Finding your location…';
+    status.textContent = t('Finding your location…');
     try {
       const pos = await getPosition();
       ctx.position = pos;
       const city = cityForPosition(ctx.cityIndex.cities, pos);
       if (city) {
-        status.textContent = `You are in ${city.name}.`;
+        status.textContent = t('You are in {city}.', { city: cityName(city) });
         await choose(city, 'gps');
       } else {
-        status.textContent = 'You seem to be outside the areas we cover so far.';
+        status.textContent = t('You seem to be outside the areas we cover so far.');
         showList();
       }
     } catch (e) {
@@ -53,12 +55,12 @@ export function render(root, ctx) {
   root.append(
     h('main', { class: 'screen center' },
       h('div', { class: 'card stack' },
-        h('h2', {}, 'Where do you ride?'),
-        h('p', {}, 'Knight Bus uses your location to download only your city\'s bus map, so it stays small and fast.'),
-        h('button', { class: 'primary', onclick: useGps }, '📍 Use my location'),
+        h('h2', {}, t('Where do you ride?')),
+        h('p', {}, t("Knight Bus uses your location to download only your city's bus map, so it stays small and fast.")),
+        h('button', { class: 'primary', onclick: useGps }, t('📍 Use my location')),
         status,
         list,
-        ctx.city ? h('button', { class: 'link', onclick: () => ctx.go('#/home') }, 'Cancel') : null)),
+        ctx.city ? h('button', { class: 'link', onclick: () => ctx.go('#/home') }, t('Cancel')) : null)),
   );
   showList();
 }

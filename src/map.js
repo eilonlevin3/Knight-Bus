@@ -1,6 +1,8 @@
 // Leaflet map helpers. Leaflet is loaded as a global (L) from index.html.
 // Base tiles come from OpenStreetMap; sw.js caches them as they are viewed (REQ-DATA-3).
 
+import { t } from './i18n.js';
+
 const STOP_MIN_ZOOM = 15;
 
 export const LINE_COLORS = [
@@ -74,7 +76,7 @@ export function userMarker(map) {
     if (!marker) {
       marker = L.circleMarker([pos.lat, pos.lon], {
         radius: 7, color: '#ffffff', weight: 3, fillColor: '#1d4ed8', fillOpacity: 1,
-      }).addTo(map).bindTooltip('You are here');
+      }).addTo(map).bindTooltip(t('You are here'));
     } else {
       marker.setLatLng([pos.lat, pos.lon]);
     }
@@ -110,7 +112,7 @@ export function flagIcon(kind) {
 
 export function flagMarker(map, kind, place) {
   return L.marker([place.lat, place.lon], { icon: flagIcon(kind), zIndexOffset: 2000, keyboard: false })
-    .bindTooltip(`${kind === 'origin' ? 'Start' : 'Destination'}: ${place.label}`, { direction: 'top', offset: [8, -36] })
+    .bindTooltip(`${kind === 'origin' ? t('Start') : t('Destination')}: ${place.label}`, { direction: 'top', offset: [8, -36] })
     .addTo(map);
 }
 
@@ -135,7 +137,7 @@ export function legendControl(map) {
       const el = L.DomUtil.create('div', 'map-legend');
       const head = L.DomUtil.create('button', 'legend-head', el);
       head.type = 'button';
-      head.textContent = 'Key';
+      head.textContent = t('Key');
       head.setAttribute('aria-expanded', 'true');
       body = L.DomUtil.create('div', 'legend-body', el);
       head.onclick = () => {

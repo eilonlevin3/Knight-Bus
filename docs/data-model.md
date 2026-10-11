@@ -83,13 +83,16 @@ downloads small. It is read by [src/cityData.js](../src/cityData.js).
 | Field | Row layout |
 |-------|------------|
 | `stops[i]` | `[stopId, stopCode, name, lat, lon, place?]` |
-| `routes[j]` | `[routeId, routeNumber, destination, agencyIndex, routeType, stopIndexes[], shape, minutes[], source?, otherPatterns?]` |
+| `routes[j]` | `[routeId, routeNumber, destination, agencyIndex, routeType, stopIndexes[], shape, minutes[], source?, otherPatterns?, oppositeRouteId?]` |
 
 - `place` (optional) is `"platform/floor"`, for example `"634/6"` or `"2"`. It is given only
   for stops that share their stop code with other stops (REQ-STOP-1).
 - `stopIndexes` are positions in `stops[]`, in travel order, from first stop to last.
 - `minutes[]` (REQ-DATA-6) has one entry per stop: scheduled minutes from the first stop,
   from the route's representative trip. It may be `null`. Older apps ignore it.
+- `oppositeRouteId` (optional, 11th entry; the two before it are then `null` and `[]` if
+  not set) is the route that runs the same service in the other direction (REQ-ROUTE-2).
+  Missing for circular and one-way routes.
 - `source` (optional, 9th entry) marks a route from outside the government feed (REQ-DATA-7).
   Its details are in `sources`. These routes have no live buses.
 - `otherPatterns` (optional, 10th entry; `source` is then `null` if not set) lists the route's

@@ -1,13 +1,15 @@
 // GPS position and choosing the metropolitan area. Docs: docs/user-flows.md#1-first-launch
 // @req REQ-LOC-1 @req REQ-LOC-2
 
+import { t } from './i18n.js';
+
 export function getPosition({ timeout = 15000 } = {}) {
   return new Promise((resolve, reject) => {
-    if (!('geolocation' in navigator)) return reject(new Error('This browser has no GPS support.'));
+    if (!('geolocation' in navigator)) return reject(new Error(t('This browser has no GPS support.')));
     navigator.geolocation.getCurrentPosition(
       (p) => resolve({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy }),
       (e) => reject(new Error(
-        e.code === 1 ? 'Location permission was denied.' : 'Could not get your location.',
+        e.code === 1 ? t('Location permission was denied.') : t('Could not get your location.'),
       )),
       { enableHighAccuracy: true, timeout, maximumAge: 60000 },
     );

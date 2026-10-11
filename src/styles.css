@@ -96,7 +96,15 @@ input[type="email"], input[type="password"], input[type="text"], input[type="sea
   min-height: 40px; padding: 8px 14px; border-radius: 999px; border: none; font-weight: 700; font-size: 0.85rem; white-space: nowrap;
   background: var(--accent); color: var(--purple); box-shadow: 0 4px 12px rgb(0 0 0 / 0.3);
 }
-.fab-space { flex: none; height: 56px; } /* so the last lines of the panel are not under the button */
+/* Bottom right of the home screen, one under the other: New Favorite Commute, Search routes,
+   Options (REQ-HOME-3, REQ-ROUTE-1, REQ-LANG-2). */
+.fab-stack {
+  position: absolute; right: 12px; bottom: calc(12px + var(--safe-bottom)); z-index: 600;
+  display: flex; flex-direction: column; align-items: flex-end; gap: 8px; pointer-events: none;
+}
+.fab-stack .fab { position: static; pointer-events: auto; }
+.fab.small { min-height: 34px; padding: 6px 12px; font-weight: 600; background: var(--card); color: var(--text); border: 1px solid var(--line); }
+.fab-space { flex: none; height: 140px; } /* so the last lines of the panel are not under the buttons */
 .map-screen { position: relative; }
 .map-button {
   width: 40px; height: 40px; min-height: 0; padding: 0; border-radius: 50%; font-size: 1.3rem; line-height: 1;
@@ -287,3 +295,25 @@ ul.plain { margin: 0; padding-inline-start: 18px; display: flex; flex-direction:
 
 /* The summary at the top of the route pop-up (REQ-LINE-1d) */
 .summary-box { background: color-mix(in srgb, var(--accent) 22%, var(--card)); border-radius: 10px; padding: 10px 12px; gap: 6px; unicode-bidi: plaintext; }
+
+/* Search routes, and the stop list of the route screen (REQ-ROUTE-1, REQ-ROUTE-3) */
+.route-result { display: flex; gap: 10px; align-items: center; }
+.stop-list summary { cursor: pointer; font-weight: 600; padding: 6px 0; }
+.stop-list ol { margin: 4px 0 0; padding-inline-start: 28px; display: flex; flex-direction: column; gap: 2px; }
+.stop-list button.link { text-align: start; text-decoration: none; unicode-bidi: plaintext; }
+.stop-list button.current { font-weight: 700; text-decoration: underline; }
+
+/* Options and language (REQ-LANG-2) */
+.lang-row button { flex: 1; }
+.center-row { justify-content: center; }
+
+/* Hebrew reads right to left (REQ-LANG-1). The page direction is set on <html>; most of the
+   layout follows by itself. The map always stays left to right; only its texts turn. */
+.leaflet-container { direction: ltr; }
+[dir="rtl"] .leaflet-popup-content, [dir="rtl"] .leaflet-tooltip, [dir="rtl"] .map-legend { direction: rtl; text-align: right; }
+[dir="rtl"] .legend-swatch { transform: scaleX(-1); }
+/* Clock times stay left to right ("07:45", ":45"). */
+.hour-row b, .minutes span { direction: ltr; unicode-bidi: isolate; }
+/* The home-screen buttons stay at the right edge in both languages. */
+.fab-stack { direction: ltr; }
+[dir="rtl"] .fab-stack .fab { direction: rtl; }

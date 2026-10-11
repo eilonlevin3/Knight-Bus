@@ -1,8 +1,9 @@
-// Home screen: a map around you, tap any stop to see its lines and live buses, and your
-// saved commutes. Docs: docs/user-flows.md#2-home-screen
-// @req REQ-HOME-1 @req REQ-HOME-2 @req REQ-HOME-3 @req REQ-FAV-1 @req REQ-FAV-2 @req REQ-AUTH-3 @req REQ-ANL-3
+// Home screen: a map around you, tap any stop to see its routes and live buses, and your
+// Favorite Commutes. Docs: docs/user-flows.md#2-home-screen
+// @req REQ-HOME-1 @req REQ-HOME-2 @req REQ-HOME-3 @req REQ-FAV-1 @req REQ-FAV-2 @req REQ-AUTH-3 @req REQ-ANL-3 @req REQ-ROUTE-1 @req REQ-LANG-2
 
 import { h, toast } from '../lib/dom.js';
+import { t, tn, locale, cityName } from '../i18n.js';
 import { FAVORITE_SLOTS, storagePrefix } from '../config.js';
 import { signOut } from '../auth.js';
 import { createMap, stopLayer, userMarker } from '../map.js';
@@ -12,12 +13,13 @@ import { approachPoints } from '../lib/mapFit.js';
 import { draggableSheet } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { consent, setConsent, detailed, track, trackDetail, bucket } from '../analytics.js';
-import { SAFE_SUMMARY, DEBUG_SUMMARY } from './privacy.js';
-import { liveSummary, lineBadge, lineTitle } from './liveInfo.js';
-import { showLineInfo } from './lineInfo.js';
+import { safeSummary, debugSummary } from './privacy.js';
+import { liveSummary, routeBadge, routeTitle } from './liveInfo.js';
+import { showRouteInfo } from './lineInfo.js';
 import { stopSuffix, stopHazard } from './stopInfo.js';
+import { showOptions } from './options.js';
 
-const MAX_LINES_SHOWN_AT_FIRST = 30; // very busy stops: the rest start unchecked
+const MAX_ROUTES_SHOWN_AT_FIRST = 30; // very busy stops: the rest start unchecked
 const LAST_POSITION_KEY = `${storagePrefix}lastPosition`; // kept on this phone only, for a quick start
 
 const readLastPosition = () => {
@@ -61,8 +63,8 @@ export async function render(root, ctx) {
       const b = L.DomUtil.create('button', 'map-button');
       b.type = 'button';
       b.textContent = '◎';
-      b.title = 'Go to my location';
-      b.setAttribute('aria-label', 'Go to my location');
+      b.title = t('Go to my location');
+      b.setAttribute('aria-label', t('Go to my location'));
       L.DomEvent.disableClickPropagation(b);
       b.onclick = async () => {
         try {
@@ -95,7 +97,7 @@ export async function render(root, ctx) {
   function selectStop(stop) {
     state.stop = stop;
     const routes = city.routesAtStop(stop.id);
-    state.hidden = new Set(routes.slice(MAX_LINES_SHOWN_AT_FIRST).map((r) => r.id));
+    state.hidden = new Set(routes.slice(MAX_ROUTES_SHOWN_AT_FIRST).map((r) => r.id));
     state.rows = [];
     lines.set(shownEntries());
     stops.refresh();
@@ -123,22 +125,22 @@ export async function render(root, ctx) {
 
   function commuteButtons() {
     if (!saved().length) {
-      return h('p', { class: 'muted small' }, 'No Favorite Commutes yet. Use ＋ New Favorite Commute to save the stops and lines you ride often.');
+      return h('p', { class: 'muted small' }, t('No Favorite Commutes yet. Use ＋ New Favorite Commute to save the stops and routes you ride often.'));
     }
     return h('div', { class: 'commute-list' }, ...saved().map((slot) => {
       const fav = ctx.favorites[slot];
-      const lineCount = new Set(fav.stops.flatMap((s) => s.routeIds)).size;
+      const routeCount = new Set(fav.stops.flatMap((s) => s.routeIds)).size;
       return h('div', { class: 'commute-item' },
         h('button', { class: 'commute-go', onclick: () => ctx.go(`#/commute/${slot}`) },
           h('b', {}, commuteName(fav, slot)),
-          h('small', {}, `${fav.stops.map((s) => s.stopName).join(' → ')} · ${lineCount} line${lineCount === 1 ? '' : 's'}`)),
-        h('button', { class: 'commute-edit', 'aria-label': `Edit ${commuteName(fav, slot)}`, onclick: () => ctx.go(`#/edit/${slot}`) }, '✎'));
+          h('small', {}, `${fav.stops.map((s) => s.stopName).join(' · ')} · ${tn(routeCount, '1 route', '{n} routes')}`)),
+        h('button', { class: 'commute-edit', 'aria-label': t('Edit {name}', { name: commuteName(fav, slot) }), onclick: () => ctx.go(`#/edit/${slot}`) }, '✎'));
     }));
   }
 
   function stopSection() {
     if (!state.stop) {
-      return h('p', { class: 'muted' }, 'Tap a bus stop on the map to see its lines and live buses. Zoom in if you see no stops.');
+      return h('p', { class: 'muted' }, t('Tap a bus stop on the map to see its routes and live buses. Zoom in if you see no stops.'));
     }
     const s = state.stop;
     const routes = city.routesAtStop(s.id);
@@ -149,17 +151,17 @@ export async function render(root, ctx) {
         h('input', {
           type: 'checkbox',
           checked: on,
-          'aria-label': `Show line ${r.short} on the map`,
+          'aria-label': t('Show route {n} on the map', { n: r.short }),
           onchange: (e) => {
             if (e.target.checked) state.hidden.delete(r.id); else state.hidden.add(r.id);
             lines.set(shownEntries());
             paint();
           },
         }),
-        lineBadge(r, on ? lines.colorOf(r.id) : null),
+        routeBadge(r, on ? lines.colorOf(r.id) : null),
         h('span', { class: 'line-text' },
-          lineTitle(r, () => showLineInfo(ctx, city, r, s.id)),
-          on ? liveSummary(live) : h('small', { class: 'muted' }, 'Hidden from the map')));
+          routeTitle(r, () => showRouteInfo(ctx, city, r, s.id)),
+          on ? liveSummary(live) : h('small', { class: 'muted' }, t('Hidden from the map'))));
     });
     return h('div', { class: 'stop-section' },
       h('div', { class: 'row between' },
@@ -167,27 +169,30 @@ export async function render(root, ctx) {
           h('button', { class: 'stop-title', onclick: () => map.setView([s.lat, s.lon], 17) },
             `🚏 ${s.name}`, h('span', { class: 'muted' }, stopSuffix(s))),
           stopHazard(city, s, selectStop)),
-        h('button', { class: 'link', 'aria-label': 'Close this stop', onclick: closeStop }, '✕ Close')),
+        h('button', { class: 'link', 'aria-label': t('Close this stop'), onclick: closeStop }, t('✕ Close'))),
       h('p', { class: 'muted small' },
-        `${routes.length} line${routes.length === 1 ? '' : 's'} stop here. Solid = coming to this stop, lighter = after it. Uncheck a line to hide it.`,
-        routes.length > MAX_LINES_SHOWN_AT_FIRST ? ` Showing the first ${MAX_LINES_SHOWN_AT_FIRST}; check more below.` : ''),
+        tn(routes.length, '1 route stops here.', '{n} routes stop here.'),
+        t(' Solid line = coming to this stop, lighter = after it. Uncheck a route to hide it.'),
+        routes.length > MAX_ROUTES_SHOWN_AT_FIRST ? t(' Showing the first {n}; check more below.', { n: MAX_ROUTES_SHOWN_AT_FIRST }) : ''),
       ...rows,
       h('div', { class: 'row between' },
-        h('small', { class: 'muted' }, state.updatedAt ? `Updated ${state.updatedAt.toLocaleTimeString()} · refreshes every 30 s` : 'Loading live buses…'),
-        h('button', { class: 'link small', onclick: () => lines.refresh() }, '↻ Refresh')));
+        h('small', { class: 'muted' }, state.updatedAt
+          ? t('Updated {time} · refreshes every 30 s', { time: state.updatedAt.toLocaleTimeString(locale()) })
+          : t('Loading live buses…')),
+        h('button', { class: 'link small', onclick: () => lines.refresh() }, t('↻ Refresh'))));
   }
 
   // Asked once. No answer = nothing recorded.
   function consentCard() {
     if (consent() !== null) return null;
     const card = h('div', { class: 'card stack consent' },
-      h('b', {}, 'Help improve Knight Bus?'),
-      h('small', {}, SAFE_SUMMARY),
-      detailed ? h('small', { class: 'notice' }, DEBUG_SUMMARY) : null,
+      h('b', {}, t('Help improve Knight Bus?')),
+      h('small', {}, safeSummary()),
+      detailed ? h('small', { class: 'notice' }, debugSummary()) : null,
       h('div', { class: 'row' },
-        h('button', { onclick: async () => { await setConsent(false); card.remove(); } }, 'No thanks'),
-        h('button', { class: 'primary', onclick: async () => { await setConsent(true); card.remove(); } }, 'Share usage')),
-      h('button', { class: 'link small', onclick: () => ctx.go('#/privacy') }, 'Details'));
+        h('button', { onclick: async () => { await setConsent(false); card.remove(); } }, t('No thanks')),
+        h('button', { class: 'primary', onclick: async () => { await setConsent(true); card.remove(); } }, t('Share usage'))),
+      h('button', { class: 'link small', onclick: () => ctx.go('#/privacy') }, t('Details')));
     return card;
   }
 
@@ -197,37 +202,41 @@ export async function render(root, ctx) {
       h('header', { class: 'topbar' },
         h('img', { src: 'icons/icon-192.png', alt: '', width: 28, height: 28 }),
         h('h1', {}, 'Knight Bus'),
-        h('button', { class: 'link small', onclick: () => ctx.go('#/city') }, `📍 ${city.meta.name}`)),
-      // While a stop is open it comes first; the commutes stay one scroll away.
+        h('button', { class: 'link small', onclick: () => ctx.go('#/city') }, `📍 ${cityName(city.meta)}`)),
+      // While a stop is open it comes first; the Favorite Commutes stay one scroll away.
       state.stop ? stopSection() : null,
-      h('h2', {}, 'My Favorite Commutes'),
+      h('h2', {}, t('My Favorite Commutes')),
       commuteButtons(),
       state.stop ? null : stopSection(),
       consentCard(),
       h('footer', { class: 'footer' },
         h('span', { class: 'muted small' }, ctx.user.email || ctx.user.displayName),
-        h('button', { class: 'link small', onclick: async () => { await signOut(); ctx.setUser(null); } }, 'Sign out'),
-        h('button', { class: 'link small', onclick: () => ctx.go('#/privacy') }, 'Privacy & usage data'),
-        ctx.isAdmin ? h('button', { class: 'link small', onclick: () => ctx.go('#/report') }, '📊 Favorite Commutes report') : null,
+        h('button', { class: 'link small', onclick: async () => { await signOut(); ctx.setUser(null); } }, t('Sign out')),
+        h('button', { class: 'link small', onclick: () => ctx.go('#/privacy') }, t('Privacy & usage data')),
+        ctx.isAdmin ? h('button', { class: 'link small', onclick: () => ctx.go('#/report') }, t('📊 Favorite Commutes report')) : null,
         h('span', { class: 'muted small' },
-          `Bus data ${new Date(ctx.cityIndex.generatedAt).toLocaleDateString()} · Live: Ministry of Transport SIRI via Open Bus`)),
+          t('Bus data {date} · Live: Ministry of Transport SIRI via Open Bus', { date: new Date(ctx.cityIndex.generatedAt).toLocaleDateString(locale()) }))),
       h('div', { class: 'fab-space' }),
     ];
     sheet.replaceChildren(...parts.filter(Boolean));
     sheet.scrollTop = scroll;
   }
 
-  // Small "New Favorite Commute" button, bottom right, while a slot is free.
-  // With a stop open, the new commute starts at that stop.
-  if (freeSlot()) {
-    screen.append(h('button', {
-      class: 'fab',
-      onclick: () => {
-        ctx.newCommuteStopId = state.stop?.id || null;
-        ctx.go(`#/edit/${freeSlot()}`);
-      },
-    }, '＋ New Favorite Commute'));
-  }
+  // Bottom right, one under the other: New Favorite Commute (while a slot is free),
+  // Search routes, Options.
+  screen.append(h('div', { class: 'fab-stack' },
+    freeSlot()
+      ? h('button', {
+          class: 'fab',
+          // With a stop open, the new Favorite Commute starts at that stop.
+          onclick: () => {
+            ctx.newCommuteStopId = state.stop?.id || null;
+            ctx.go(`#/edit/${freeSlot()}`);
+          },
+        }, t('＋ New Favorite Commute'))
+      : null,
+    h('button', { class: 'fab small', onclick: () => ctx.go('#/routes') }, t('🔍 Search routes')),
+    h('button', { class: 'fab small', onclick: () => showOptions(ctx) }, t('⚙ Options'))));
 
   const panel = draggableSheet(screen, sheet, { onResize: () => map.invalidateSize({ pan: false }) });
   paint();

@@ -1,7 +1,8 @@
-// Open a favorite commute: its stops, chosen lines and live buses. Docs: docs/user-flows.md#4-using-a-favorite-commute
+// Open a Favorite Commute: its stops, chosen routes and live buses. Docs: docs/user-flows.md#4-using-a-favorite-commute
 // @req REQ-COMM-1 @req REQ-COMM-2 @req REQ-COMM-3 @req REQ-COMM-6 @req REQ-COMM-7 @req REQ-COMM-8
 
 import { h } from '../lib/dom.js';
+import { t, backArrow, locale } from '../i18n.js';
 import { createMap, stopLayer, userMarker, flagMarker, flagHtml, legendControl, lighten, escapeHtml } from '../map.js';
 import { watchPosition } from '../location.js';
 import { LiveLines } from '../liveLines.js';
@@ -9,8 +10,8 @@ import { approachPoints } from '../lib/mapFit.js';
 import { draggableSheet } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { track, trackDetail, bucket, hourOfDay, weekday } from '../analytics.js';
-import { liveSummary, lineBadge, lineTitle, isWeekendLine } from './liveInfo.js';
-import { showLineInfo } from './lineInfo.js';
+import { liveSummary, routeBadge, routeTitle, isWeekendRoute } from './liveInfo.js';
+import { showRouteInfo } from './lineInfo.js';
 import { platformText, stopHazard } from './stopInfo.js';
 
 export async function render(root, ctx, { slot }) {
@@ -69,15 +70,15 @@ export async function render(root, ctx, { slot }) {
 
   function paintLegend() {
     const items = lines.legendItems().map(({ route, color }) =>
-      `<div class="legend-row"><span class="legend-swatch${isWeekendLine(route) ? ' dashed' : ''}" style="--in:${color};--out:${lighten(color, 0.3)}"></span>` +
+      `<div class="legend-row"><span class="legend-swatch${isWeekendRoute(route) ? ' dashed' : ''}" style="--in:${color};--out:${lighten(color, 0.3)}"></span>` +
       `<b>${escapeHtml(route.short)}</b> <span class="legend-dest">${escapeHtml(route.dest)}</span></div>`);
-    const anyWeekend = lines.legendItems().some(({ route }) => isWeekendLine(route));
+    const anyWeekend = lines.legendItems().some(({ route }) => isWeekendRoute(route));
     const placeRows = ['origin', 'destination'].filter((k) => fav[k]).map((k) =>
-      `<div class="legend-row"><span class="legend-flag">${flagHtml(k)}</span>${k === 'origin' ? 'Start' : 'Destination'}</div>`);
+      `<div class="legend-row"><span class="legend-flag">${flagHtml(k)}</span>${k === 'origin' ? t('Start') : t('Destination')}</div>`);
     const help = items.length
-      ? '<div class="legend-help"><span class="legend-swatch demo"></span> to stop → from stop</div>' +
-        '<div class="legend-help"><span class="legend-bus"></span> next <span class="legend-bus passed"></span> passed</div>' +
-        (anyWeekend ? '<div class="legend-help"><span class="legend-swatch demo dashed"></span> weekend line, no live</div>' : '')
+      ? `<div class="legend-help"><span class="legend-swatch demo"></span> ${t('to stop → from stop')}</div>` +
+        `<div class="legend-help"><span class="legend-bus"></span> ${t('next')} <span class="legend-bus passed"></span> ${t('passed')}</div>` +
+        (anyWeekend ? `<div class="legend-help"><span class="legend-swatch demo dashed"></span> ${t('weekend route, no live')}</div>` : '')
       : '';
     legend.update(items.join('') + placeRows.join('') + help);
   }
@@ -106,7 +107,7 @@ export async function render(root, ctx, { slot }) {
       const stop = city.stops.get(st.stopId);
       const stopRows = st.routeIds.map((id) => {
         const route = city.routes.get(id);
-        if (!route) return h('div', { class: 'line-row' }, h('small', { class: 'muted' }, `Line ${id} no longer runs.`));
+        if (!route) return h('div', { class: 'line-row' }, h('small', { class: 'muted' }, t('Route {id} no longer runs.', { id })));
         const k = key({ stopId: st.stopId, routeId: id });
         const on = !hidden.has(k);
         const live = on ? rows.find((r) => r.stop.id === st.stopId && r.route.id === id) : null;
@@ -114,7 +115,7 @@ export async function render(root, ctx, { slot }) {
           h('input', {
             type: 'checkbox',
             checked: on,
-            'aria-label': `Show line ${route.short} on the map`,
+            'aria-label': t('Show route {n} on the map', { n: route.short }),
             onchange: (e) => {
               if (e.target.checked) hidden.delete(k); else hidden.add(k);
               track('line_toggled', { on: e.target.checked ? 1 : 0 });
@@ -122,10 +123,10 @@ export async function render(root, ctx, { slot }) {
               show();
             },
           }),
-          lineBadge(route, on ? lines.colorOf(id) : null),
+          routeBadge(route, on ? lines.colorOf(id) : null),
           h('span', { class: 'line-text' },
-            lineTitle(route, () => showLineInfo(ctx, city, route, st.stopId)),
-            on ? liveSummary(live) : h('small', { class: 'muted' }, 'Hidden from the map')));
+            routeTitle(route, () => showRouteInfo(ctx, city, route, st.stopId)),
+            on ? liveSummary(live) : h('small', { class: 'muted' }, t('Hidden from the map'))));
       });
       return h('div', { class: 'stop-section' },
         h('span', { class: 'stop-head' },
@@ -140,14 +141,14 @@ export async function render(root, ctx, { slot }) {
     const scroll = sheet.scrollTop;
     sheet.replaceChildren(
       h('div', { class: 'row between' },
-        h('button', { class: 'link', onclick: () => ctx.go('#/home') }, '← Home'),
+        h('button', { class: 'link', onclick: () => ctx.go('#/home') }, `${backArrow()} ${t('Home')}`),
         h('h2', {}, commuteName(fav, slot)),
-        h('button', { class: 'link', onclick: () => ctx.go(`#/edit/${slot}`) }, '✎ Edit')),
-      h('p', { class: 'muted small' }, 'Uncheck a line to hide it here. Your Favorite Commute stays the same.'),
+        h('button', { class: 'link', onclick: () => ctx.go(`#/edit/${slot}`) }, t('✎ Edit'))),
+      h('p', { class: 'muted small' }, t('Uncheck a route to hide it here. Your Favorite Commute stays the same.')),
       ...sections,
       h('div', { class: 'row between' },
-        h('small', { class: 'muted' }, updatedAt ? `Updated ${updatedAt.toLocaleTimeString()} · refreshes every 30 s` : 'Loading…'),
-        h('button', { class: 'link small', onclick: () => lines.refresh() }, '↻ Refresh')),
+        h('small', { class: 'muted' }, updatedAt ? t('Updated {time} · refreshes every 30 s', { time: updatedAt.toLocaleTimeString(locale()) }) : t('Loading…')),
+        h('button', { class: 'link small', onclick: () => lines.refresh() }, t('↻ Refresh'))),
     );
     sheet.scrollTop = scroll;
   }

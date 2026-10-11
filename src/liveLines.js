@@ -1,8 +1,9 @@
-// Draws the chosen lines and their live buses on a map, and keeps the buses fresh.
+// Draws the chosen routes as lines on a map, with their live buses, and keeps the buses fresh.
 // Used by both the editor and the commute screen, so they behave the same (REQ-COMM-1).
 // @req REQ-LINE-1a @req REQ-LINE-1b @req REQ-LINE-1c @req REQ-RT-8 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
 
 import { realtime } from './config.js';
+import { t, tn, arrow } from './i18n.js';
 import { fetchLiveBuses, classifyBuses, ageLabel } from './realtime.js';
 import { LINE_COLORS, busIcon, escapeHtml, lighten } from './map.js';
 import { stopPositions, splitPath, samePath } from './lib/routeGeometry.js';
@@ -72,7 +73,7 @@ export class LiveLines {
       // Lines without live buses (weekend service) are dashed, so they are never mistaken
       // for a line that simply has no bus on the way.
       const dashArray = route.live ? null : `${weight * 2} ${weight * 1.6}`;
-      const tip = `Line ${route.short} → ${route.dest}${route.live ? '' : ` · ${route.agency} (weekend line, no live tracking)`}`;
+      const tip = `${t('Route {n}', { n: route.short })} ${arrow()} ${route.dest}${route.live ? '' : ` · ${route.agency} ${t('(weekend route, no live tracking)')}`}`;
       // A pattern that takes the same path as one already drawn gets no line of its own:
       // only the full line shows (REQ-LINE-1c).
       const drawn = [path];
@@ -84,9 +85,9 @@ export class LiveLines {
       });
       const variants = dotted.map((p) => new OffsetPolyline(this.city.shapeOf(p), {
         color, weight: Math.max(3, weight - 1), opacity: 0.9, offset, dashArray: `1 ${weight * 1.8}`, lineCap: 'round',
-      }).bindTooltip(`${tip} · less common route (${p.share}% of trips)`, { sticky: true }));
+      }).bindTooltip(`${tip} · ${t('less common stop pattern ({share}% of trips)', { share: p.share })}`, { sticky: true }));
       const layers = [
-        ...variants, // drawn first, so only where they leave the usual route do the dots show
+        ...variants, // drawn first, so only where they leave the most common pattern do the dots show
         new OffsetPolyline(outbound, { color: lighten(color, 0.3), weight, opacity: 0.6, offset, lineCap: 'butt', dashArray }).bindTooltip(tip, { sticky: true }),
         new OffsetPolyline(incoming, { color, weight, opacity: 0.95, offset, lineCap: 'butt', dashArray }).bindTooltip(tip, { sticky: true }),
       ];
@@ -146,8 +147,10 @@ export class LiveLines {
     for (const row of rows) {
       const add = (bus, kind) => {
         const text = kind === 'next'
-          ? (bus.stopsAway === 0 ? `Next stop: ${row.stop.name}` : `${bus.stopsAway} stops before ${row.stop.name}`)
-          : `Passed ${row.stop.name} ${-bus.stopsAway} stops ago`;
+          ? (bus.stopsAway === 0
+            ? t('Next stop: {stop}', { stop: row.stop.name })
+            : tn(bus.stopsAway, '1 stop before {stop}', '{n} stops before {stop}', { stop: row.stop.name }))
+          : tn(-bus.stopsAway, 'Passed {stop} 1 stop ago', 'Passed {stop} {n} stops ago', { stop: row.stop.name });
         const m = markers.get(bus.rideId) || { bus, row, kind, lines: [] };
         if (kind === 'next') m.kind = 'next';
         m.lines.push(text);
@@ -159,8 +162,8 @@ export class LiveLines {
     for (const { bus, row, kind, lines } of markers.values()) {
       L.marker([bus.lat, bus.lon], { icon: busIcon(row.route.short, row.color, kind), zIndexOffset: kind === 'next' ? 1000 : 0 })
         .bindPopup(
-          `<b>Line ${escapeHtml(row.route.short)}</b> → ${escapeHtml(row.route.dest)}<br>` +
-          `${lines.map(escapeHtml).join('<br>')}<br><small>Position ${ageLabel(bus.recordedAt)}</small>`,
+          `<b>${escapeHtml(t('Route {n}', { n: row.route.short }))}</b> ${arrow()} ${escapeHtml(row.route.dest)}<br>` +
+          `${lines.map(escapeHtml).join('<br>')}<br><small>${escapeHtml(t('Position {age}', { age: ageLabel(bus.recordedAt) }))}</small>`,
         )
         .addTo(this.busLayer);
     }

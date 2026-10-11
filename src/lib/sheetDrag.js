@@ -7,9 +7,10 @@
 // On release it settles at the nearest size: small, half or large.
 
 import { h } from './dom.js';
+import { t } from '../i18n.js';
 
 export function draggableSheet(screen, sheet, { snaps = [0.2, 0.5, 0.82], start = 0.5, onResize = () => {}, onSnap = () => {} } = {}) {
-  const handle = h('div', { class: 'sheet-handle', role: 'separator', 'aria-orientation': 'horizontal', 'aria-label': 'Drag to resize the panel' });
+  const handle = h('div', { class: 'sheet-handle', role: 'separator', 'aria-orientation': 'horizontal', 'aria-label': t('Drag to resize the panel') });
   screen.insertBefore(handle, sheet);
 
   let height = 0; // pixels

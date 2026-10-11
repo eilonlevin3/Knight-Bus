@@ -1,7 +1,8 @@
 // Downloads and caches one city's transit bundle. Docs: docs/data-model.md#city-bundle
-// @req REQ-DATA-1
+// @req REQ-DATA-1 @req REQ-ROUTE-1 @req REQ-ROUTE-2
 
 import { dataBaseUrl, scheduleBaseUrl } from './config.js';
+import { t, cityName } from './i18n.js';
 import { decode } from './lib/polyline.js';
 
 const CACHE_NAME = 'kb-city-data-v1';
@@ -21,7 +22,7 @@ export async function loadCityIndex() {
     const cached = cache && (await cache.match(url));
     if (cached) return cached.json();
     throw new Error(
-      'Could not load the city list. If this is a new install, the data pipeline has not run yet (docs/setup.md).',
+      t('Could not load the city list. If this is a new install, the data pipeline has not run yet (docs/setup.md).'),
     );
   }
 }
@@ -35,15 +36,15 @@ export async function loadCity(cityMeta, onProgress = () => {}) {
   const cache = await openCache();
   let res = cache && (await cache.match(url));
   if (!res) {
-    onProgress(`Downloading ${cityMeta.name} (${(cityMeta.bytes / 1e6).toFixed(1)} MB)…`);
+    onProgress(t('Downloading {city} ({mb} MB)…', { city: cityName(cityMeta), mb: (cityMeta.bytes / 1e6).toFixed(1) }));
     res = await fetch(url);
-    if (!res.ok) throw new Error(`Download failed (HTTP ${res.status}).`);
+    if (!res.ok) throw new Error(t('Download failed (HTTP {status}).', { status: res.status }));
     if (cache) {
       await cache.put(url, res.clone());
       await removeOldVersions(cache, cityMeta);
     }
   }
-  onProgress('Preparing map data…');
+  onProgress(t('Preparing map data…'));
   const city = new CityData(await res.json(), cityMeta);
   loaded.set(cityMeta.id, city);
   return city;
@@ -61,7 +62,7 @@ async function removeOldVersions(cache, cityMeta) {
   }
 }
 
-// A line's timetable for the coming week, or null when there is none (weekend-service lines).
+// A route's timetable for the coming week, or null when there is none (weekend-service routes).
 // { patterns: [{ stops: [stopId], offsets: [minutes] }], trips: [[dayMask, startMinute, patternIndex]] }
 export async function loadSchedule(routeId) {
   try {
@@ -79,7 +80,7 @@ export class CityData {
     this.meta = meta;
     this.version = meta.version;
     this.agencies = raw.agencies;
-    this.sources = raw.sources || {}; // lines from outside the government feed: { id: { name, hours, info } }
+    this.sources = raw.sources || {}; // routes from outside the government feed: { id: { name, hours, info } }
 
     this.stops = new Map();
     // The optional 6th entry is "platform/floor", given for stops that share their stop
@@ -97,9 +98,9 @@ export class CityData {
     });
 
     this.routes = new Map();
-    for (const [id, short, dest, agencyIdx, type, seq, shape, times = null, source = null, alts = []] of raw.routes) {
-      // A line can take more than one route ("stop pattern"): the usual one, plus variants
-      // that skip or add stops (REQ-DATA-8). patterns[0] is the most common.
+    for (const [id, short, dest, agencyIdx, type, seq, shape, times = null, source = null, alts = [], opposite = null] of raw.routes) {
+      // A route can have more than one stop pattern: the most common one, plus others that
+      // skip or add stops (REQ-DATA-8). patterns[0] is the most common.
       //   times: scheduled minutes from the first stop (may be missing)
       //   share: % of the week's trips that use this pattern
       const pattern = (stopIdx, encodedShape, minutes, share) => ({
@@ -107,20 +108,22 @@ export class CityData {
       });
       const altShare = alts.reduce((n, a) => n + a[3], 0);
       const patterns = [pattern(seq, shape, times, Math.max(1, 100 - altShare)), ...alts.map((a) => pattern(a[0], a[1], a[2], a[3]))];
-      // source: set for lines outside the government feed; those have no live buses (REQ-RT-5).
+      // source: set for routes outside the government feed; those have no live buses (REQ-RT-5).
+      // opposite: id of the route that runs the same service the other way (REQ-ROUTE-2).
       const route = {
         id, short, dest, agency: this.agencies[agencyIdx], type,
         patterns, multi: patterns.length > 1,
-        stops: patterns[0].stops, times: patterns[0].times, // the usual route, for code that needs just one
+        stops: patterns[0].stops, times: patterns[0].times, // the most common pattern, for code that needs just one
         source, live: !source, hours: source ? this.sources[source]?.hours || null : null,
+        opposite,
       };
       this.routes.set(id, route);
-      // The line is listed at every stop that any of its patterns serves.
+      // The route is listed at every stop that any of its patterns serves.
       for (const s of new Set(patterns.flatMap((p) => p.stops))) s.routeIds.push(id);
     }
   }
 
-  // The path of a pattern (or of a line's usual route), decoded on first use.
+  // The path of a pattern (or of a route's most common pattern), decoded on first use.
   shapeOf(patternOrRoute) {
     const p = patternOrRoute.patterns ? patternOrRoute.patterns[0] : patternOrRoute;
     if (!p._shape) p._shape = decode(p.encodedShape);
@@ -134,12 +137,12 @@ export class CityData {
     return [...group].sort((a, b) => a.platform.localeCompare(b.platform, 'en', { numeric: true }) || a.id.localeCompare(b.id));
   }
 
-  // The patterns of a line that pass a stop, most common first.
+  // The patterns of a route that pass a stop, most common first.
   patternsAt(route, stopId) {
     return route.patterns.filter((p) => p.stops.some((s) => s.id === stopId));
   }
 
-  // Lines serving a stop, sorted by line number.
+  // Routes serving a stop, sorted by route number.
   routesAtStop(stopId) {
     const stop = this.stops.get(stopId);
     if (!stop) return [];
@@ -157,6 +160,39 @@ export class CityData {
       }
     }
     return out;
+  }
+
+  // Every route of the city for the search screen, sorted by number. A bus service runs in
+  // two directions, which are two routes in the data: each pair is listed once, as
+  // { route, opposite } (opposite is null for a one-way or circular route).
+  routePairs() {
+    if (!this._pairs) {
+      const seen = new Set();
+      this._pairs = [];
+      const sorted = [...this.routes.values()]
+        .sort((a, b) => a.short.localeCompare(b.short, 'he', { numeric: true }) || a.dest.localeCompare(b.dest, 'he'));
+      for (const route of sorted) {
+        if (seen.has(route.id)) continue;
+        const opposite = (route.opposite && this.routes.get(route.opposite)) || null;
+        seen.add(route.id);
+        if (opposite) seen.add(opposite.id);
+        this._pairs.push({ route, opposite });
+      }
+    }
+    return this._pairs;
+  }
+
+  // Search the route pairs by route number (from its start), or by part of a destination,
+  // a first stop or the operator's name. No text = everything.
+  searchRoutes(query, pairs = this.routePairs()) {
+    const q = query.trim().toLowerCase();
+    if (!q) return pairs;
+    const has = (text) => (text || '').toLowerCase().includes(q);
+    const out = pairs.filter(({ route, opposite }) => route.short.toLowerCase().startsWith(q) ||
+      has(route.dest) || has(opposite?.dest) || has(route.agency) || has(route.stops[0]?.name));
+    // An exact number first, then numbers that start with the text, then the rest.
+    const rank = ({ route }) => (route.short.toLowerCase() === q ? 0 : route.short.toLowerCase().startsWith(q) ? 1 : 2);
+    return out.sort((a, b) => rank(a) - rank(b));
   }
 
   // Search by stop code (exact or prefix) or by part of the name.

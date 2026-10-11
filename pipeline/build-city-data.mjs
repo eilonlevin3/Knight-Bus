@@ -1,5 +1,5 @@
 // Builds one transit bundle per city from the national GTFS feed.
-// @req REQ-STOP-1 @req REQ-DATA-2 @req REQ-SCOPE-1 @req REQ-DATA-5 @req REQ-DATA-6 @req REQ-DATA-7 @req REQ-DATA-8 @req REQ-DATA-9
+// @req REQ-ROUTE-2 @req REQ-STOP-1 @req REQ-DATA-2 @req REQ-SCOPE-1 @req REQ-DATA-5 @req REQ-DATA-6 @req REQ-DATA-7 @req REQ-DATA-8 @req REQ-DATA-9
 // Docs: docs/data-pipeline.md (how it works), docs/data-model.md (output format).
 //
 // Usage:  npm run build:data
@@ -164,6 +164,9 @@ async function main() {
       longName: g('route_long_name'),
       agency: g('agency_id'),
       type: Number(g('route_type')),
+      // route_desc is "<line code>-<direction 1|2>-<alternative>", e.g. "10708-1-0". Two routes
+      // with the same code and alternative are the two directions of one bus line (REQ-ROUTE-2).
+      desc: g('route_desc'),
       patternsByKey: new Map(), // "stop,stop,..." -> pattern
       patterns: [], // filled below: most common first
       trips: [], // [dayMask, startMinute, pattern] for the schedule files
@@ -359,6 +362,28 @@ async function main() {
     }
   }
 
+  // Pair every route with its opposite direction, so the app can offer "switch direction"
+  // and list a bus line once instead of twice (REQ-ROUTE-2).
+  const groups = new Map(); // "code|alternative" (or "source|number") -> routes
+  const groupKey = (r) => {
+    if (r.source) return `${r.source}|${r.short}`;
+    const [code, , alt = ''] = (r.desc || '').split('-');
+    return code ? `${code}|${alt}` : null;
+  };
+  for (const r of routes.values()) {
+    const k = groupKey(r);
+    if (!k) continue;
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(r);
+  }
+  const directionOf = (r) => (r.desc || '').split('-')[1] || r.id;
+  for (const list of groups.values()) {
+    for (const r of list) {
+      const other = list.find((x) => x !== r && directionOf(x) !== directionOf(r));
+      if (other) r.opposite = other.id;
+    }
+  }
+
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const generatedAt = new Date().toISOString();
   const index = { v: 1, country: config.country, generatedAt, gtfsLastModified: lastModified, cities: [] };
@@ -414,9 +439,12 @@ async function main() {
         shape,
         times,
       ];
-      // Optional tail: [8] source (not from the government feed: no live buses), [9] other patterns.
-      if (r.source || alts.length) row.push(r.source || null);
-      if (alts.length) row.push(alts);
+      // Optional tail: [8] source (not from the government feed: no live buses), [9] other
+      // patterns, [10] the id of the same bus line in the opposite direction.
+      const opposite = r.opposite && routes.has(r.opposite) ? r.opposite : null;
+      if (r.source || alts.length || opposite) row.push(r.source || null);
+      if (alts.length || opposite) row.push(alts);
+      if (opposite) row.push(opposite);
       return row;
     });
     const usedSources = Object.fromEntries([...new Set(cityRoutes.map((r) => r.source).filter(Boolean))].map((id) => [id, sourceInfo[id]]));

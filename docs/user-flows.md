@@ -15,6 +15,8 @@ flowchart TD
   M -- ＋ New Favorite Commute / ✎ --> E[Editor]
   M -- tap a Favorite Commute --> V[Favorite Commute view]
   M -- tap a bus stop --> M
+  M -- 🔍 Search routes --> S[Route list] --> R[A route in full<br/>one direction · timetable]
+  M -- ⚙ Options --> O[Language · city]
   V -- ✎ Edit --> E
   E -- Save Favorite Commute --> M
 ```
@@ -49,6 +51,8 @@ The first screen after sign-in (REQ-HOME-1). It used to be called the main menu.
 │ [ Home               ] [✎]   │
 │ Tap a bus stop on the map…   │
 │      (＋ New Favorite Commute)│  small, bottom right, while a slot is free
+│             (🔍 Search routes)│  below it: every route of the city
+│                  (⚙ Options) │  below that: language, city
 └──────────────────────────────┘
 ```
 
@@ -71,12 +75,17 @@ number of routes. Tap it to open the Favorite Commute; **✎** opens the editor.
 **＋ New Favorite Commute**, bottom right, appears while fewer than three are saved. If a stop is
 open on the map, the new Favorite Commute starts at that stop.
 
+**🔍 Search routes** (REQ-ROUTE-1), below it, opens the [route list](#6-search-routes).
+**⚙ Options** (REQ-LANG-2), below that, opens a small pop-up with the
+[language](#language), *Change city* and *Privacy & usage data*.
+
 Also in the panel: the city (tap to change), the signed-in email, *Sign out* (REQ-AUTH-3),
 *Privacy & usage data*, and for admins *📊 Favorite Commutes report*. The first time, a card asks
 **Help improve Knight Bus?** (REQ-ANL-3): *Share usage* or *No thanks*. Until answered,
 nothing is recorded. What is recorded: [privacy.md](privacy.md).
 
-Code: [views/home.js](../src/views/home.js), [liveLines.js](../src/liveLines.js),
+Code: [views/home.js](../src/views/home.js), [views/options.js](../src/views/options.js),
+[liveLines.js](../src/liveLines.js),
 [lib/mapFit.js](../src/lib/mapFit.js), [lib/sheetDrag.js](../src/lib/sheetDrag.js).
 
 ## 3. Editing a Favorite Commute
@@ -226,8 +235,8 @@ driving. A bus on a less common pattern is still shown; "stops away" is counted 
 most common pattern that passes your stop.
 
 **The ⚠ sign** (REQ-LINE-2). Every such route has a small ⚠ next to its destination, in the
-home stop list, the editor and the Favorite Commute. Pressing it opens a pop-up. On screen, the most
-common pattern is called "Usual route" and each other pattern "Variant".
+home stop list, the editor and the Favorite Commute. Pressing it opens a pop-up. On screen the
+patterns are called "Most common pattern" and "Other pattern" (in Hebrew: המסלול הנפוץ, מסלול חלופי).
 
 It starts with **In short**, a summary of how the patterns differ (REQ-LINE-1d), for example:
 
@@ -239,17 +248,37 @@ It starts with **In short**, a summary of how the patterns differ (REQ-LINE-1d),
 
 Then the patterns one by one:
 
-- *Usual route: 51% of trips · 36 stops · stops here*
-- *Variant: 49% of trips · 35 stops · does not stop here*, with *Skips: …* and *Also stops at: …*
+- *Most common pattern: 51% of trips · 36 stops · stops here*
+- *Other pattern: 49% of trips · 35 stops · does not stop here*, with *Skips: …* and *Also stops at: …*
 - one sentence saying what the map shows from this stop,
-- the button **Show the full line on the map**.
+- the button **Show the full route on the map**.
 
 Pressing ⚠ inside a checkbox row does not tick the box.
 
 ## 5. A route in full
 
-Opened from the ⚠ pop-up (REQ-LINE-3). Address: `#/line/<city>/<route>/<stop>`.
+Opened from the ⚠ pop-up (REQ-LINE-3) or from [Search routes](#6-search-routes)
+(REQ-ROUTE-1). Address: `#/line/<city>/<route>/<stop>`; the stop is optional.
 
+```
+┌──────────────────────────────┐
+│   MAP: this direction only   │
+├───────────── ▬ ──────────────┤
+│ ← Back   [62]  → Ramat Gan   │
+│ From Reading to Sheba · Dan  │
+│ [⇄ Switch direction] [🕒 Timetable]
+│ Tap a stop on the map or in the list…
+│ ▸ Stops on this route (36)   │  opens the stops in order
+└──────────────────────────────┘
+```
+
+- **One direction** (REQ-ROUTE-2). A bus service runs both ways; the screen shows the one
+  you opened. **⇄ Switch direction** replaces it with the opposite direction (its own map,
+  stops and timetable). The two are never drawn together. A circular or one-way route has
+  no such button.
+- **🕒 Timetable** (REQ-ROUTE-3) shows the times at the route's first stop, or at the stop
+  already chosen. **Stops on this route** lists the stops of the most common pattern in
+  order; tap one to choose it on the map and see its timetable.
 - **Map:** the whole route. Its most common stop pattern is drawn as a solid purple line;
   each other pattern as a dotted line in its own color, unless it takes the same path as one
   already drawn (REQ-LINE-1c). All stops are shown; a stop that
@@ -261,8 +290,53 @@ Opened from the ⚠ pop-up (REQ-LINE-3). Address: `#/line/<city>/<route>/<stop>`
   hour, for example `07  :00 :15 :35 :55`. Times of trips on a less common pattern have a
   dotted underline; `⁺` marks times after midnight. These are timetable times, not live.
 - Weekend-service routes have no timetable; the panel says so and gives their hours.
-- **← Back** returns to where you came from.
+- **← Back** returns to where you came from (switching direction does not add a step).
 
 Code: [views/lineInfo.js](../src/views/lineInfo.js), [views/line.js](../src/views/line.js),
 [lib/schedule.js](../src/lib/schedule.js), [liveLines.js](../src/liveLines.js),
 [cityData.js](../src/cityData.js).
+
+## 6. Search routes
+
+Opened with **🔍 Search routes** on the home screen (REQ-ROUTE-1). Address: `#/routes`.
+
+- The list holds **every route in the city's data**, weekend services included, sorted by
+  number. Type a **route number** (matched from its start: `6` finds 6, 60, 62…), part of a
+  **destination** or first stop, or an **operator**. An exact number comes first. At most
+  60 rows are shown; the line above the list says how many match.
+- **Each bus service appears once** (REQ-ROUTE-2), as *one end ⇄ other end*, with its first
+  and last stop and its operator below. The first and last stop tell apart routes that
+  share a number (the same number is used in different towns).
+- **Tap a row** to open [the route in full](#5-a-route-in-full): its map, **⇄ Switch
+  direction**, **🕒 Timetable** and its stops.
+
+Which two routes are the two directions of one service is worked out when the city data is
+built: [data-pipeline.md](data-pipeline.md#opposite-directions).
+
+Code: [views/routes.js](../src/views/routes.js), [cityData.js](../src/cityData.js)
+(`routePairs`, `searchRoutes`).
+
+## Language
+
+The app is in **English and Hebrew** (REQ-LANG-1).
+
+- **Changing it** (REQ-LANG-2): home screen → **⚙ Options** → *Language* → **English** or
+  **עברית**. The screen is drawn again at once in the new language. Before signing in, the
+  sign-in screen has a link to the other language.
+- **Remembered on this device only** (`kb.language`). On a first visit the app follows the
+  phone's language: Hebrew phone → Hebrew, anything else → English.
+- **Hebrew reads right to left.** The panels, lists and pop-ups turn around; the map does
+  not. The home-screen buttons stay bottom right. Arrows turn with the text (← points to
+  where a route goes). Clock times stay as they are (`07:45`).
+- **Names from the transit data** (stops, destinations, operators) are Hebrew in both
+  languages; that is how the Ministry of Transport publishes them. City names are shown in
+  the app's language.
+
+How it works: the code writes each text in English through `t('…')`; in Hebrew the text is
+looked up in [i18n/he.js](../src/i18n/he.js), one line per text. `npm test` reads the code
+and fails if a text has no Hebrew line, if a Hebrew line lost a `{place}` for a value, or
+if a line is left over from a text the app no longer shows. To add a text: write it in
+English in the code, run `npm test`, add the line it asks for.
+
+Code: [i18n.js](../src/i18n.js), [i18n/he.js](../src/i18n/he.js),
+[views/options.js](../src/views/options.js), [tests/i18n.test.mjs](../tests/i18n.test.mjs).

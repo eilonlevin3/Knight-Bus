@@ -24,6 +24,7 @@ you change what is collected, change this file, the screen text and the code tog
 | Sign-in: email or Google account | Firebase Authentication | The account owner; project admins |
 | Favorite Commutes: stops, routes, start/destination | Firestore `users/{uid}/favorites` | The account owner; project admins |
 | Location | Used on the phone to pick the city, center the home map and draw "you are here". The last position is remembered **on the phone only** (`kb.lastPosition`), for a quick start | Never sent |
+| Language | The language chosen in Options is remembered **on the phone only** (`kb.language`) | Never sent, except the usage event `language_changed` below, if you agreed |
 
 ## Safe usage data: everyone who agreed (user and debug versions)
 
@@ -45,6 +46,8 @@ id; the account is never attached.
 | `line_toggled` | on or off |
 | `stop_info_opened` | how many stops share the number, whether platforms tell them apart. Not which stop |
 | `line_info_opened`, `line_map_opened`, `line_stop_tapped`, `schedule_opened` | that it happened, the number of stop patterns, whether a timetable existed. Not which route or stop |
+| `route_search_opened`, `direction_switched` | that a route was opened from Search routes, or its direction switched. Not which route, and never what was typed in the search |
+| `language_changed` | the language chosen (`en` or `he`) |
 | `panel_dragged` | small / half / large |
 | `commute_cleared`, `update_applied`, `usage_sharing_on` | that it happened |
 

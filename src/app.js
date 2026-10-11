@@ -1,9 +1,10 @@
 // App start-up and screen router. Docs: docs/architecture.md#the-app
-// Screens are chosen by the URL hash: #/login, #/city, #/home, #/edit/1, #/commute/1
+// Screens are chosen by the URL hash: #/login, #/city, #/home, #/edit/1, #/commute/1, #/routes
 // (#/menu is the old name of #/home and still works, for apps installed before the rename.)
-// @req REQ-AUTH-3 @req REQ-PWA-2
+// @req REQ-AUTH-3 @req REQ-PWA-2 @req REQ-LANG-2
 
 import { h } from './lib/dom.js';
+import { t, applyLanguage } from './i18n.js';
 import { storagePrefix } from './config.js';
 import { build } from './build.js';
 import { registerServiceWorker } from './updates.js';
@@ -18,8 +19,10 @@ import * as commute from './views/commute.js';
 import * as privacy from './views/privacy.js';
 import * as report from './views/report.js';
 import * as line from './views/line.js';
+import * as routes from './views/routes.js';
 import * as analytics from './analytics.js';
 
+applyLanguage();
 const root = document.getElementById('app');
 const CITY_KEY = `${storagePrefix}cityId`;
 
@@ -51,7 +54,7 @@ const ctx = {
   async getCity(cityId) {
     if (ctx.city?.id === cityId) return ctx.city;
     const meta = ctx.cityIndex.cities.find((c) => c.id === cityId);
-    if (!meta) throw new Error(`City "${cityId}" is no longer available.`);
+    if (!meta) throw new Error(t('City "{city}" is no longer available.', { city: cityId }));
     return loadCity(meta);
   },
 
@@ -69,7 +72,7 @@ async function route() {
   cleanup = null;
   root.replaceChildren();
 
-  // #/commute/2 · #/edit/1 · #/line/<city>/<line id>/<stop id>
+  // #/commute/2 · #/edit/1 · #/routes · #/line/<city>/<route id>/<stop id>
   const [, name = 'home', param, param2, param3] = location.hash.match(/^#\/(\w+)(?:\/([\w-]+))?(?:\/([\w-]+))?(?:\/([\w-]+))?/) || [];
 
   // Guards: signed in -> city chosen -> requested screen.
@@ -77,16 +80,16 @@ async function route() {
   if (name === 'city' || !ctx.city) { analytics.screen('city'); return cityView.render(root, ctx); }
   if (name === 'privacy') { analytics.screen('privacy'); return privacy.render(root, ctx); }
 
-  const views = { home, menu: home, edit: editor, commute, line, report: ctx.isAdmin ? report : home };
+  const views = { home, menu: home, edit: editor, commute, line, routes, report: ctx.isAdmin ? report : home };
   const view = views[name] || home;
   const slot = Number(param);
   if ((view === editor || view === commute) && ![1, 2, 3].includes(slot)) return ctx.go('#/home');
-  analytics.screen(view === home ? 'home' : view === editor ? 'editor' : view === report ? 'report' : view === line ? 'line' : 'commute');
+  analytics.screen(view === home ? 'home' : view === editor ? 'editor' : view === report ? 'report' : view === line ? 'line' : view === routes ? 'routes' : 'commute');
 
   // Render into a container that is already in the page (the map needs its size),
   // with a loading overlay on top until the screen is ready.
   const container = h('div', { class: 'view' });
-  const overlay = loading('Loading…');
+  const overlay = loading(t('Loading…'));
   root.append(container, overlay);
   try {
     const nextCleanup = await view.render(container, ctx, { slot, cityId: param, routeId: param2, stopId: param3 });
@@ -106,15 +109,15 @@ function loading(text) {
 function errorBox(e) {
   return h('main', { class: 'screen center' },
     h('div', { class: 'card stack' },
-      h('h2', {}, 'Something went wrong'),
+      h('h2', {}, t('Something went wrong')),
       h('p', {}, e.message),
-      h('button', { class: 'primary', onclick: () => location.reload() }, 'Reload')));
+      h('button', { class: 'primary', onclick: () => location.reload() }, t('Reload'))));
 }
 
 // After sign-in: load the city list, the remembered city (from the device cache) and favorites.
 async function start() {
   if (!ctx.user) return route();
-  root.replaceChildren(loading('Loading your city…'));
+  root.replaceChildren(loading(t('Loading your city…')));
   try {
     ctx.cityIndex ||= await loadCityIndex();
     const saved = (() => { try { return localStorage.getItem(CITY_KEY); } catch { return null; } })();
@@ -131,6 +134,8 @@ async function start() {
 }
 
 window.addEventListener('hashchange', route);
+// The language was changed (Options): draw the current screen again in the new language.
+window.addEventListener('kb-language', route);
 
 watchUser((user) => {
   const changed = user?.uid !== ctx.user?.uid;

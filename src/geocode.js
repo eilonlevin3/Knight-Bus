@@ -3,6 +3,8 @@
 // search-as-you-type, so we search only when the user presses Search.
 // @req REQ-FAV-5
 
+import { t } from './i18n.js';
+
 const BASE = 'https://nominatim.openstreetmap.org';
 let last = 0;
 
@@ -11,7 +13,7 @@ async function politeFetch(url) {
   if (wait > 0) await new Promise((r) => setTimeout(r, wait));
   last = Date.now();
   const res = await fetch(url, { headers: { 'Accept-Language': 'he,en' } });
-  if (!res.ok) throw new Error(`Address search failed (HTTP ${res.status}).`);
+  if (!res.ok) throw new Error(t('Address search failed (HTTP {status}).', { status: res.status }));
   return res.json();
 }
 

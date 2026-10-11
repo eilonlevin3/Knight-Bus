@@ -2,6 +2,7 @@
 // @req REQ-AUTH-1 @req REQ-AUTH-2 @req REQ-AUTH-3 @req REQ-AUTH-4
 
 import { firebaseConfig, FIREBASE_SDK, storagePrefix } from './config.js';
+import { t } from './i18n.js';
 
 export const firebaseConfigured = !firebaseConfig.apiKey.startsWith('REPLACE');
 
@@ -91,16 +92,16 @@ function readLocalUser() {
 // Firebase error codes -> short human messages.
 export function authErrorMessage(err) {
   const map = {
-    'auth/invalid-email': 'That email address is not valid.',
-    'auth/invalid-credential': 'Wrong email or password.',
-    'auth/wrong-password': 'Wrong email or password.',
-    'auth/user-not-found': 'No account with that email. Create one?',
-    'auth/email-already-in-use': 'An account with that email already exists. Sign in instead.',
-    'auth/weak-password': 'Password must be at least 6 characters.',
-    'auth/popup-closed-by-user': 'Google sign-in was closed.',
-    'auth/popup-blocked': 'The browser blocked the Google pop-up. Allow pop-ups and try again.',
-    'auth/unauthorized-domain': 'This web address is not allowed in Firebase yet (docs/setup.md, step 2).',
-    'auth/network-request-failed': 'No connection. Try again.',
+    'auth/invalid-email': t('That email address is not valid.'),
+    'auth/invalid-credential': t('Wrong email or password.'),
+    'auth/wrong-password': t('Wrong email or password.'),
+    'auth/user-not-found': t('No account with that email. Create one?'),
+    'auth/email-already-in-use': t('An account with that email already exists. Sign in instead.'),
+    'auth/weak-password': t('Password must be at least 6 characters.'),
+    'auth/popup-closed-by-user': t('Google sign-in was closed.'),
+    'auth/popup-blocked': t('The browser blocked the Google pop-up. Allow pop-ups and try again.'),
+    'auth/unauthorized-domain': t('This web address is not allowed in Firebase yet (docs/setup.md, step 2).'),
+    'auth/network-request-failed': t('No connection. Try again.'),
   };
-  return map[err?.code] || err?.message || 'Something went wrong.';
+  return map[err?.code] || err?.message || t('Something went wrong.');
 }

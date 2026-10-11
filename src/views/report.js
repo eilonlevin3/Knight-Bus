@@ -2,6 +2,7 @@
 // @req REQ-ANL-2 @req REQ-ANL-5
 
 import { h } from '../lib/dom.js';
+import { t, tn, arrow, backArrow, cityName as localCityName } from '../i18n.js';
 import { favoritesCollection } from '../config.js';
 import { loadAllCommutes } from '../store.js';
 import { summarize, MIN_PEOPLE_PER_STOP } from '../lib/report.js';
@@ -25,68 +26,68 @@ export async function render(root, ctx) {
   const pct = (n, of) => (of ? `${Math.round((100 * n) / of)}%` : '0%');
 
   async function load() {
-    tabs.replaceChildren(tab('favorites', 'Real users'), tab('favoritesDebug', 'Debug testers'));
-    body.replaceChildren(h('p', { class: 'muted' }, 'Counting…'));
+    tabs.replaceChildren(tab('favorites', t('Real users')), tab('favoritesDebug', t('Debug testers')));
+    body.replaceChildren(h('p', { class: 'muted' }, t('Counting…')));
     let r;
     try {
       r = summarize(await loadAllCommutes(which));
     } catch (e) {
-      body.replaceChildren(h('p', { class: 'error' }, `Could not load the report: ${e.message}`),
-        h('p', { class: 'muted small' }, 'The database rules may need publishing again (docs/setup.md).'));
+      body.replaceChildren(h('p', { class: 'error' }, t('Could not load the report: {error}', { error: e.message })),
+        h('p', { class: 'muted small' }, t('The database rules may need publishing again (docs/setup.md).')));
       return;
     }
     if (!r.commutes) {
-      body.replaceChildren(h('p', { class: 'muted' }, 'No Favorite Commutes here yet.'));
+      body.replaceChildren(h('p', { class: 'muted' }, t('No Favorite Commutes here yet.')));
       return;
     }
 
-    // Line and city names come from the city data; the report itself only has ids.
-    const cityName = (id) => ctx.cityIndex.cities.find((c) => c.id === id)?.name || id;
+    // Route and city names come from the city data; the report itself only has ids.
+    const cityName = (id) => localCityName(ctx.cityIndex.cities.find((c) => c.id === id)) || id;
     const cities = new Map();
     for (const { cityId } of r.byCity) {
       try { cities.set(cityId, await ctx.getCity(cityId)); } catch { /* city no longer published */ }
     }
     const lineLabel = (l) => {
       const route = cities.get(l.cityId)?.routes.get(l.routeId);
-      return route ? `${route.short} → ${route.dest}${route.source ? ' · weekend line' : ''}` : `Line ${l.routeId} (no longer runs)`;
+      return route ? `${route.short} ${arrow()} ${route.dest}${route.source ? t(' · weekend route') : ''}` : t('Route {id} (no longer runs)', { id: l.routeId });
     };
     const weekend = r.topLines.filter((l) => cities.get(l.cityId)?.routes.get(l.routeId)?.source).reduce((n, l) => n + l.commutes, 0);
 
     const topLines = r.topLines.slice(0, 20);
     body.replaceChildren(
-      card('Overview',
+      card(t('Overview'),
         h('div', { class: 'stat-grid' },
-          h('div', {}, h('b', {}, String(r.people)), h('small', {}, 'people with a Favorite Commute')),
-          h('div', {}, h('b', {}, String(r.commutes)), h('small', {}, 'Favorite Commutes')),
-          h('div', {}, h('b', {}, String(r.averageLines)), h('small', {}, 'lines per Favorite Commute, average')),
-          h('div', {}, h('b', {}, String(weekend)), h('small', {}, 'uses of weekend-only lines')))),
-      card('Favorite Commutes per person', ...[1, 2, 3].map((n) => bar(`${n} saved`, r.commutesPerPerson[n], r.people))),
-      card('By city', ...r.byCity.map((c) => bar(cityName(c.cityId), c.count, r.commutes))),
-      card('Shape of a Favorite Commute',
-        bar('1 stop', r.stopsPerCommute[1], r.commutes, pct(r.stopsPerCommute[1], r.commutes)),
-        bar('2 stops', r.stopsPerCommute[2], r.commutes, pct(r.stopsPerCommute[2], r.commutes)),
-        bar('With a start point', r.withStart, r.commutes, pct(r.withStart, r.commutes)),
-        bar('With a destination', r.withDestination, r.commutes, pct(r.withDestination, r.commutes)),
-        bar('With both', r.withBoth, r.commutes, pct(r.withBoth, r.commutes))),
-      card(`Most saved lines${r.topLines.length > 20 ? ' (top 20)' : ''}`,
-        h('p', { class: 'muted small' }, 'Bar = different people who saved the line. Number in brackets = Favorite Commutes.'),
+          h('div', {}, h('b', {}, String(r.people)), h('small', {}, t('people with a Favorite Commute'))),
+          h('div', {}, h('b', {}, String(r.commutes)), h('small', {}, t('Favorite Commutes'))),
+          h('div', {}, h('b', {}, String(r.averageLines)), h('small', {}, t('routes per Favorite Commute, average'))),
+          h('div', {}, h('b', {}, String(weekend)), h('small', {}, t('uses of weekend-only routes'))))),
+      card(t('Favorite Commutes per person'), ...[1, 2, 3].map((n) => bar(t('{n} saved', { n }), r.commutesPerPerson[n], r.people))),
+      card(t('By city'), ...r.byCity.map((c) => bar(cityName(c.cityId), c.count, r.commutes))),
+      card(t('Shape of a Favorite Commute'),
+        bar(tn(1, '1 stop', '{n} stops'), r.stopsPerCommute[1], r.commutes, pct(r.stopsPerCommute[1], r.commutes)),
+        bar(tn(2, '1 stop', '{n} stops'), r.stopsPerCommute[2], r.commutes, pct(r.stopsPerCommute[2], r.commutes)),
+        bar(t('With a start point'), r.withStart, r.commutes, pct(r.withStart, r.commutes)),
+        bar(t('With a destination'), r.withDestination, r.commutes, pct(r.withDestination, r.commutes)),
+        bar(t('With both'), r.withBoth, r.commutes, pct(r.withBoth, r.commutes))),
+      card(t('Most saved routes') + (r.topLines.length > 20 ? t(' (top 20)') : ''),
+        h('p', { class: 'muted small' }, t('Bar = different people who saved the route. Number in brackets = Favorite Commutes.')),
         ...topLines.map((l) => bar(lineLabel(l), l.people, topLines[0].people, `(${l.commutes}) · ${cityName(l.cityId)}`))),
-      card('Most saved stops',
+      card(t('Most saved stops'),
         h('p', { class: 'muted small' },
-          `Only stops saved by at least ${MIN_PEOPLE_PER_STOP} different people are listed, so no stop can point to one person. Hidden: ${r.stopsHidden}.`),
+          t('Only stops saved by at least {min} different people are listed, so no stop can point to one person. Hidden: {hidden}.', { min: MIN_PEOPLE_PER_STOP, hidden: r.stopsHidden })),
         ...(r.topStops.length
           ? r.topStops.slice(0, 20).map((s) => bar(`${s.name} · ${s.code}`, s.people, r.topStops[0].people, cityName(s.cityId)))
-          : [h('p', { class: 'muted' }, 'None yet.')])),
-      card('Last saved, by month', ...r.byMonth.map((m) => bar(m.month, m.count, Math.max(...r.byMonth.map((x) => x.count))))),
+          : [h('p', { class: 'muted' }, t('None yet.'))])),
+      card(t('Last saved, by month'), ...r.byMonth.map((m) => bar(m.month, m.count, Math.max(...r.byMonth.map((x) => x.count))))),
     );
   }
 
   root.append(
     h('main', { class: 'screen report' },
       h('header', { class: 'topbar' },
-        h('button', { class: 'link', onclick: () => ctx.go('#/home') }, '← Home'),
-        h('h1', {}, 'Favorite Commutes report')),
-      h('p', { class: 'muted small' }, 'Counts only. No names, emails or locations of people. For how the app is used (screens, time, active users), see Analytics in the Firebase console.'),
+        h('button', { class: 'link', onclick: () => ctx.go('#/home') }, `${backArrow()} ${t('Home')}`),
+        h('h1', {}, t('Favorite Commutes report'))),
+      h('p', { class: 'muted small' }, t('Counts only. No names, emails or locations of people. For how the app is used (screens, time, active users), see Analytics in the Firebase console.')),
       tabs,
       body),
   );

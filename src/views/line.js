@@ -1,26 +1,29 @@
-// One line in full: every route it takes, all its stops, and the schedule at any stop.
+// One route in full: its path on the map with every stop pattern, all its stops, a switch
+// to the opposite direction, and the timetable at any stop.
 // Docs: docs/user-flows.md#5-a-route-in-full
-// @req REQ-LINE-3 @req REQ-LINE-4 @req REQ-LINE-1c
+// @req REQ-LINE-3 @req REQ-LINE-4 @req REQ-LINE-1c @req REQ-ROUTE-2 @req REQ-ROUTE-3
 
 import { h } from '../lib/dom.js';
+import { t, tn, arrow, backArrow } from '../i18n.js';
 import { createMap, userMarker } from '../map.js';
 import { loadSchedule } from '../cityData.js';
 import { draggableSheet } from '../lib/sheetDrag.js';
 import { track, trackDetail } from '../analytics.js';
-import { lineBadge, weekendTag } from './liveInfo.js';
+import { routeBadge, weekendTag } from './liveInfo.js';
 import { patternName, differenceLines } from './lineInfo.js';
 import { stopSuffix, stopHazard } from './stopInfo.js';
 import { timesAtStop } from '../lib/schedule.js';
 import { samePath } from '../lib/routeGeometry.js';
 
 const PATTERN_COLORS = ['#7b2cbf', '#e85d04', '#0077b6', '#2a9d8f'];
-const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const dayNames = () => [t('Sun'), t('Mon'), t('Tue'), t('Wed'), t('Thu'), t('Fri'), t('Sat')];
 const hhmm = (minutes) => `${String(Math.floor(minutes / 60) % 24).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}`;
 
 export async function render(root, ctx, { cityId, routeId, stopId }) {
   const city = await ctx.getCity(cityId);
   const route = city.routes.get(routeId);
   if (!route) return ctx.go('#/home');
+  const opposite = route.opposite ? city.routes.get(route.opposite) : null;
 
   const mapEl = h('div', { class: 'map' });
   const sheet = h('section', { class: 'sheet' });
@@ -35,20 +38,22 @@ export async function render(root, ctx, { cityId, routeId, stopId }) {
   };
 
   const first = route.patterns[0].stops[0];
+  const last = route.patterns[0].stops.at(-1);
   const map = createMap(mapEl, [first.lat, first.lon], 13);
   userMarker(map)(ctx.position);
 
-  // Every route of the line: the usual one solid, the others dotted, each in its own color.
-  // A pattern that takes the same path as an earlier one gets no line of its own (REQ-LINE-1c).
+  // Only this direction is drawn. Every stop pattern of it: the most common as a solid line,
+  // the others dotted, each in its own color. A pattern that takes the same path as an
+  // earlier one gets no line of its own (REQ-LINE-1c).
   const sameAsEarlier = route.patterns.map((p, i) =>
     route.patterns.slice(0, i).some((q) => samePath(city.shapeOf(p), city.shapeOf(q))));
   const lines = route.patterns.map((p, i) => (sameAsEarlier[i] ? null : L.polyline(city.shapeOf(p), {
     color: PATTERN_COLORS[i % PATTERN_COLORS.length], weight: i ? 4 : 6, opacity: 0.9,
     dashArray: i ? '1 9' : null, lineCap: 'round',
-  }).bindTooltip(`${patternName(i)} (${p.share}% of trips)`, { sticky: true }))).filter(Boolean);
-  [...lines].reverse().forEach((l) => l.addTo(map)); // usual route on top
+  }).bindTooltip(t('{name} ({share}% of trips)', { name: patternName(i), share: p.share }), { sticky: true }))).filter(Boolean);
+  [...lines].reverse().forEach((l) => l.addTo(map)); // most common pattern on top
 
-  // Every stop of every route. A stop only some routes serve takes that route's color.
+  // Every stop of every pattern. A stop only some patterns serve takes that pattern's color.
   const servedBy = new Map(); // stop id -> [pattern index]
   route.patterns.forEach((p, i) => p.stops.forEach((s) => {
     if (!servedBy.has(s.id)) servedBy.set(s.id, []);
@@ -72,22 +77,23 @@ export async function render(root, ctx, { cityId, routeId, stopId }) {
     markers.set(id, m);
   }
 
-  const servedText = (s) => {
-    const by = servedBy.get(s.id) || [];
-    return by.length === route.patterns.length ? null : `Only the ${by.map((i) => patternName(i).toLowerCase()).join(' and ')} stops here.`;
-  };
+  const servedText = (s) => ((servedBy.get(s.id) || []).length === route.patterns.length
+    ? null
+    : t('Only some of the stop patterns stop here: {names}.', { names: servedBy.get(s.id).map(patternName).join(', ') }));
 
   // Pressing a stop: a small pop-up with a link to its full schedule.
-  function selectStop(s, fromMap = false) {
+  function selectStop(s, fromMap = false, popup = true) {
     state.stop = s;
     state.showSchedule = false;
     for (const [id, m] of markers) m.setStyle(stopStyle(city.stops.get(id)));
     markers.get(s.id)?.bringToFront();
-    const content = h('div', { class: 'stop-popup' },
-      h('b', {}, s.name), h('span', { class: 'muted' }, stopSuffix(s)),
-      servedText(s) ? h('small', { class: 'block' }, servedText(s)) : null,
-      h('button', { class: 'link', onclick: () => { map.closePopup(); openSchedule(); } }, 'Full schedule at this stop →'));
-    L.popup({ offset: [0, -6] }).setLatLng([s.lat, s.lon]).setContent(content).openOn(map);
+    if (popup) {
+      const content = h('div', { class: 'stop-popup' },
+        h('b', {}, s.name), h('span', { class: 'muted' }, stopSuffix(s)),
+        servedText(s) ? h('small', { class: 'block' }, servedText(s)) : null,
+        h('button', { class: 'link', onclick: () => { map.closePopup(); openSchedule(); } }, `${t('Full schedule at this stop')} ${arrow()}`));
+      L.popup({ offset: [0, -6] }).setLatLng([s.lat, s.lon]).setContent(content).openOn(map);
+    }
     if (fromMap) track('line_stop_tapped');
     paint();
   }
@@ -104,85 +110,115 @@ export async function render(root, ctx, { cityId, routeId, stopId }) {
     sheet.querySelector('.schedule')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   }
 
+  // The route's timetable: the times at its first stop, unless a stop is already chosen.
+  function openTimetable() {
+    if (!state.stop) selectStop(first, false, false);
+    openSchedule();
+  }
+
   // ---------- Panel ----------
 
   function patternList() {
-    if (!route.multi) return h('p', { class: 'muted small' }, 'This line always takes the same route.');
+    if (!route.multi) return null;
     return h('div', { class: 'stack' },
-      h('p', {}, h('span', { class: 'hazard-mark' }, '⚠'), ' This line does not always take the same route:'),
+      h('p', {}, h('span', { class: 'hazard-mark' }, '⚠'), t(' This route does not always follow the same stop pattern:')),
       ...route.patterns.map((p, i) => h('div', { class: 'pattern-row' },
         h('span', { class: `pattern-swatch${i && !sameAsEarlier[i] ? ' dotted' : ''}`, style: `--c:${PATTERN_COLORS[(sameAsEarlier[i] ? 0 : i) % PATTERN_COLORS.length]}` }),
         h('span', { class: 'line-text' },
-          h('span', {}, h('b', {}, patternName(i)), ` · ${p.share}% of trips · ${p.stops.length} stops`),
-          ...(i > 0 ? differenceLines(route.patterns[0], p, city, 6).map((t) => h('small', { class: 'muted' }, t)) : []),
-          sameAsEarlier[i] ? h('small', { class: 'muted' }, 'Same path as the usual route, so it has no line of its own.') : null))));
+          h('span', {}, h('b', {}, patternName(i)), t(' · {share}% of trips', { share: p.share }), tn(p.stops.length, ' · 1 stop', ' · {n} stops')),
+          ...(i > 0 ? differenceLines(route.patterns[0], p, city, 6).map((x) => h('small', { class: 'muted' }, x)) : []),
+          sameAsEarlier[i] ? h('small', { class: 'muted' }, t('Same path as the most common pattern, so it has no line of its own.')) : null))));
   }
 
   function scheduleBlock() {
     const s = state.stop;
-    if (state.schedule === undefined) return h('p', { class: 'muted schedule' }, 'Loading the timetable…');
+    if (state.schedule === undefined) return h('p', { class: 'muted schedule' }, t('Loading the timetable…'));
     if (!state.schedule) {
       return h('p', { class: 'muted schedule' }, route.live
-        ? 'No timetable is published for this line this week.'
-        : `${route.agency} publishes no timetable we can read.${route.hours ? ` It runs ${route.hours}.` : ''}`);
+        ? t('No timetable is published for this route this week.')
+        : t('{agency} publishes no timetable we can read.', { agency: route.agency }) + (route.hours ? t(' It runs {hours}.', { hours: t(route.hours) }) : ''));
     }
     const times = timesAtStop(state.schedule, s.id, state.day);
     const byHour = new Map();
-    for (const t of times) {
-      const hour = Math.floor(t.minute / 60);
+    for (const x of times) {
+      const hour = Math.floor(x.minute / 60);
       if (!byHour.has(hour)) byHour.set(hour, []);
-      byHour.get(hour).push(t);
+      byHour.get(hour).push(x);
     }
-    const anyVariant = times.some((t) => t.pattern > 0);
+    const anyOther = times.some((x) => x.pattern > 0);
     return h('div', { class: 'schedule stack' },
-      h('div', { class: 'day-tabs', role: 'tablist' }, ...DAY_NAMES.map((d, i) => h('button', {
+      h('div', { class: 'day-tabs', role: 'tablist' }, ...dayNames().map((d, i) => h('button', {
         class: i === state.day ? 'primary' : '', role: 'tab', 'aria-selected': String(i === state.day),
         onclick: () => { state.day = i; paint(); },
       }, d))),
       times.length
         ? h('div', { class: 'hours' }, ...[...byHour.entries()].map(([hour, list]) => h('div', { class: 'hour-row' },
           h('b', {}, `${String(hour % 24).padStart(2, '0')}${hour >= 24 ? '⁺' : ''}`),
-          h('span', { class: 'minutes' }, ...list.map((t) => h('span', {
-            class: t.pattern ? 'variant-time' : '', title: t.pattern ? patternName(t.pattern) : hhmm(t.minute),
-          }, `:${String(t.minute % 60).padStart(2, '0')}`))))))
-        : h('p', { class: 'muted' }, `No trips at this stop on ${DAY_NAMES[state.day]}.`),
+          h('span', { class: 'minutes' }, ...list.map((x) => h('span', {
+            class: x.pattern ? 'variant-time' : '', title: x.pattern ? patternName(x.pattern) : hhmm(x.minute),
+          }, `:${String(x.minute % 60).padStart(2, '0')}`))))))
+        : h('p', { class: 'muted' }, t('No trips at this stop on {day}.', { day: dayNames()[state.day] })),
       h('small', { class: 'muted' },
-        `${times.length} scheduled trips. Timetable times, not live.`,
-        anyVariant ? ' Dotted underline = a variant route.' : '',
-        [...byHour.keys()].some((x) => x >= 24) ? ' ⁺ = after midnight.' : ''));
+        tn(times.length, '1 scheduled trip. Timetable times, not live.', '{n} scheduled trips. Timetable times, not live.'),
+        anyOther ? t(' Dotted underline = a less common stop pattern.') : '',
+        [...byHour.keys()].some((x) => x >= 24) ? t(' ⁺ = after midnight.') : ''));
   }
 
   function stopCard() {
     const s = state.stop;
-    if (!s) return h('p', { class: 'muted' }, 'Tap a stop on the map to see its full schedule.');
+    if (!s) return h('p', { class: 'muted' }, t('Tap a stop on the map or in the list to see its full schedule.'));
     return h('div', { class: 'card stack' },
       h('div', { class: 'row between' },
         h('span', { class: 'stop-head' },
           h('button', { class: 'stop-title', onclick: () => map.setView([s.lat, s.lon], 17) },
             `🚏 ${s.name}`, h('span', { class: 'muted' }, stopSuffix(s))),
           stopHazard(city, s)),
-        state.showSchedule ? null : h('button', { class: 'link', onclick: openSchedule }, 'Full schedule →')),
+        state.showSchedule ? null : h('button', { class: 'link', onclick: openSchedule }, `${t('Full schedule')} ${arrow()}`)),
       servedText(s) ? h('small', { class: 'muted' }, servedText(s)) : null,
       state.showSchedule ? scheduleBlock() : null);
   }
 
+  // The stops of the most common pattern, in order. Tap one to choose it.
+  function stopList() {
+    return h('details', { class: 'stop-list' },
+      h('summary', {}, tn(route.stops.length, 'Stops on this route (1)', 'Stops on this route ({n})')),
+      h('ol', {}, ...route.stops.map((s) => h('li', {},
+        h('button', {
+          class: `link${state.stop?.id === s.id ? ' current' : ''}`,
+          onclick: () => { map.setView([s.lat, s.lon], 16); selectStop(s, false); },
+        }, s.name, h('span', { class: 'muted' }, stopSuffix(s)))))));
+  }
+
   function paint() {
     const scroll = sheet.scrollTop;
+    const listWasOpen = sheet.querySelector('.stop-list')?.open;
     sheet.replaceChildren(...[
       h('div', { class: 'row' },
-        h('button', { class: 'link', onclick: () => (history.length > 1 ? history.back() : ctx.go('#/home')) }, '← Back'),
-        lineBadge(route, PATTERN_COLORS[0]),
-        h('h2', { class: 'grow' }, `→ ${route.dest}`)),
-      h('p', { class: 'muted small' }, route.agency, ' ', weekendTag(route)),
+        h('button', { class: 'link', onclick: () => (history.length > 1 ? history.back() : ctx.go('#/home')) }, `${backArrow()} ${t('Back')}`),
+        routeBadge(route, PATTERN_COLORS[0]),
+        h('h2', { class: 'grow' }, `${arrow()} ${route.dest}`)),
+      h('p', { class: 'muted small' }, t('From {a} to {b}', { a: first.name, b: last.name }), ' · ', route.agency, ' ', weekendTag(route)),
+      h('div', { class: 'row' },
+        opposite
+          ? h('button', {
+              // Replaces this screen, so "Back" still leads to where you came from.
+              onclick: () => { track('direction_switched'); location.replace(`#/line/${city.id}/${opposite.id}`); },
+            }, t('⇄ Switch direction'))
+          : null,
+        h('button', { onclick: openTimetable }, t('🕒 Timetable'))),
       stopCard(),
       patternList(),
+      stopList(),
     ].filter(Boolean));
+    if (listWasOpen) sheet.querySelector('.stop-list').open = true;
     sheet.scrollTop = scroll;
   }
 
   const panel = draggableSheet(screen, sheet, { onResize: () => map.invalidateSize({ pan: false }) });
+  let closed = false;
   paint();
   setTimeout(() => {
+    if (closed) return; // left the screen already
     map.invalidateSize();
     map.fitBounds(L.featureGroup(lines).getBounds(), { padding: [24, 24] });
     if (state.stop) markers.get(state.stop.id)?.bringToFront();
@@ -191,6 +227,7 @@ export async function render(root, ctx, { cityId, routeId, stopId }) {
   trackDetail('line_map_opened', { line: route.id, stop: state.stop?.id || null });
 
   return () => {
+    closed = true;
     panel.destroy();
     lines.forEach((l) => l.remove());
     markers.forEach((m) => m.remove());

@@ -8,6 +8,7 @@
 // the new version starts the next time the app is fully closed and opened.
 
 import { h } from './lib/dom.js';
+import { t } from './i18n.js';
 import { track } from './analytics.js';
 
 let updateRequested = false; // set when the person taps Update
@@ -41,8 +42,8 @@ export function registerServiceWorker() {
 function offerUpdate(worker) {
   if (document.querySelector('.update-banner')) return;
   const banner = h('div', { class: 'update-banner', role: 'status' },
-    h('span', {}, 'A new version of Knight Bus is ready.'),
-    h('button', { class: 'primary', onclick: () => { track('update_applied'); updateRequested = true; worker.postMessage('SKIP_WAITING'); } }, 'Update'),
-    h('button', { class: 'link small', onclick: () => banner.remove(), 'aria-label': 'Later' }, 'Later'));
+    h('span', {}, t('A new version of Knight Bus is ready.')),
+    h('button', { class: 'primary', onclick: () => { track('update_applied'); updateRequested = true; worker.postMessage('SKIP_WAITING'); } }, t('Update')),
+    h('button', { class: 'link small', onclick: () => banner.remove(), 'aria-label': t('Later') }, t('Later')));
   document.body.append(banner);
 }

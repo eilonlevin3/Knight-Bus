@@ -55,6 +55,20 @@ four). The most common is the route's main pattern; the others carry their share
 route is listed at every stop any pattern serves. In the feed of 2026-10-10: 68 routes had
 more than one stop pattern this week, 36 of them in the Tel Aviv file.
 
+## Opposite directions
+
+A bus service that runs both ways is two routes in the timetable data, one per direction.
+The pipeline pairs them, so the app can list the service once and offer **Switch
+direction** (REQ-ROUTE-2). Each route row gets the id of its opposite as its 11th entry.
+
+- **Government routes:** the `route_desc` column reads `code-direction-alternative`
+  (for example `10062-1-#`). Two routes with the same code and alternative but a different
+  direction are a pair.
+- **Weekend routes:** two routes of the same source with the same number are a pair.
+- A route with no partner (circular, one-way) gets no entry and no Switch button.
+
+In the Tel Aviv bundle 1,966 of 2,295 routes have an opposite (2026-10-10).
+
 ## Timetable files
 
 For the schedule screen (REQ-DATA-9) the pipeline writes `data/schedules/<route id>.json`

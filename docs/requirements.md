@@ -23,11 +23,14 @@ These words mean one thing each, in every doc.
 | **Stop** | A place where buses stop, with a stop number. A terminal can have several stops that share one number (its platforms). |
 | **Favorite Commute** | What a person saves: up to two stops and the routes chosen at each, with an optional start point and destination. Up to three per person. Always written with both words; "commute" alone means the trip in general. |
 
-Three places still say "line" for a route, on purpose:
+The app's screens use the same words ("Route 62", "Show the full route on the map", "Most
+common pattern", "Other pattern"). In Hebrew: route = קו, stop = תחנה, stop pattern = מסלול,
+Favorite Commute = נסיעה מועדפת (the full word list is at the top of `src/i18n/he.js`).
+
+Two places still say "line" for a route, on purpose:
 
 - **Requirement IDs** `REQ-LINE-1a` to `REQ-LINE-4` keep the word LINE, because IDs never change. They are about routes with more than one stop pattern.
-- **On-screen text** in the app ("Line 62", "Show the full line on the map", "Usual route", "Variant"). Where a doc quotes the screen, the quote is exact.
-- **File and address names** (`views/line.js`, `lineInfo.js`, `#/line/…`). `liveLines.js` and `offsetLine.js` really are about drawn lines.
+- **File, address and usage-event names** (`views/line.js`, `lineInfo.js`, `#/line/…`, `line_map_opened`). `liveLines.js` and `offsetLine.js` really are about drawn lines.
 
 ## Scope
 
@@ -151,6 +154,21 @@ Three places still say "line" for a route, on purpose:
 | REQ-LINE-2 | A route with more than one stop pattern shows a small **⚠ hazard sign** next to it in every list. Pressing it opens a pop-up about the route: the summary of REQ-LINE-1d first, then each pattern's share of trips, how it differs (stops skipped or added), whether it stops at this stop, and what is drawn. | Done |
 | REQ-LINE-3 | The pop-up links to a **full-route screen**: the route on the map with all its stop patterns (the most common as a solid line, the others as dotted lines, each in its own color) and all their stops. | Done |
 | REQ-LINE-4 | On the full-route screen, pressing a stop shows a link to that stop's **full schedule**: every scheduled time of the route at the stop, by weekday, with trips of the less common patterns marked. Routes without a published timetable say so. | Done |
+
+## Searching routes
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| REQ-ROUTE-1 | The home screen has a **Search routes** button, below *New Favorite Commute*. It opens a list of every route in the city's data, searchable by route number, destination or operator. Tapping a result opens the full-route screen with the route's map. | Done |
+| REQ-ROUTE-2 | A bus service that runs in two directions is listed **once** in the search, and the full-route screen shows **one direction only**, with a **Switch direction** button that shows the opposite direction instead. Both directions are never drawn together. | Done |
+| REQ-ROUTE-3 | The full-route screen has a **Timetable** button (the times at the route's first stop, or at the stop already chosen) and the route's **stops in order**; choosing a stop shows the timetable there (REQ-LINE-4). | Done |
+
+## Languages
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| REQ-LANG-1 | Every on-screen text is available in **English and Hebrew**. In Hebrew the screens read right to left; the map stays as it is. Names that come from the transit data (stops, destinations, operators) are Hebrew in both languages. A test fails when a text has no Hebrew translation. | Done |
+| REQ-LANG-2 | The home screen has an **Options** button, bottom right, where the language is changed; the screen changes at once. The choice is remembered on the device. On a first visit the app follows the phone's language. The sign-in screen also offers the other language. | Done |
 
 ## Usage insights (see privacy.md and ADR-0008)
 

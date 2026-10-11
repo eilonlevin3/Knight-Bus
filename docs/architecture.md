@@ -47,6 +47,8 @@ flowchart LR
 | Side-by-side lines | Shifted lines without knots, recomputed per zoom | [src/lib/offsetLine.js](../src/lib/offsetLine.js) | [ADR-0007](adr/0007-address-search.md) |
 | Draggable panel | Bottom panel you drag for more map or more list | [src/lib/sheetDrag.js](../src/lib/sheetDrag.js) | [user-flows.md](user-flows.md#4-using-a-favorite-commute) |
 | Usage insights | Consent, safe events, debug-only details | [src/analytics.js](../src/analytics.js), [src/views/privacy.js](../src/views/privacy.js) | [privacy.md](privacy.md) |
+| Route search | Every route of the city, one row per two-direction service | [src/views/routes.js](../src/views/routes.js), [src/cityData.js](../src/cityData.js) | [user-flows.md](user-flows.md#6-search-routes) |
+| Languages | English and Hebrew, right-to-left layout, the Options pop-up | [src/i18n.js](../src/i18n.js), [src/i18n/he.js](../src/i18n/he.js), [src/views/options.js](../src/views/options.js) | [user-flows.md](user-flows.md#language) |
 | Stops sharing a number | Platform labels, the stop ⚠ pop-up | [src/views/stopInfo.js](../src/views/stopInfo.js) | [user-flows.md](user-flows.md#stops-that-share-a-number) |
 | Stop patterns of a route | The ⚠ pop-up, the full-route screen, schedules | [src/views/lineInfo.js](../src/views/lineInfo.js), [src/views/line.js](../src/views/line.js), [src/lib/schedule.js](../src/lib/schedule.js) | [user-flows.md](user-flows.md#routes-with-more-than-one-stop-pattern) |
 | Extra route sources | Weekend routes outside the government feed | [pipeline/sources/](../pipeline/sources/) | [data-pipeline.md](data-pipeline.md#weekend-routes-outside-the-government-feed) |
@@ -74,6 +76,7 @@ The URL hash picks the screen:
 | `#/home` (old name `#/menu` still works) | Home screen: map around you, stop explorer, Favorite Commutes | [views/home.js](../src/views/home.js) |
 | `#/privacy` | Privacy notice, usage-sharing switch | [views/privacy.js](../src/views/privacy.js) |
 | `#/report` | Favorite Commutes report (admins only) | [views/report.js](../src/views/report.js) |
+| `#/routes` | Search all routes of the city | [views/routes.js](../src/views/routes.js) |
 | `#/line/<city>/<route>/<stop>` | A route in full: all its stop patterns, stops, schedule per stop | [views/line.js](../src/views/line.js) |
 | `#/edit/1` … `#/edit/3` | Edit a Favorite Commute | [views/editor.js](../src/views/editor.js) |
 | `#/commute/1` … `#/commute/3` | Use a Favorite Commute | [views/commute.js](../src/views/commute.js) |
