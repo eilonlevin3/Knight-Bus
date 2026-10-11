@@ -119,6 +119,7 @@ Two places still say "line" for a route, on purpose:
 | REQ-RT-5 | Routes without live data (from outside the government feed) say so, with their service hours, instead of "No bus on the way". | Done |
 | REQ-RT-6 | Routes without live data are **marked clearly wherever they appear**: a *Weekend · no live tracking* tag and a dashed ring on the route number in every list (home stop list, editor, commute, summary), a **dashed line on the map**, a dashed entry in the map key, and the note in the report. | Done |
 | REQ-RT-8 | A live bus is shown **where it really is**, whichever stop pattern of its route it is driving. A bus is never hidden or moved because it is on a less common pattern; it is left out only when it is on none of the route's paths. | Done |
+| REQ-RT-9 | When the live feed runs late, the app still shows the newest positions it has, up to 30 minutes old, and **says clearly that they are late** and how old they are. A bus whose last position is more than 7 minutes behind the newest one on its route is taken as finished and left out. | Done |
 | REQ-RT-7 | Live positions for the weekend *Naaim BeSofash* routes. Blocked: no public source exists (see data-pipeline.md). Needs an agreement with the operator, or a feed they publish. | Planned |
 | REQ-RT-4 | Read the Ministry of Transport SIRI SM service directly, through our own proxy, for lower latency and arrival predictions. | Planned |
 

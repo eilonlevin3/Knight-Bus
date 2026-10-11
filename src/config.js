@@ -29,7 +29,11 @@ export const FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
 export const realtime = {
   baseUrl: 'https://open-bus-stride-api.hasadna.org.il',
   refreshMs: 30_000,
-  windowMinutes: 7, // ignore positions older than this
+  // The public mirror sometimes runs 15-25 minutes behind (seen all day on 2026-10-11).
+  // Positions up to this old are still shown, marked as late (REQ-RT-9).
+  windowMinutes: 30,
+  rideGapMinutes: 7, // a bus this far behind the newest position on its route has finished its trip
+  lateMinutes: 5, // older than this, a position is called late
   maxOffRouteMeters: 250, // ignore buses this far from the line's path
 };
 

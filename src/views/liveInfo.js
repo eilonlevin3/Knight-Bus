@@ -1,10 +1,10 @@
 // Text summary of live buses for one (stop, route) row, and how a route is labelled.
 // Shared by the home, editor and commute screens.
-// @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-LINE-2
+// @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-RT-9 @req REQ-LINE-2
 
 import { h } from '../lib/dom.js';
 import { t, tn, arrow } from '../i18n.js';
-import { ageLabel } from '../realtime.js';
+import { ageLabel, isLate } from '../realtime.js';
 
 export function liveSummary(row) {
   if (!row) return h('small', { class: 'muted' }, t('Loading live buses…'));
@@ -25,7 +25,12 @@ export function liveSummary(row) {
     parts.push(h('span', { class: 'live-passed' }, ` · ${tn(-row.passed[0].stopsAway, 'Passed 1 stop ago', 'Passed {n} stops ago')}`));
   }
   const newest = [...row.next, ...row.passed].map((b) => b.recordedAt).sort((a, b) => b - a)[0];
-  if (newest) parts.push(h('span', { class: 'muted' }, ` · ${ageLabel(newest)}`));
+  // When the feed runs late the positions are still shown, with a clear warning.
+  if (newest && isLate(newest)) {
+    parts.push(h('span', { class: 'late' }, ` · ⚠ ${t('Live data is late: positions are from {age}', { age: ageLabel(newest) })}`));
+  } else if (newest) {
+    parts.push(h('span', { class: 'muted' }, ` · ${ageLabel(newest)}`));
+  }
   return h('small', {}, ...parts);
 }
 

@@ -16,7 +16,7 @@ phone:
 ```
 GET https://open-bus-stride-api.hasadna.org.il/siri_vehicle_locations/list
     ?siri_routes__line_ref=<GTFS route_id>
-    &recorded_at_time_from=<now − 7 min>
+    &recorded_at_time_from=<now − 30 min>
     &recorded_at_time_to=<now + 2 min>
     &order_by=recorded_at_time desc
     &limit=300
@@ -25,6 +25,12 @@ GET https://open-bus-stride-api.hasadna.org.il/siri_vehicle_locations/list
 The SIRI `LineRef` is the same number as the GTFS `route_id`, so a route from the city bundle
 maps straight to its live buses. When this was written, positions were about 1–2 minutes old.
 
+**When the feed runs late** (REQ-RT-9). The mirror loads the ministry's data in batches and
+can fall behind: on 2026-10-11 it was 15–25 minutes behind all day. The app therefore asks
+for the last 30 minutes, and any position older than 5 minutes is shown with
+*⚠ Live data is late: positions are from 17 min ago*. The bus is drawn where it was then;
+it has moved on since. This is another reason for REQ-RT-4 (reading the ministry directly).
+
 The upper time bound matters: the feed has some rows with wrong future timestamps (year
 2038), and they would otherwise sort first.
 
@@ -32,7 +38,9 @@ The upper time bound matters: the feed has some rows with wrong future timestamp
 
 For one route and one chosen stop:
 
-1. Fetch the newest position of each ride (`siri_ride__id`) on the route in the last 7 minutes.
+1. Fetch the newest position of each ride (`siri_ride__id`) on the route in the last 30
+   minutes. Drop rides whose newest position is more than 7 minutes behind the newest
+   position on the route: those buses finished their trip.
 2. **Place every stop on the route's path** (its shape), walking forward from the
    first stop. This keeps the stops in order even where a route comes back along the same
    street. The result is cached per route.

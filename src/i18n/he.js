@@ -110,6 +110,7 @@ export const he = {
   '{agency}: buses on this route cannot be tracked': '{agency}: אין מעקב בזמן אמת אחרי האוטובוסים בקו הזה',
   '. Runs {hours}': '. פועל {hours}',
   'Live data unavailable right now.': 'נתוני זמן אמת לא זמינים כרגע.',
+  'Live data is late: positions are from {age}': 'נתוני זמן אמת מתעכבים: המיקומים עודכנו {age}',
   'Live data error (HTTP {status})': 'שגיאה בנתוני זמן אמת (HTTP {status})',
   'Next: ': 'הבא: ',
   'arriving': 'מגיע',

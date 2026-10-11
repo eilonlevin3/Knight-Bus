@@ -1,5 +1,5 @@
 // Live bus positions and "next two + last passed" logic. Docs: docs/realtime.md
-// @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-8
+// @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-8 @req REQ-RT-9
 
 import { realtime } from './config.js';
 import { t } from './i18n.js';
@@ -33,8 +33,20 @@ export async function fetchLiveBuses(routeId) {
       recordedAt: new Date(r.recorded_at_time),
     });
   }
-  return [...latestByRide.values()];
+  return dropFinishedRides([...latestByRide.values()]);
 }
+
+// The feed can run late, so "old" is judged against the newest position the feed has for
+// this route, not against the clock: a bus whose last position is far behind the newest
+// one has finished its trip (REQ-RT-9).
+export function dropFinishedRides(buses, gapMinutes = realtime.rideGapMinutes) {
+  if (!buses.length) return buses;
+  const newest = Math.max(...buses.map((b) => b.recordedAt.getTime()));
+  return buses.filter((b) => newest - b.recordedAt.getTime() <= gapMinutes * 60000);
+}
+
+// True when a position is too old to be called live.
+export const isLate = (date) => Date.now() - date.getTime() > realtime.lateMinutes * 60000;
 
 // Puts each bus on the line and picks, relative to the chosen stop:
 //   next   = the two closest buses that have not reached the chosen stop yet

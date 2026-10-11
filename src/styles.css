@@ -317,3 +317,6 @@ ul.plain { margin: 0; padding-inline-start: 18px; display: flex; flex-direction:
 /* The home-screen buttons stay at the right edge in both languages. */
 .fab-stack { direction: ltr; }
 [dir="rtl"] .fab-stack .fab { direction: rtl; }
+
+/* Live positions that arrive late (REQ-RT-9) */
+.late { color: #e85d04; font-weight: 600; }

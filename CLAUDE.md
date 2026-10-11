@@ -121,7 +121,11 @@ Claude could not do these in this setup; ask the owner, with exact steps:
 
 - **Stride API:** always pass both `recorded_at_time_from` and `recorded_at_time_to`;
   some rows carry year-2038 timestamps and sort first otherwise. Stride `line_ref` equals
-  the GTFS `route_id`. Positions are 1–2 minutes old.
+  the GTFS `route_id`. Positions are 1–2 minutes old on a good day, but the mirror can run
+  **15–25 minutes behind for a whole day** (2026-10-11: the owner saw no live bus at all,
+  because the app then ignored anything older than 7 minutes). Now positions up to 30
+  minutes old are shown with a "Live data is late" warning (REQ-RT-9). To check the lag:
+  `siri_snapshots/list?order_by=id desc` and compare `snapshot_id` (UTC) with `etl_end_time`.
 - **Placing buses:** use the nearest point on the route *shape*, not the nearest stop.
   Nearest-stop dropped real buses (a bus can be 600 m from any stop yet on the road).
   Limit: 250 m from the path.
