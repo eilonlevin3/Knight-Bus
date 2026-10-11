@@ -35,6 +35,14 @@ loop serve the bus whichever way it is headed. Examples:
 - **Route 392 Be'er Sheva ↔ Eilat** turns into army bases along the road: 7 stops.
 - **Route 173 Elad ↔ Ramat Gan** (מטרופולין): 12 stops inside a neighborhood.
 
+Inside Tel Aviv-Yafo itself it is rare: only 6 routes have such a stop. Two to look at:
+
+- **Route 16** (דן, Carmelit terminal ↔ Sheba): three stops in a row in Yad Eliyahu,
+  מעפילי אגוז/מח"ל (26055), ביה"ס תל חי/מעפילי אגוז (26056) and דרך הטייסים/עודד (21218).
+  They are stops 29–31 one way and 13–15 the other.
+- **Route 445** (מטרופולין, Reading ↔ Ben Gurion Airport): הירקון/שדרות בן גוריון (20654) is
+  stop 7 one way and stop 17 the other.
+
 What the app does about it: at such a stop the route number appears twice. Each icon gets a
 frame in the color of the company that runs it, and the destination is in the pop-up
 behind the number ([user flows](../user-flows.md#2-home-screen), REQ-HOME-3).
