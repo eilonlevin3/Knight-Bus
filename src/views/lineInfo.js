@@ -1,11 +1,11 @@
 // The ⚠ pop-up: what is special about a route that has more than one stop pattern.
 // Docs: docs/user-flows.md#routes-with-more-than-one-stop-pattern
-// @req REQ-LINE-1d @req REQ-LINE-2
+// @req REQ-LINE-1d @req REQ-LINE-2 @req REQ-HOME-3
 
 import { h } from '../lib/dom.js';
 import { t, tn, arrow } from '../i18n.js';
 import { track } from '../analytics.js';
-import { routeBadge, weekendTag } from './liveInfo.js';
+import { routeBadge, weekendTag, liveSummary } from './liveInfo.js';
 import { patternSummary, patternDifference, stopNames } from '../lib/patterns.js';
 import { samePath } from '../lib/routeGeometry.js';
 
@@ -18,6 +18,36 @@ export function differenceLines(main, pattern, city, limit = 4) {
     d.skipped.length ? t('Skips: {names}', { names: stopNames(d.skipped, limit) }) : null,
     d.added.length ? t('Also stops at: {names}', { names: stopNames(d.added, limit) }) : null,
   ].filter(Boolean);
+}
+
+// The small pop-up behind a route number in the home screen's stop list: where the route
+// goes, who runs it, its live buses at this stop, and a link to the full-route screen.
+// live: the route's row from LiveLines (null while loading); shown: is it on the map?
+export function showRouteCard(ctx, city, route, stop, live, shown) {
+  const close = () => overlay.remove();
+  track('route_card_opened', { multi: route.multi ? 1 : 0 });
+  const overlay = h('div', {
+    class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': t('About route {n}', { n: route.short }),
+    onclick: (e) => { if (e.target === overlay) close(); },
+  },
+    h('div', { class: 'card stack modal-card' },
+      h('div', { class: 'row' }, routeBadge(route), h('h2', { class: 'grow' }, `${arrow()} ${route.dest}`), weekendTag(route)),
+      h('p', { class: 'muted small' }, route.agency, route.hours ? ` · ${t(route.hours)}` : ''),
+      h('p', { class: 'small' }, t('From {a} to {b}', { a: route.stops[0].name, b: route.stops.at(-1).name }),
+        tn(route.stops.length, ' · 1 stop', ' · {n} stops')),
+      h('div', { class: 'summary-box stack' },
+        h('b', {}, t('At {stop}', { stop: stop.name })),
+        shown ? liveSummary(live) : h('small', { class: 'muted' }, t('Hidden from the map. Check its box to see its live buses.'))),
+      route.multi
+        ? h('p', { class: 'small' }, h('span', { class: 'hazard-mark' }, '⚠'), t(' This route does not always follow the same stop pattern.'), ' ',
+          h('button', { class: 'link small', onclick: () => { close(); showRouteInfo(ctx, city, route, stop.id); } }, t('What is different?')))
+        : null,
+      h('button', {
+        class: 'primary',
+        onclick: () => { close(); ctx.go(`#/line/${city.id}/${route.id}/${stop.id}`); },
+      }, t('Full route: map, stops and timetable')),
+      h('button', { onclick: close }, t('Close'))));
+  document.body.append(overlay);
 }
 
 export function showRouteInfo(ctx, city, route, stopId) {

@@ -34,6 +34,25 @@ it has moved on since. This is another reason for REQ-RT-4 (reading the ministry
 The upper time bound matters: the feed has some rows with wrong future timestamps (year
 2038), and they would otherwise sort first.
 
+## What a bus tells us
+
+Tap a bus on any map (REQ-RT-10). The pop-up shows the route, where the bus is relative to
+your stop, and:
+
+- **Last signal:** the date and time the bus reported, and how long ago that was. If it is
+  more than 5 minutes old, a warning says the bus has moved on since.
+- **What the signal says**, in plain words: position, speed (km/h), heading, kilometers
+  driven since the trip started, when the trip was scheduled to start, the vehicle number,
+  the trip reference, the operator code, how far the position is from the route on our map,
+  and the batch the signal arrived in.
+- **Everything in the signal, as it was sent:** the raw record, field by field, including
+  the fields the feed leaves empty.
+
+Nothing here is about a person: it is public data about a vehicle. Opening the pop-up is
+counted as `bus_info_opened` (privacy.md); which bus is not recorded.
+
+Code: [views/busInfo.js](../src/views/busInfo.js), [liveLines.js](../src/liveLines.js).
+
 ## The "next two + last passed" rule
 
 For one route and one chosen stop:

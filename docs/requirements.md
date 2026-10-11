@@ -86,7 +86,7 @@ Two places still say "line" for a route, on purpose:
 |----|-------------|--------|
 | REQ-HOME-1 | The first screen after sign-in is the **home screen** (formerly "main menu"). Its upper half is a map centered on the user's location, with a button to return to it. | Done |
 | REQ-HOME-2 | Tapping a bus stop on the home map selects it: the map zooms to the stop and the last ~5 minutes of every route before it, **all routes through the stop are drawn** (each as a line: solid where it comes to the stop, lighter after it) with their **live buses**, and the panel lists them with live status, the same as in a Favorite Commute. | Done |
-| REQ-HOME-3 | In the stop's route list every route has a checkbox, all checked (for very busy stops, the first 30). Unchecking hides a route. Closing the stop returns to the plain map. **＋ New Favorite Commute** with a stop selected starts the new Favorite Commute at that stop. | Done |
+| REQ-HOME-3 | The stop's routes are shown as **small icons, not full rows**: each is a checkbox and the route number. All are checked (at a busy stop, the first 16). Unchecking hides a route. Pressing the **number** (not the box) opens a pop-up with more about the route and a link to its full-route screen. Closing the stop returns to the plain map. **＋ New Favorite Commute** with a stop selected starts the new Favorite Commute at that stop. | Done |
 
 ## Favorite Commutes
 
@@ -120,6 +120,7 @@ Two places still say "line" for a route, on purpose:
 | REQ-RT-6 | Routes without live data are **marked clearly wherever they appear**: a *Weekend · no live tracking* tag and a dashed ring on the route number in every list (home stop list, editor, commute, summary), a **dashed line on the map**, a dashed entry in the map key, and the note in the report. | Done |
 | REQ-RT-8 | A live bus is shown **where it really is**, whichever stop pattern of its route it is driving. A bus is never hidden or moved because it is on a less common pattern; it is left out only when it is on none of the route's paths. | Done |
 | REQ-RT-9 | When the live feed runs late, the app still shows the newest positions it has, up to 30 minutes old, and **says clearly that they are late** and how old they are. A bus whose last position is more than 7 minutes behind the newest one on its route is taken as finished and left out. | Done |
+| REQ-RT-10 | Tapping a live bus on any map shows **everything we know about it**: when its last signal arrived and how old it is, and all the information in that signal (position, speed, heading, distance driven, scheduled start of the trip, vehicle number, trip reference and the rest), in plain words and as the raw record. | Done |
 | REQ-RT-7 | Live positions for the weekend *Naaim BeSofash* routes. Blocked: no public source exists (see data-pipeline.md). Needs an agreement with the operator, or a feed they publish. | Planned |
 | REQ-RT-4 | Read the Ministry of Transport SIRI SM service directly, through our own proxy, for lower latency and arrival predictions. | Planned |
 

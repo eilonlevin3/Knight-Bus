@@ -222,6 +222,11 @@ Claude could not do these in this setup; ask the owner, with exact steps:
   route = קו, stop = תחנה, stop pattern = מסלול, Favorite Commute = נסיעה מועדפת, a drawn
   line = פס (because קו already means route). Changing language fires `kb-language` and
   the router redraws. Outside a browser (tests) the language is English.
+- **Home stop list and bus details** (owner, 2026-10-11): a stop's routes are small icons
+  (checkbox + number), not rows; the first 16 are checked; the number opens a route pop-up
+  (`showRouteCard`) linking to the full-route screen. Tapping a live bus opens
+  `views/busInfo.js` with the last signal's time and every field of it (`bus.raw`). The
+  editor still lists routes as full rows; the owner asked only about the stop view.
 - **Route search and directions** (owner, 2026-10-10): `#/routes` lists each two-direction
   service once (`city.routePairs()`); the route screen shows one direction with
   ⇄ Switch direction (`route.opposite`, paired in the pipeline from `route_desc`) and a

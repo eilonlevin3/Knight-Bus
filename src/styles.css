@@ -320,3 +320,27 @@ ul.plain { margin: 0; padding-inline-start: 18px; display: flex; flex-direction:
 
 /* Live positions that arrive late (REQ-RT-9) */
 .late { color: #e85d04; font-weight: 600; }
+
+/* Home screen: a stop's routes as small icons, a checkbox and the route number (REQ-HOME-3) */
+.route-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.route-chip {
+  display: flex; align-items: center; gap: 6px; padding: 5px 6px 5px 8px; border-radius: 12px;
+  background: var(--card); border: 1px solid var(--purple-2);
+}
+.route-chip.off { opacity: 0.6; border: 1px dashed var(--line); }
+.route-chip input[type="checkbox"] { width: 24px; height: 24px; margin: 0; accent-color: var(--purple); flex: none; }
+.chip-number {
+  --c: #8d86a0; min-height: 34px; min-width: 46px; padding: 4px 10px; border: none; border-radius: 8px;
+  background: var(--c); color: #fff; font-weight: 800; cursor: pointer;
+}
+.chip-number.weekend { outline: 2px dashed var(--accent); outline-offset: 1px; }
+.chip-mark { margin-inline-start: 4px; color: var(--accent); }
+
+/* The live-bus pop-up: label and value pairs (REQ-RT-10) */
+.facts { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 0.9rem; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; text-align: end; overflow-wrap: anywhere; unicode-bidi: plaintext; }
+.facts.raw { font: 12px/1.4 ui-monospace, monospace; margin-top: 8px; direction: ltr; }
+.facts.raw dd { text-align: left; }
+details > summary { cursor: pointer; }
+.bus-marker { cursor: pointer; }

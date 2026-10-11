@@ -14,12 +14,12 @@ import { draggableSheet } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { consent, setConsent, detailed, track, trackDetail, bucket } from '../analytics.js';
 import { safeSummary, debugSummary } from './privacy.js';
-import { liveSummary, routeBadge, routeTitle } from './liveInfo.js';
-import { showRouteInfo } from './lineInfo.js';
+import { isWeekendRoute } from './liveInfo.js';
+import { showRouteCard } from './lineInfo.js';
 import { stopSuffix, stopHazard } from './stopInfo.js';
 import { showOptions } from './options.js';
 
-const MAX_ROUTES_SHOWN_AT_FIRST = 30; // very busy stops: the rest start unchecked
+const MAX_ROUTES_SHOWN_AT_FIRST = 16; // busy stops: the rest start unchecked
 const LAST_POSITION_KEY = `${storagePrefix}lastPosition`; // kept on this phone only, for a quick start
 
 const readLastPosition = () => {
@@ -144,10 +144,11 @@ export async function render(root, ctx) {
     }
     const s = state.stop;
     const routes = city.routesAtStop(s.id);
+    // One small icon per route: a checkbox (show on the map or not) and the route number.
+    // Tapping the number opens more about the route (REQ-HOME-3).
     const rows = routes.map((r) => {
       const on = !state.hidden.has(r.id);
-      const live = on ? state.rows.find((x) => x.route.id === r.id) : null;
-      return h('label', { class: `line-row ${on ? 'on' : 'off'}` },
+      return h('div', { class: `route-chip ${on ? 'on' : 'off'}` },
         h('input', {
           type: 'checkbox',
           checked: on,
@@ -158,10 +159,12 @@ export async function render(root, ctx) {
             paint();
           },
         }),
-        routeBadge(r, on ? lines.colorOf(r.id) : null),
-        h('span', { class: 'line-text' },
-          routeTitle(r, () => showRouteInfo(ctx, city, r, s.id)),
-          on ? liveSummary(live) : h('small', { class: 'muted' }, t('Hidden from the map'))));
+        h('button', {
+          class: `chip-number${isWeekendRoute(r) ? ' weekend' : ''}`,
+          style: on ? `--c:${lines.colorOf(r.id)}` : '',
+          'aria-label': t('About route {n}', { n: r.short }),
+          onclick: () => showRouteCard(ctx, city, r, s, on ? state.rows.find((x) => x.route.id === r.id) : null, on),
+        }, r.short, r.multi ? h('span', { class: 'chip-mark' }, '⚠') : null));
     });
     return h('div', { class: 'stop-section' },
       h('div', { class: 'row between' },
@@ -172,9 +175,9 @@ export async function render(root, ctx) {
         h('button', { class: 'link', 'aria-label': t('Close this stop'), onclick: closeStop }, t('✕ Close'))),
       h('p', { class: 'muted small' },
         tn(routes.length, '1 route stops here.', '{n} routes stop here.'),
-        t(' Solid line = coming to this stop, lighter = after it. Uncheck a route to hide it.'),
+        t(' Tap a number for details; uncheck its box to hide the route. Solid line = coming to this stop, lighter = after it.'),
         routes.length > MAX_ROUTES_SHOWN_AT_FIRST ? t(' Showing the first {n}; check more below.', { n: MAX_ROUTES_SHOWN_AT_FIRST }) : ''),
-      ...rows,
+      h('div', { class: 'route-chips' }, ...rows),
       h('div', { class: 'row between' },
         h('small', { class: 'muted' }, state.updatedAt
           ? t('Updated {time} · refreshes every 30 s', { time: state.updatedAt.toLocaleTimeString(locale()) })

@@ -63,10 +63,21 @@ position remembered on this phone, or the city center. The **◎** button brings
 zooms to it and to where its buses are in their last ~5 minutes, and **every route through
 the stop is drawn**: solid where it comes to the stop, lighter after it, side by side where
 routes share a street. Live buses appear as in a Favorite Commute: the next two and the last that
-passed, per route. The panel shows the stop first, with one row per route and its live status.
+passed, per route. **Tap a bus** to see everything known about it (REQ-RT-10,
+[realtime.md](realtime.md#what-a-bus-tells-us)).
 
-**Route checkboxes** (REQ-HOME-3). All routes start checked; at a very busy stop, the first
-30. Uncheck a route to hide it and its buses. **✕ Close** returns to the plain map.
+**Route icons** (REQ-HOME-3). The panel shows the stop first, then its routes as small
+icons, several to a row: `[☑ 62] [☑ 66⚠] [☐ 189]`. Each is a checkbox and the route number
+in the route's map color (⚠ = more than one stop pattern; dashed ring = weekend route).
+
+- **The box** shows or hides the route and its buses on the map. All start checked; at a
+  busy stop, the first 16.
+- **The number** opens a pop-up about the route: where it goes, its operator, first and
+  last stop, its live buses at this stop, *What is different?* for a route with several
+  stop patterns, and **Full route: map, stops and timetable**, which opens
+  [the route in full](#5-a-route-in-full).
+
+**✕ Close** returns to the plain map.
 
 **My Favorite Commutes** (REQ-FAV-1, REQ-FAV-2, REQ-FAV-4). Only Favorite Commutes you saved are shown, each
 as a button with the **name you gave it** ("Favorite Commute N" if you gave none), its stops and

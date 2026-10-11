@@ -6,7 +6,8 @@ import { t } from './i18n.js';
 import { stopPositions, projectOnPath } from './lib/routeGeometry.js';
 
 // Latest position of every bus currently running on a route (GTFS route_id == SIRI LineRef).
-// Returns [{ rideId, vehicle, lat, lon, recordedAt: Date }]
+// Returns [{ rideId, vehicle, lat, lon, recordedAt: Date, raw }]; raw is the whole signal as
+// it came, for the bus pop-up (REQ-RT-10).
 export async function fetchLiveBuses(routeId) {
   const now = Date.now();
   const params = new URLSearchParams({
@@ -31,6 +32,7 @@ export async function fetchLiveBuses(routeId) {
       lat: r.lat,
       lon: r.lon,
       recordedAt: new Date(r.recorded_at_time),
+      raw: r,
     });
   }
   return dropFinishedRides([...latestByRide.values()]);

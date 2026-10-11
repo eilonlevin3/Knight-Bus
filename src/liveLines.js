@@ -1,13 +1,14 @@
 // Draws the chosen routes as lines on a map, with their live buses, and keeps the buses fresh.
 // Used by both the editor and the commute screen, so they behave the same (REQ-COMM-1).
-// @req REQ-LINE-1a @req REQ-LINE-1b @req REQ-LINE-1c @req REQ-RT-8 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
+// @req REQ-RT-10 @req REQ-LINE-1a @req REQ-LINE-1b @req REQ-LINE-1c @req REQ-RT-8 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
 
 import { realtime } from './config.js';
 import { t, tn, arrow } from './i18n.js';
 import { fetchLiveBuses, classifyBuses, ageLabel } from './realtime.js';
-import { LINE_COLORS, busIcon, escapeHtml, lighten } from './map.js';
+import { LINE_COLORS, busIcon, lighten } from './map.js';
 import { stopPositions, splitPath, samePath } from './lib/routeGeometry.js';
 import { makeOffsetPolyline } from './lib/offsetLine.js';
+import { showBusInfo } from './views/busInfo.js';
 
 let OffsetPolyline = null; // created on first use, once Leaflet (global L) is loaded
 
@@ -160,11 +161,12 @@ export class LiveLines {
       row.passed.forEach((b) => add(b, 'passed'));
     }
     for (const { bus, row, kind, lines } of markers.values()) {
-      L.marker([bus.lat, bus.lon], { icon: busIcon(row.route.short, row.color, kind), zIndexOffset: kind === 'next' ? 1000 : 0 })
-        .bindPopup(
-          `<b>${escapeHtml(t('Route {n}', { n: row.route.short }))}</b> ${arrow()} ${escapeHtml(row.route.dest)}<br>` +
-          `${lines.map(escapeHtml).join('<br>')}<br><small>${escapeHtml(t('Position {age}', { age: ageLabel(bus.recordedAt) }))}</small>`,
-        )
+      // Tap a bus: everything we know about it (REQ-RT-10).
+      L.marker([bus.lat, bus.lon], {
+        icon: busIcon(row.route.short, row.color, kind), zIndexOffset: kind === 'next' ? 1000 : 0,
+        title: `${t('Route {n}', { n: row.route.short })} ${arrow()} ${row.route.dest} · ${ageLabel(bus.recordedAt)}`,
+      })
+        .on('click', () => showBusInfo({ bus, route: row.route, where: lines }))
         .addTo(this.busLayer);
     }
   }

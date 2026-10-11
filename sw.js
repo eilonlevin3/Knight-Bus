@@ -55,6 +55,7 @@ const SHELL = [
   'src/views/report.js',
   'src/views/line.js',
   'src/views/lineInfo.js',
+  'src/views/busInfo.js',
   'src/views/stopInfo.js',
   'src/lib/report.js',
   'icons/icon.svg',

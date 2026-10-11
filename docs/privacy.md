@@ -48,6 +48,7 @@ id; the account is never attached.
 | `line_info_opened`, `line_map_opened`, `line_stop_tapped`, `schedule_opened` | that it happened, the number of stop patterns, whether a timetable existed. Not which route or stop |
 | `route_search_opened`, `direction_switched` | that a route was opened from Search routes, or its direction switched. Not which route, and never what was typed in the search |
 | `language_changed` | the language chosen (`en` or `he`) |
+| `bus_info_opened`, `route_card_opened` | that a bus's or a route's pop-up was opened, whether the bus signal was late, whether the route has several stop patterns. Not which bus or route |
 | `panel_dragged` | small / half / large |
 | `commute_cleared`, `update_applied`, `usage_sharing_on` | that it happened |
 
