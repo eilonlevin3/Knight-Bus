@@ -250,7 +250,14 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   `city.currentRouteIds()` maps old saved ids. Do not "fix" a number that still appears
   twice at a stop: it is both directions or two operators. The owner chose (2026-10-12): no
   destination on the icon, a frame in the company's color instead (`operatorColor`), the
-  destination in the pop-up. A side effect: about one route in seven now has the ⚠ sign (was 1–2%).
+  destination in the pop-up.
+- **The ministry's "direction" code is not trusted** (owner caught it on Haifa's 32,
+  2026-10-12): two entries of a circular route can be "directions" yet drive the same way.
+  The pipeline compares the order in which they pass each other's stops (`sameWay`): same
+  order = merge, opposite order = `opposite`. Any claim about "both directions" must use
+  `opposite` from the built data, never the direction code.
+- **Live data source** (owner, 2026-10-12): stay on Stride for now and see how it behaves.
+  The faster options are written up above; do not build them until asked. A side effect: about one route in seven now has the ⚠ sign (was 1–2%).
 - **Buttons while a stop is open** (owner, 2026-10-11): tucked to the right edge with a
   handle; swipe left to show, right to hide (REQ-HOME-4). The editor shows routes as the
   same icons as the home screen (`routeChip` in `views/liveInfo.js`).

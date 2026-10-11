@@ -233,6 +233,29 @@ async function main() {
   finishTrip();
   trips.clear();
 
+  log('Reading stops');
+  const stops = new Map();
+  await readCsv(z, 'stops.txt', (g) => {
+    // stop_desc looks like "רחוב: ... עיר: ... רציף: 12 קומה: 6" (street, city, platform, floor).
+    // Platform and floor tell apart the stops of a terminal that share one stop code (REQ-STOP-1).
+    const desc = g('stop_desc');
+    const platform = ((desc.match(/רציף:\s*([^\s]+)/) || [])[1] || '').replace(/^.*:$/, ''); // empty platform: the next label is not a value
+    const floor = (desc.match(/קומה:\s*([^\s]+)/) || [])[1] || '';
+    stops.set(g('stop_id'), {
+      id: g('stop_id'),
+      code: g('stop_code'),
+      name: g('stop_name'),
+      lat: Number(g('stop_lat')),
+      lon: Number(g('stop_lon')),
+      station: g('location_type') === '1', // a whole terminal, not a place where buses stop
+      platform: platform === '0' ? '' : platform,
+      floor: floor === '0' ? '' : floor,
+    });
+  });
+  // How many real stops use each stop code (terminals: one code, many platforms).
+  const stopsPerCode = new Map();
+  for (const s of stops.values()) if (s.code && !s.station) stopsPerCode.set(s.code, (stopsPerCode.get(s.code) || 0) + 1);
+
   // The ministry publishes every "alternative" (חלופה) of a route as its own route_id: the
   // same operator, number and direction, with some stops skipped or added. To a rider that
   // is one route with several stop patterns, so they are merged into one (REQ-DATA-10).
@@ -273,22 +296,64 @@ async function main() {
     list.sort(byWeight);
     for (const other of list.slice(1)) mergeInto(list[0], other);
   }
-  // A circular route is sometimes published as two "directions" that serve exactly the same
-  // stops in the same order. That is one route too.
-  const mainPattern = (r) => [...r.patternsByKey.entries()].sort((a, b) => (b[1].weekCount - a[1].weekCount) || (b[1].count - a[1].count))[0]?.[0];
-  const sameStops = new Map(); // "operator|code|stops of the most common pattern" -> [route]
+
+  // The "direction" in the ministry's data is not always a direction. For a circular route
+  // it often marks another version of the same loop, driven the same way (Haifa's 32).
+  // So entries of one route in different "directions" are compared on the map:
+  //   they drive the same way  -> one route, merged like alternatives;
+  //   they drive opposite ways -> two routes, each the other's opposite (REQ-ROUTE-2).
+  const mainStops = (r) => [...r.patternsByKey.values()].sort((a, b) => (b.weekCount - a.weekCount) || (b.count - a.count))[0].stops;
+  const metersApart = (a, b) => Math.hypot((a.lat - b.lat) * 111320, (a.lon - b.lon) * 111320 * Math.cos(a.lat * Math.PI / 180));
+  // +1: b passes a's stops in the same order. -1: in the opposite order. 0: cannot tell.
+  // Each stop of a is matched to the nearest stop of b (within 150 m, so the stop across
+  // the street counts), and the matched positions are read along a.
+  const sameWay = (a, b) => {
+    const B = mainStops(b).map((id) => stops.get(id));
+    let prev = null;
+    let forward = 0;
+    let backward = 0;
+    for (const id of mainStops(a)) {
+      const p = stops.get(id);
+      if (!p) continue;
+      let best = -1;
+      let bestMeters = 150;
+      B.forEach((q, i) => {
+        if (!q) return;
+        const m = metersApart(p, q);
+        if (m < bestMeters) { bestMeters = m; best = i; }
+      });
+      if (best < 0) continue;
+      if (prev !== null && best !== prev) { if (best > prev) forward++; else backward++; }
+      prev = best;
+    }
+    const steps = forward + backward;
+    if (steps < 3) return 0;
+    return forward >= 0.7 * steps ? 1 : backward >= 0.7 * steps ? -1 : 0;
+  };
+  const byCode = new Map(); // "operator|code|number" -> the entries left, one per "direction"
   for (const r of routes.values()) {
     const [code] = r.desc.split('-');
     if (!code) continue;
-    const k = `${r.agency}|${code}|${r.short}|${mainPattern(r)}`;
-    if (!sameStops.has(k)) sameStops.set(k, []);
-    sameStops.get(k).push(r);
+    const k = `${r.agency}|${code}|${r.short}`;
+    if (!byCode.has(k)) byCode.set(k, []);
+    byCode.get(k).push(r);
   }
-  for (const list of sameStops.values()) {
+  let sameWayMerged = 0;
+  let opposites = 0;
+  for (const list of byCode.values()) {
     if (list.length < 2) continue;
     list.sort(byWeight);
-    for (const other of list.slice(1)) mergeInto(list[0], other);
+    const kept = [];
+    for (const r of list) {
+      const twin = kept.find((k) => sameWay(k, r) === 1 && sameWay(r, k) === 1);
+      if (twin) { mergeInto(twin, r); sameWayMerged++; } else kept.push(r);
+    }
+    for (const r of kept) {
+      const other = kept.find((x) => x !== r && !x.opposite && sameWay(r, x) === -1) || kept.find((x) => x !== r && sameWay(r, x) === -1);
+      if (other) { r.opposite = other.id; opposites++; }
+    }
   }
+  log(`  ${sameWayMerged} entries listed as another "direction" drive the same way and were merged; ${opposites} routes have an opposite direction`);
   log(`  merged ${mergedAway} alternatives into their routes`);
 
   let multi = 0;
@@ -304,29 +369,6 @@ async function main() {
   }
   for (const [id, r] of routes) if (!r.patterns.length) routes.delete(id);
   log(`  ${routes.size} bus lines, ${multi} with more than one stop pattern`);
-
-  log('Reading stops');
-  const stops = new Map();
-  await readCsv(z, 'stops.txt', (g) => {
-    // stop_desc looks like "רחוב: ... עיר: ... רציף: 12 קומה: 6" (street, city, platform, floor).
-    // Platform and floor tell apart the stops of a terminal that share one stop code (REQ-STOP-1).
-    const desc = g('stop_desc');
-    const platform = ((desc.match(/רציף:\s*([^\s]+)/) || [])[1] || '').replace(/^.*:$/, ''); // empty platform: the next label is not a value
-    const floor = (desc.match(/קומה:\s*([^\s]+)/) || [])[1] || '';
-    stops.set(g('stop_id'), {
-      id: g('stop_id'),
-      code: g('stop_code'),
-      name: g('stop_name'),
-      lat: Number(g('stop_lat')),
-      lon: Number(g('stop_lon')),
-      station: g('location_type') === '1', // a whole terminal, not a place where buses stop
-      platform: platform === '0' ? '' : platform,
-      floor: floor === '0' ? '' : floor,
-    });
-  });
-  // How many real stops use each stop code (terminals: one code, many platforms).
-  const stopsPerCode = new Map();
-  for (const s of stops.values()) if (s.code && !s.station) stopsPerCode.set(s.code, (stopsPerCode.get(s.code) || 0) + 1);
 
   log('Reading shapes');
   const neededShapes = new Map();
@@ -422,24 +464,18 @@ async function main() {
     }
   }
 
-  // Pair every route with its opposite direction, so the app can offer "switch direction"
-  // and list a bus line once instead of twice (REQ-ROUTE-2).
-  const groups = new Map(); // "operator|code" (or "source|number") -> the route in each direction
-  const groupKey = (r) => {
-    if (r.source) return `${r.source}|${r.short}`;
-    const [code] = (r.desc || '').split('-');
-    return code ? `${r.agency}|${code}|${r.short}` : null;
-  };
+  // Weekend routes from outside the government feed: two routes of one source with the same
+  // number are the two directions (REQ-ROUTE-2). Government routes were paired above.
+  const bySource = new Map(); // "source|number" -> routes
   for (const r of routes.values()) {
-    const k = groupKey(r);
-    if (!k) continue;
-    if (!groups.has(k)) groups.set(k, []);
-    groups.get(k).push(r);
+    if (!r.source) continue;
+    const k = `${r.source}|${r.short}`;
+    if (!bySource.has(k)) bySource.set(k, []);
+    bySource.get(k).push(r);
   }
-  const directionOf = (r) => (r.desc || '').split('-')[1] || r.id;
-  for (const list of groups.values()) {
+  for (const list of bySource.values()) {
     for (const r of list) {
-      const other = list.find((x) => x !== r && directionOf(x) !== directionOf(r));
+      const other = list.find((x) => x !== r);
       if (other) r.opposite = other.id;
     }
   }

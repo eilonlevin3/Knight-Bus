@@ -18,7 +18,8 @@ The data pipeline shapes the entries into what a rider sees
 |------------------------|------------|-------------|
 | Trips of one entry that serve different stops | One route with several **stop patterns** | REQ-DATA-8 |
 | Entries with the same operator, code, direction and number ("alternatives") | **Merged** into one route; each becomes a stop pattern | REQ-DATA-10 |
-| The same code and number in the other direction | A separate route, linked as the **opposite direction** | REQ-ROUTE-2 |
+| The same code and number under another "direction", passing the stops in the **opposite order** | A separate route, linked as the **opposite direction** | REQ-ROUTE-2 |
+| The same code and number under another "direction", passing the stops in the **same order** (some circular routes, e.g. Haifa's 32) | **Merged**: it is the same route | REQ-DATA-10 |
 | An alternative with its own number on the bus (62א) | A separate route | REQ-DATA-10 |
 
 ## Why merge in the pipeline and not on the screen

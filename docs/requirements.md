@@ -80,7 +80,7 @@ Two places still say "line" for a route, on purpose:
 | REQ-DATA-8 | A route whose trips do not all serve the same stops keeps **every stop pattern** (the most common one and up to five others), each with its share of the week's trips. The route is listed at every stop any pattern serves. | Done |
 | REQ-DATA-9 | The pipeline writes one small **timetable file per route** for the coming week (start times per weekday and pattern, minutes to each stop). The app loads a file only when a stop's schedule is opened. | Done |
 
-| REQ-DATA-10 | The ministry publishes each "alternative" of a route (same operator, number and direction, some stops skipped or added) as a separate entry. The pipeline **merges them into one route** with several stop patterns, so a stop never lists the same route twice for that reason. A circular route published as two directions with identical stops is merged too. Live buses and Favorite Commutes saved under a merged entry's id keep working. Entries with their own number on the bus (62א beside 62) stay separate. | Done |
+| REQ-DATA-10 | The ministry publishes each "alternative" of a route (same operator, number and direction, some stops skipped or added) as a separate entry. The pipeline **merges them into one route** with several stop patterns, so a stop never lists the same route twice for that reason. Entries published as two "directions" that in fact drive the same way (some circular routes) are merged too; only entries that pass each other's stops in the opposite order count as opposite directions (REQ-ROUTE-2). Live buses and Favorite Commutes saved under a merged entry's id keep working. Entries with their own number on the bus (62א beside 62) stay separate. | Done |
 
 ## Home screen
 

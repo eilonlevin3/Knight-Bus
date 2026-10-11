@@ -72,12 +72,18 @@ merged into one route:
 - the other entries' ids are kept in the route row (12th entry). Live buses report under
   those ids, so the app asks for each; a Favorite Commute saved with such an id is read as
   the merged route.
-- A circular route published as two "directions" whose most common pattern has exactly the
-  same stops is merged the same way.
+- **A "direction" in the ministry's data is not always a direction.** For a circular route
+  it often marks another version of the same loop, driven the same way: Haifa's route 32 is
+  published as two "directions" that pass almost all the same stops in the same order. So entries
+  of one route with different direction codes are compared on the map. Each stop of one is
+  matched to the nearest stop of the other (within 150 m, so the stop across the street
+  counts) and the order is read: the **same order** means the same way, and the entries are
+  merged; the **opposite order** means a real opposite direction (see below).
 - An alternative with **its own number on the bus** (62א beside 62) is not merged.
 
-In the feed of 2026-10-11: 1,022 entries were merged, leaving 5,574 routes, 810 of them
-with more than one stop pattern (281 of 1,960 in the Tel Aviv file). A number can still
+In the feed of 2026-10-11: 1,102 entries were merged (89 of them "directions" that drive
+the same way), leaving 5,494 routes, 865 of them with more than one stop pattern (291 of
+1,945 in the Tel Aviv file). A number can still
 appear twice at a stop when both directions stop there or two operators use it; the app
 then frames the icon in the company's color (REQ-HOME-3).
 
@@ -88,11 +94,13 @@ The pipeline pairs them, so the app can list the service once and offer **Switch
 direction** (REQ-ROUTE-2). Each route row gets the id of its opposite as its 11th entry.
 
 - **Government routes:** after the alternatives are merged, two routes of the same
-  operator with the same code and number but a different direction are a pair.
+  operator with the same code and number are a pair when they pass each other's stops in
+  the **opposite order** (the check described above). The direction code alone is not
+  trusted.
 - **Weekend routes:** two routes of the same source with the same number are a pair.
 - A route with no partner (circular, one-way) gets no entry and no Switch button.
 
-In the Tel Aviv bundle 1,764 of 1,960 routes have an opposite (2026-10-11).
+In the Tel Aviv bundle 1,532 of 1,945 routes have an opposite (2026-10-11).
 
 ## Timetable files
 
