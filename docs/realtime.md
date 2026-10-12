@@ -48,6 +48,9 @@ your stop, and:
 - **Everything in the signal, as it was sent:** the raw record, field by field, including
   the fields the feed leaves empty.
 
+The pop-up can be longer than the screen. Its **Close** button stays at the bottom while
+the rest scrolls, so it can be closed without scrolling (the same in every pop-up).
+
 Nothing here is about a person: it is public data about a vehicle. Opening the pop-up is
 counted as `bus_info_opened` (privacy.md); which bus is not recorded.
 
