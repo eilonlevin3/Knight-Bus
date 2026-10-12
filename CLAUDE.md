@@ -261,6 +261,14 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
 - **Buttons while a stop is open** (owner, 2026-10-11): tucked to the right edge with a
   handle; swipe left to show, right to hide (REQ-HOME-4). The editor shows routes as the
   same icons as the home screen (`routeChip` in `views/liveInfo.js`).
+- **Opening view of a Favorite Commute** (owner, 2026-10-12): automatic = the stops and
+  about 1 km of each chosen route before them (`commuteViewPoints`; no longer the 5-minute
+  timetable stretch, and the flags no longer widen it). The person can set their own in the
+  editor (REQ-FAV-6). It is stored on the device (`lib/savedView.js`), NOT in the Favorite
+  Commute document: the published database rules only allow the known fields
+  (`firestore.rules`, `hasOnly`), and the owner has not republished rules since 2026-10-10,
+  so a new field would make every save fail. Move it into the document only together with
+  a rules change the owner publishes.
 - **Route search and directions** (owner, 2026-10-10): `#/routes` lists each two-direction
   service once (`city.routePairs()`); the route screen shows one direction with
   ⇄ Switch direction (`route.opposite`, paired in the pipeline from `route_desc`) and a

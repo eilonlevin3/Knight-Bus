@@ -6,7 +6,8 @@ import { t, backArrow, locale } from '../i18n.js';
 import { createMap, stopLayer, userMarker, flagMarker, flagHtml, legendControl, lighten, escapeHtml } from '../map.js';
 import { watchPosition } from '../location.js';
 import { LiveLines } from '../liveLines.js';
-import { approachPoints } from '../lib/mapFit.js';
+import { commuteViewPoints } from '../lib/mapFit.js';
+import { readView } from '../lib/savedView.js';
 import { draggableSheet } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { track, trackDetail, bucket, hourOfDay, weekday } from '../analytics.js';
@@ -85,16 +86,13 @@ export async function render(root, ctx, { slot }) {
     legend.update(items.join('') + placeRows.join('') + help);
   }
 
-  // Start zoomed to: start point, destination, the chosen stops, and each chosen line's
-  // last ~5 minutes before reaching its stop (where the bus you are waiting for is now).
+  // Where the map opens. The view the person chose in the editor, if any (REQ-FAV-6).
+  // Otherwise: the chosen stops and about one kilometer of each chosen route coming to
+  // them (REQ-COMM-2). The start point and destination are drawn, but may be out of view.
+  const ownView = readView(ctx.user, slot);
   function fitCommute() {
-    const pts = [];
-    for (const f of ['origin', 'destination']) if (fav[f]) pts.push([fav[f].lat, fav[f].lon]);
-    pts.push(...approachPoints(city, all));
-    for (const st of fav.stops) {
-      const s = city.stops.get(st.stopId);
-      if (s) pts.push([s.lat, s.lon]);
-    }
+    if (ownView) return map.setView([ownView.lat, ownView.lon], ownView.zoom);
+    const pts = commuteViewPoints(city, fav);
     if (!pts.length) return;
     const keyWidth = legend.width() || 0;
     map.fitBounds(L.latLngBounds(pts), {
@@ -165,7 +163,7 @@ export async function render(root, ctx, { slot }) {
   setTimeout(() => { map.invalidateSize(); fitCommute(); }, 0);
   track('commute_opened', {
     slot, city: city.id, hour: hourOfDay(), weekday: weekday(), stops: fav.stops.length, lines: bucket(all.length),
-    has_start: fav.origin ? 1 : 0, has_destination: fav.destination ? 1 : 0,
+    has_start: fav.origin ? 1 : 0, has_destination: fav.destination ? 1 : 0, own_view: ownView ? 1 : 0,
   });
   trackDetail('commute_opened', { slot, commute: fav, position: ctx.position });
 

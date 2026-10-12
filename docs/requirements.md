@@ -102,6 +102,8 @@ Two places still say "line" for a route, on purpose:
 | REQ-FAV-4 | The user names each Favorite Commute in the editor; that name is the text of its home-screen button. Without a name it is called "Favorite Commute N". The user can rename or clear a Favorite Commute. | Done |
 | REQ-FAV-5 | A Favorite Commute can have an optional **start point** and **destination**. The user sets each by tapping the map or searching an address; the start point can also be the current location. | Done |
 
+| REQ-FAV-6 | In the editor the user can choose the **opening view** of a Favorite Commute: with its stops, routes, start point and destination drawn, they move and zoom the map and press *Use this view*. The Favorite Commute then opens on exactly that view every time. *Automatic* returns to REQ-COMM-2. The chosen view is kept on the device. | Done |
+
 ## Editing a Favorite Commute
 
 | ID | Requirement | Status |
@@ -133,7 +135,7 @@ Two places still say "line" for a route, on purpose:
 | ID | Requirement | Status |
 |----|-------------|--------|
 | REQ-COMM-1 | Opening a Favorite Commute shows its stops and selected routes with live buses, the same as in the editor. | Done |
-| REQ-COMM-2 | The Favorite Commute view opens zoomed so that the start point, destination and chosen stops are all visible, plus each chosen route's last **~5 minutes of travel before** its stop (by timetable, or ~1.5 km when the timetable is missing). | Done |
+| REQ-COMM-2 | The Favorite Commute view opens zoomed so that the chosen stops are visible, plus about **one kilometer of each chosen route coming to** its stop. The start point and destination are drawn but need not be in view. If the user chose an opening view (REQ-FAV-6), that view is used instead. | Done |
 | REQ-COMM-3 | The start point is marked with a **green flag**, the destination with a **checkered flag**, on the map and in the editor. | Done |
 | REQ-COMM-4 | Each route's line is drawn in two parts: before the chosen stop (incoming) **solid**; after the stop (outbound) lighter and partly transparent, but still clearly visible. | Done |
 | REQ-COMM-5 | Where routes share a street, their lines are drawn **side by side**, so every route passing there is visible. Shifting the lines must not create loops or knots at corners at any zoom. | Done |

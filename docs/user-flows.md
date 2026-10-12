@@ -128,6 +128,8 @@ stateDiagram-v2
   Summary --> Pick: + Add stop 2
   Summary --> Routes: Edit a stop
   Summary --> Place: Set start / destination
+  Summary --> View: Set opening view
+  View --> Summary: Use this view / Cancel
   Place --> Summary: tap map / pick address / my location
   Summary --> [*]: Save Favorite Commute → home
 ```
@@ -163,7 +165,17 @@ location* is also offered. A tapped point gets a street name looked up automatic
 place shows on the map as a flag: green for start, checkered for destination (REQ-COMM-3).
 *Remove* clears it.
 
-Code: [views/editor.js](../src/views/editor.js), [liveLines.js](../src/liveLines.js), [geocode.js](../src/geocode.js).
+**Opening view** (REQ-FAV-6, optional). The last card of the summary. *Set* opens a step
+where the map shows everything in the Favorite Commute: its stops, routes, start point and
+destination. **Move and zoom the map** until it shows what you want to see each time, then
+press **Use this view**; not everything has to be in view. After *Save Favorite Commute*,
+the Favorite Commute opens on exactly that view. *Change* sets it again; *Automatic* goes
+back to the app's own choice (your stops and about 1 km of each route coming to them).
+The view is remembered **on this phone only**: on another phone the Favorite Commute opens
+on the automatic view until you set one there.
+
+Code: [views/editor.js](../src/views/editor.js), [lib/savedView.js](../src/lib/savedView.js),
+[liveLines.js](../src/liveLines.js), [geocode.js](../src/geocode.js).
 
 ## 4. Using a Favorite Commute
 
@@ -173,13 +185,15 @@ bus markers as the editor, for all saved stops and routes together. Buses refres
 it (REQ-RT-10, [realtime.md](realtime.md#what-a-bus-tells-us)), or tap a stop name to zoom
 to it. Here the routes are full rows with their live status, because there are only a few.
 
-**Where the map starts** (REQ-COMM-2). It zooms to fit:
-- the start point and destination flags, if set;
+**Where the map starts** (REQ-COMM-2, REQ-FAV-6). If you chose an **opening view** in the
+editor, the map opens on exactly that. Otherwise it zooms to fit:
 - the chosen stops;
-- for each chosen route, the stretch it drives in the **5 minutes before reaching your
-  stop**. That is where the bus you are waiting for is now. The stretch uses the timetable
-  ([data-pipeline.md](data-pipeline.md)), so it is short in traffic-heavy centers and longer
-  on fast roads.
+- for each chosen route, about **one kilometer of its path before your stop**. That is
+  where the bus you are waiting for is coming from.
+
+The start point and destination flags are drawn, but the automatic view does not stretch
+to include them; pan the map, or set an opening view that shows them.
+(The home screen's stop view still uses the last 5 minutes by timetable, REQ-HOME-2.)
 
 **How routes are drawn** (REQ-COMM-4, REQ-COMM-5):
 

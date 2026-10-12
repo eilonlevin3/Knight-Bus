@@ -1,5 +1,5 @@
 // Edit a Favorite Commute: pick up to 2 stops, check routes, save. Docs: docs/user-flows.md#3-editing-a-favorite-commute
-// @req REQ-EDIT-1 @req REQ-EDIT-2 @req REQ-EDIT-3 @req REQ-EDIT-5 @req REQ-EDIT-6 @req REQ-FAV-2 @req REQ-FAV-4 @req REQ-FAV-5
+// @req REQ-FAV-6 @req REQ-EDIT-1 @req REQ-EDIT-2 @req REQ-EDIT-3 @req REQ-EDIT-5 @req REQ-EDIT-6 @req REQ-FAV-2 @req REQ-FAV-4 @req REQ-FAV-5
 
 import { h, toast } from '../lib/dom.js';
 import { t, tn } from '../i18n.js';
@@ -13,6 +13,8 @@ import { routeBadge, routeChip, repeatedNumbers } from './liveInfo.js';
 import { showRouteCard } from './lineInfo.js';
 import { stopSuffix, stopHazard, platformText } from './stopInfo.js';
 import { commuteName, isDefaultName } from '../lib/names.js';
+import { commuteViewPoints } from '../lib/mapFit.js';
+import { readView, writeView, clearView } from '../lib/savedView.js';
 import { track, trackDetail, bucket } from '../analytics.js';
 
 export async function render(root, ctx, { slot }) {
@@ -29,6 +31,10 @@ export async function render(root, ctx, { slot }) {
   // Optional start point and destination: { lat, lon, label } or null.
   draft.origin ??= null;
   draft.destination ??= null;
+
+  // The map view this Favorite Commute opens on: { lat, lon, zoom }, or null = automatic.
+  // Kept on this device (REQ-FAV-6); written when the Favorite Commute is saved.
+  let openingView = existing ? readView(ctx.user, slot) : null;
 
   const state = {
     mode: draft.stops.length ? 'summary' : 'pick', // 'summary' | 'pick' | 'lines' | 'place'
@@ -104,7 +110,7 @@ export async function render(root, ctx, { slot }) {
   // Which (stop, line) pairs should be on the map right now.
   function shownEntries() {
     if (state.mode === 'lines') return [...state.checked].map((routeId) => ({ stopId: state.stop.id, routeId }));
-    if (state.mode === 'summary') return draft.stops.flatMap((s) => s.routeIds.map((routeId) => ({ stopId: s.stopId, routeId })));
+    if (state.mode === 'summary' || state.mode === 'view') return draft.stops.flatMap((s) => s.routeIds.map((routeId) => ({ stopId: s.stopId, routeId })));
     return [];
   }
 
@@ -127,7 +133,15 @@ export async function render(root, ctx, { slot }) {
     if (mode === 'pick') state.stop = null;
     update();
     if (mode === 'summary') fitSummary();
+    if (mode === 'view') showOpeningView();
   };
+
+  // What the Favorite Commute opens on now: the chosen view, or the automatic one.
+  function showOpeningView() {
+    if (openingView) return map.setView([openingView.lat, openingView.lon], openingView.zoom);
+    const pts = commuteViewPoints(city, draft);
+    if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [24, 24], maxZoom: 17 });
+  }
 
   // ---------- Sheet contents per mode ----------
 
@@ -262,6 +276,37 @@ export async function render(root, ctx, { slot }) {
       place ? h('small', { class: 'muted place-label' }, place.label) : null);
   }
 
+  // Choosing the opening view: everything is drawn; the person moves and zooms the map.
+  function paintView() {
+    return [
+      h('h2', {}, t('Opening view')),
+      h('p', { class: 'muted' }, t('Move and zoom the map until it shows what you want to see each time you open this Favorite Commute. Your stops, routes, start point and destination are drawn; they do not all have to be in view.')),
+      h('div', { class: 'row sticky' },
+        h('button', { onclick: () => go('summary') }, t('Cancel')),
+        h('button', {
+          class: 'primary',
+          onclick: () => {
+            const c = map.getCenter();
+            openingView = { lat: +c.lat.toFixed(5), lon: +c.lng.toFixed(5), zoom: map.getZoom() };
+            track('opening_view_set', { zoom: openingView.zoom });
+            go('summary');
+          },
+        }, t('Use this view'))),
+    ];
+  }
+
+  function viewCard() {
+    return h('div', { class: 'card place-card' },
+      h('div', { class: 'row between' },
+        h('span', {}, '🔍 ', h('b', {}, t('Opening view'))),
+        h('span', {},
+          h('button', { class: 'link small', onclick: () => go('view') }, openingView ? t('Change') : t('Set')),
+          openingView ? h('button', { class: 'link small danger', onclick: () => { openingView = null; paint(); } }, t('Automatic')) : null)),
+      h('small', { class: 'muted place-label' }, openingView
+        ? t('The map opens the way you set it.')
+        : t('Automatic: your stops and about 1 km of each route coming to them.')));
+  }
+
   function paintSummary() {
     const name = h('input', {
       type: 'text', value: draft.name, maxLength: 40, placeholder: t('e.g. To work (otherwise: Favorite Commute {n})', { n: slot }),
@@ -290,6 +335,7 @@ export async function render(root, ctx, { slot }) {
         ? h('button', { onclick: () => go('pick', draft.stops.length) }, t('+ Add stop {n}', { n: draft.stops.length + 1 }))
         : null,
       placeCard('destination'),
+      viewCard(),
       h('div', { class: 'row sticky' },
         h('button', { onclick: () => ctx.go('#/home') }, t('Cancel')),
         h('button', {
@@ -299,6 +345,7 @@ export async function render(root, ctx, { slot }) {
             e.target.disabled = true;
             try {
               await saveFavorite(ctx.user, slot, { ...draft, name: commuteName(draft, slot) });
+              if (openingView) writeView(ctx.user, slot, openingView); else clearView(ctx.user, slot);
               const lineIds = draft.stops.flatMap((st) => st.routeIds);
               track('commute_saved', {
                 slot, city: city.id, is_new: existing ? 0 : 1, stops: draft.stops.length, lines: bucket(lineIds.length),
@@ -320,6 +367,7 @@ export async function render(root, ctx, { slot }) {
             class: 'link small danger',
             onclick: async () => {
               await deleteFavorite(ctx.user, slot);
+              clearView(ctx.user, slot);
               track('commute_cleared', { slot });
               await ctx.reloadFavorites();
               toast(t('Favorite Commute cleared'));
@@ -332,7 +380,7 @@ export async function render(root, ctx, { slot }) {
 
   function paint() {
     const scroll = sheet.scrollTop;
-    const content = { pick: paintPick, lines: paintLines, place: paintPlace, summary: paintSummary }[state.mode]();
+    const content = { pick: paintPick, lines: paintLines, place: paintPlace, view: paintView, summary: paintSummary }[state.mode]();
     sheet.replaceChildren(...content.filter(Boolean)); // optional parts are null when hidden
     sheet.scrollTop = scroll;
   }

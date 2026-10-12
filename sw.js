@@ -42,6 +42,7 @@ const SHELL = [
   'src/lib/patterns.js',
   'src/lib/sheetDrag.js',
   'src/lib/names.js',
+  'src/lib/savedView.js',
   'src/geocode.js',
   'src/views/login.js',
   'src/views/city.js',

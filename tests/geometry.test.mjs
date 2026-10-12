@@ -1,7 +1,7 @@
 // Unit tests for route geometry: the "5 minutes before your stop" zoom area and the line split.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { approachPath, splitPath, slicePath, stopPositions, metersBetween } from '../src/lib/routeGeometry.js';
+import { approachPath, pathBefore, splitPath, slicePath, stopPositions, metersBetween } from '../src/lib/routeGeometry.js';
 
 // 11 stops in a straight line heading north, ~111 m apart, 1 scheduled minute apart.
 const stops = Array.from({ length: 11 }, (_, i) => ({ id: `s${i}`, lat: 32 + i * 0.001, lon: 34.8 }));
@@ -50,4 +50,25 @@ test('slicePath works between segment fractions', () => {
   assert.ok(near(p[0][0], 32.0015));
   assert.ok(Math.abs(p.at(-1)[0] - 32.00325) < 1e-9);
   assert.equal(p.length, 4); // start, vertices 2 and 3, end
+});
+
+// REQ-COMM-2: a Favorite Commute opens on about one kilometer of each route before its stop.
+const lengthOf = (p) => p.slice(1).reduce((n, pt, i) => n + metersBetween(p[i], pt), 0);
+
+test('the path before a stop is cut at the asked distance, between two corners', () => {
+  const p = pathBefore(path, 8, 500); // stops are ~111 m apart
+  assert.ok(Math.abs(lengthOf(p) - 500) < 2, `length ${lengthOf(p)}`);
+  assert.ok(near(p.at(-1)[0], stops[8].lat));
+  assert.ok(p[0][0] > stops[3].lat && p[0][0] < stops[4].lat);
+});
+
+test('the path before a stop ends at the start of the route when the route is shorter', () => {
+  const p = pathBefore(path, 3, 1000);
+  assert.ok(near(p[0][0], stops[0].lat));
+  assert.ok(Math.abs(lengthOf(p) - 3 * metersBetween(path[0], path[1])) < 1);
+});
+
+test('the path before a point between two corners', () => {
+  const p = pathBefore(path, 2.5, 100);
+  assert.ok(Math.abs(lengthOf(p) - 100) < 2, `length ${lengthOf(p)}`);
 });

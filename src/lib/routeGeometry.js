@@ -86,10 +86,30 @@ export function metersBetween(a, b) {
   return Math.hypot((b[1] - a[1]) * k, b[0] - a[0]) * 111320;
 }
 
+// The last `meters` of the path before a position on it (less if the path starts sooner).
+// @req REQ-COMM-2
+export function pathBefore(path, pos, meters) {
+  let from = pos;
+  let left = meters;
+  let here = pointAt(path, pos);
+  for (let i = Math.ceil(pos) - 1; i >= 0 && left > 0; i--) {
+    const step = metersBetween(path[i], here);
+    if (step >= left) {
+      from -= (from - i) * (left / step); // the distance runs out between two corners
+      left = 0;
+    } else {
+      left -= step;
+      from = i;
+      here = path[i];
+    }
+  }
+  return slicePath(path, from, pos);
+}
+
 // The stretch of the line a bus covers in the `minutes` before it reaches stop `stopIndex`.
 // Uses the timetable (route.times: scheduled minutes from the first stop) when available;
 // otherwise assumes city bus speed (~18 km/h, so 5 min ≈ 1.5 km).
-// @req REQ-COMM-2
+// @req REQ-HOME-2
 export function approachPath(route, path, stopIndex, minutes = 5) {
   const pos = stopPositions(route.stops, path);
   let startIdx = stopIndex;

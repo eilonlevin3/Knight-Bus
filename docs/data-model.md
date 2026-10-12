@@ -131,5 +131,6 @@ answers "which routes serve this stop" (REQ-EDIT-2).
 | Cache `kb-tiles-v1` | tile URLs | Map tiles, up to 3,000 (sw.js) |
 | Cache `kb-city-data-v1` | `<file>?v=<version>` | City index and bundles (cityData.js) |
 | localStorage `kb.cityId` | | Selected city |
+| localStorage `kb.view.<account>.<slot>` | | The opening view chosen for a Favorite Commute: `{ lat, lon, zoom }` (REQ-FAV-6). Not in the account: a zoom chosen on one screen does not suit another, and it needs no change to the database rules |
 | localStorage `kb.localUser`, `kb.favorites.*` | | Local demo mode only |
 | Firestore offline cache | | Favorite Commutes, readable offline (store.js) |
