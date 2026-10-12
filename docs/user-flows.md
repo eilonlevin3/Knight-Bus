@@ -166,11 +166,20 @@ place shows on the map as a flag: green for start, checkered for destination (RE
 *Remove* clears it.
 
 **Opening view** (REQ-FAV-6, optional). The last card of the summary. *Set* opens a step
-where the map shows everything in the Favorite Commute: its stops, routes, start point and
-destination. **Move and zoom the map** until it shows what you want to see each time, then
-press **Use this view**; not everything has to be in view. After *Save Favorite Commute*,
-the Favorite Commute opens on exactly that view. *Change* sets it again; *Automatic* goes
-back to the app's own choice (your stops and about 1 km of each route coming to them).
+where the screen looks like the Favorite Commute screen: the map shows its stops, routes,
+start point and destination, with the same map key and the same draggable panel. Set three
+things:
+
+- **The map:** move and zoom it until it shows what you want to see each time. Not
+  everything has to be in view.
+- **Bottom panel:** *Low*, *Half* or *High*. Low leaves most of the screen to the map. You
+  can also drag the panel itself.
+- **Map key:** *Open* or *Folded*. You can also tap the key on the map.
+
+Then press **Use this view**. After *Save Favorite Commute*, the Favorite Commute opens
+exactly that way: the same map view, panel height and key. *Change* sets it again;
+*Automatic* goes back to the app's own choice (your stops and about 1 km of each route
+coming to them, panel at half, key open).
 The view is remembered **on this phone only**: on another phone the Favorite Commute opens
 on the automatic view until you set one there.
 
@@ -186,7 +195,8 @@ it (REQ-RT-10, [realtime.md](realtime.md#what-a-bus-tells-us)), or tap a stop na
 to it. Here the routes are full rows with their live status, because there are only a few.
 
 **Where the map starts** (REQ-COMM-2, REQ-FAV-6). If you chose an **opening view** in the
-editor, the map opens on exactly that. Otherwise it zooms to fit:
+editor, the screen opens exactly that way: the map view, how high the panel is, and whether
+the key is open. Otherwise the panel is at half, the key is open, and the map zooms to fit:
 - the chosen stops;
 - for each chosen route, about **one kilometer of its path before your stop**. That is
   where the bus you are waiting for is coming from.

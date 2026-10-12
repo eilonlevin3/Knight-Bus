@@ -128,9 +128,27 @@ export function lighten(hex, amount) {
   return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
 }
 
-// The map key in the top-left corner. update(html) replaces its contents.
+// The rows of the map key: one per route on the map, the flags, and what the symbols mean.
+// items: [{ route, color }] (LiveLines.legendItems()); places: { origin, destination }.
 // @req REQ-COMM-6
-export function legendControl(map) {
+export function legendHtml(items, places = {}) {
+  const rows = items.map(({ route, color }) =>
+    `<div class="legend-row"><span class="legend-swatch${route.source ? ' dashed' : ''}" style="--in:${color};--out:${lighten(color, 0.3)}"></span>` +
+    `<b>${escapeHtml(route.short)}</b> <span class="legend-dest">${escapeHtml(route.dest)}</span></div>`);
+  const placeRows = ['origin', 'destination'].filter((k) => places[k]).map((k) =>
+    `<div class="legend-row"><span class="legend-flag">${flagHtml(k)}</span>${k === 'origin' ? t('Start') : t('Destination')}</div>`);
+  const help = rows.length
+    ? `<div class="legend-help"><span class="legend-swatch demo"></span> ${t('to stop → from stop')}</div>` +
+      `<div class="legend-help"><span class="legend-bus"></span> ${t('next')} <span class="legend-bus passed"></span> ${t('passed')}</div>` +
+      (items.some(({ route }) => route.source) ? `<div class="legend-help"><span class="legend-swatch demo dashed"></span> ${t('weekend route, no live')}</div>` : '')
+    : '';
+  return rows.join('') + placeRows.join('') + help;
+}
+
+// The map key in the top-left corner. update(html) replaces its contents. Tapping its
+// title folds it away or opens it; onToggle(open) is told.
+// @req REQ-COMM-6
+export function legendControl(map, { onToggle = () => {} } = {}) {
   let body;
   const Legend = L.Control.extend({
     onAdd() {
@@ -143,6 +161,7 @@ export function legendControl(map) {
       head.onclick = () => {
         const open = el.classList.toggle('closed') === false;
         head.setAttribute('aria-expanded', String(open));
+        onToggle(open);
       };
       L.DomEvent.disableClickPropagation(el);
       L.DomEvent.disableScrollPropagation(el);
@@ -153,6 +172,11 @@ export function legendControl(map) {
   return {
     update(html) { body.innerHTML = html; control.getContainer().hidden = !html; },
     width() { return control.getContainer().offsetWidth; },
+    isOpen() { return !control.getContainer().classList.contains('closed'); },
+    setOpen(open) {
+      control.getContainer().classList.toggle('closed', !open);
+      control.getContainer().querySelector('.legend-head').setAttribute('aria-expanded', String(open));
+    },
     remove() { control.remove(); },
   };
 }

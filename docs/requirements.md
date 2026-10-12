@@ -102,7 +102,7 @@ Two places still say "line" for a route, on purpose:
 | REQ-FAV-4 | The user names each Favorite Commute in the editor; that name is the text of its home-screen button. Without a name it is called "Favorite Commute N". The user can rename or clear a Favorite Commute. | Done |
 | REQ-FAV-5 | A Favorite Commute can have an optional **start point** and **destination**. The user sets each by tapping the map or searching an address; the start point can also be the current location. | Done |
 
-| REQ-FAV-6 | In the editor the user can choose the **opening view** of a Favorite Commute: with its stops, routes, start point and destination drawn, they move and zoom the map and press *Use this view*. The Favorite Commute then opens on exactly that view every time. *Automatic* returns to REQ-COMM-2. The chosen view is kept on the device. | Done |
+| REQ-FAV-6 | In the editor the user can choose the **opening view** of a Favorite Commute: with its stops, routes, start point and destination drawn, they move and zoom the map, set **how high the bottom panel is** (low, half, high) and whether the **map key is open or folded**, and press *Use this view*. The Favorite Commute then opens exactly that way every time: the same map view, panel height and key. *Automatic* returns to REQ-COMM-2. The chosen view is kept on the device. | Done |
 
 ## Editing a Favorite Commute
 

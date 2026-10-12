@@ -264,7 +264,9 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
 - **Opening view of a Favorite Commute** (owner, 2026-10-12): automatic = the stops and
   about 1 km of each chosen route before them (`commuteViewPoints`; no longer the 5-minute
   timetable stretch, and the flags no longer widen it). The person can set their own in the
-  editor (REQ-FAV-6). It is stored on the device (`lib/savedView.js`), NOT in the Favorite
+  editor (REQ-FAV-6): map center and zoom, panel height (`small`/`half`/`large`) and key
+  open or folded. While choosing, the editor is laid out like the Favorite Commute screen
+  (same `draggableSheet` and `legendControl`), so what is seen is what opens. It is stored on the device (`lib/savedView.js`), NOT in the Favorite
   Commute document: the published database rules only allow the known fields
   (`firestore.rules`, `hasOnly`), and the owner has not republished rules since 2026-10-10,
   so a new field would make every save fail. Move it into the document only together with

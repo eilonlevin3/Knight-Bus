@@ -9,7 +9,10 @@
 import { h } from './dom.js';
 import { t } from '../i18n.js';
 
-export function draggableSheet(screen, sheet, { snaps = [0.2, 0.5, 0.82], start = 0.5, onResize = () => {}, onSnap = () => {} } = {}) {
+// The sizes the panel settles at, as a share of the screen height.
+export const PANEL_SIZES = { small: 0.2, half: 0.5, large: 0.82 };
+
+export function draggableSheet(screen, sheet, { snaps = Object.values(PANEL_SIZES), start = PANEL_SIZES.half, onResize = () => {}, onSnap = () => {} } = {}) {
   const handle = h('div', { class: 'sheet-handle', role: 'separator', 'aria-orientation': 'horizontal', 'aria-label': t('Drag to resize the panel') });
   screen.insertBefore(handle, sheet);
 
@@ -103,6 +106,10 @@ export function draggableSheet(screen, sheet, { snaps = [0.2, 0.5, 0.82], start 
   set(start * total());
 
   return {
+    // Move the panel to one of its sizes: 'small', 'half' or 'large'.
+    setSize(name) {
+      if (PANEL_SIZES[name]) set(PANEL_SIZES[name] * total(), true);
+    },
     destroy() {
       window.removeEventListener('resize', onWindowResize);
       cancelAnimationFrame(frame);

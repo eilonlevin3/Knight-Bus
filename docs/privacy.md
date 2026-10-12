@@ -24,7 +24,7 @@ you change what is collected, change this file, the screen text and the code tog
 | Sign-in: email or Google account | Firebase Authentication | The account owner; project admins |
 | Favorite Commutes: stops, routes, start/destination | Firestore `users/{uid}/favorites` | The account owner; project admins |
 | Location | Used on the phone to pick the city, center the home map and draw "you are here". The last position is remembered **on the phone only** (`kb.lastPosition`), for a quick start | Never sent |
-| Opening view | The map view chosen for a Favorite Commute (center and zoom) is remembered **on the phone only** (`kb.view.…`) | Never sent |
+| Opening view | The map view chosen for a Favorite Commute (center, zoom, panel height, key open or folded) is remembered **on the phone only** (`kb.view.…`) | Never sent |
 | Language | The language chosen in Options is remembered **on the phone only** (`kb.language`) | Never sent, except the usage event `language_changed` below, if you agreed |
 
 ## Safe usage data: everyone who agreed (user and debug versions)
@@ -49,7 +49,7 @@ id; the account is never attached.
 | `line_info_opened`, `line_map_opened`, `line_stop_tapped`, `schedule_opened` | that it happened, the number of stop patterns, whether a timetable existed. Not which route or stop |
 | `route_search_opened`, `direction_switched` | that a route was opened from Search routes, or its direction switched. Not which route, and never what was typed in the search |
 | `language_changed` | the language chosen (`en` or `he`) |
-| `opening_view_set` | that an opening view was chosen, and its zoom level (a number from 1 to 19). Not where the map was |
+| `opening_view_set` | that an opening view was chosen, its zoom level (a number from 1 to 19), the panel height and whether the key was open. Not where the map was |
 | `bus_info_opened`, `route_card_opened` | that a bus's or a route's pop-up was opened, whether the bus signal was late, whether the route has several stop patterns. Not which bus or route |
 | `panel_dragged` | small / half / large |
 | `commute_cleared`, `update_applied`, `usage_sharing_on` | that it happened |

@@ -4,7 +4,8 @@
 import { h, toast } from '../lib/dom.js';
 import { t, tn } from '../i18n.js';
 import { MAX_STOPS_PER_FAVORITE } from '../config.js';
-import { createMap, stopLayer, userMarker, flagMarker, flagHtml } from '../map.js';
+import { createMap, stopLayer, userMarker, flagMarker, flagHtml, legendControl, legendHtml } from '../map.js';
+import { draggableSheet, PANEL_SIZES } from '../lib/sheetDrag.js';
 import { watchPosition, getPosition } from '../location.js';
 import { searchPlaces, placeName } from '../geocode.js';
 import { LiveLines } from '../liveLines.js';
@@ -32,9 +33,15 @@ export async function render(root, ctx, { slot }) {
   draft.origin ??= null;
   draft.destination ??= null;
 
-  // The map view this Favorite Commute opens on: { lat, lon, zoom }, or null = automatic.
+  // How this Favorite Commute opens: { lat, lon, zoom, panel, keyOpen }, or null = automatic.
+  //   panel: 'small' | 'half' | 'large' (how high the bottom panel is); keyOpen: is the map key open
   // Kept on this device (REQ-FAV-6); written when the Favorite Commute is saved.
   let openingView = existing ? readView(ctx.user, slot) : null;
+  // While the opening view is being chosen, this screen looks like the Favorite Commute
+  // screen: the same draggable panel and the same map key.
+  let viewPanel = null;
+  let viewLegend = null;
+  let viewDraft = { panel: 'half', keyOpen: true };
 
   const state = {
     mode: draft.stops.length ? 'summary' : 'pick', // 'summary' | 'pick' | 'lines' | 'place'
@@ -48,7 +55,8 @@ export async function render(root, ctx, { slot }) {
 
   const mapEl = h('div', { class: 'map' });
   const sheet = h('section', { class: 'sheet' });
-  root.append(h('main', { class: 'map-screen' }, mapEl, sheet));
+  const screen = h('main', { class: 'map-screen' }, mapEl, sheet);
+  root.append(screen);
 
   const first = draft.stops[0] && city.stops.get(draft.stops[0].stopId);
   const center = first ? [first.lat, first.lon] : ctx.position ? [ctx.position.lat, ctx.position.lon] : city.meta.center;
@@ -128,19 +136,47 @@ export async function render(root, ctx, { slot }) {
   }
 
   const go = (mode, index = state.index) => {
+    if (state.mode === 'view' && mode !== 'view') leaveView();
     state.mode = mode;
     state.index = index;
     if (mode === 'pick') state.stop = null;
     update();
     if (mode === 'summary') fitSummary();
-    if (mode === 'view') showOpeningView();
+    if (mode === 'view') enterView();
   };
 
-  // What the Favorite Commute opens on now: the chosen view, or the automatic one.
-  function showOpeningView() {
-    if (openingView) return map.setView([openingView.lat, openingView.lon], openingView.zoom);
-    const pts = commuteViewPoints(city, draft);
-    if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [24, 24], maxZoom: 17 });
+  // Choosing the opening view. The screen is laid out like the Favorite Commute screen, so
+  // what is seen here is what opens there: the panel can be dragged, the key folded.
+  function enterView() {
+    viewDraft = { panel: openingView?.panel || 'half', keyOpen: openingView ? openingView.keyOpen !== false : true };
+    screen.classList.add('dynamic');
+    viewLegend = legendControl(map, { onToggle: (open) => { viewDraft.keyOpen = open; paint(); } });
+    viewLegend.update(legendHtml(lines.legendItems(), draft));
+    viewLegend.setOpen(viewDraft.keyOpen);
+    viewPanel = draggableSheet(screen, sheet, {
+      start: PANEL_SIZES[viewDraft.panel],
+      onResize: () => map.invalidateSize({ pan: false }),
+      onSnap: (size) => { if (PANEL_SIZES[size]) { viewDraft.panel = size; paint(); } },
+    });
+    paint();
+    // Once the panel has its size: the chosen view, or the automatic one.
+    setTimeout(() => {
+      if (state.mode !== 'view') return;
+      map.invalidateSize();
+      if (openingView) return map.setView([openingView.lat, openingView.lon], openingView.zoom);
+      const pts = commuteViewPoints(city, draft);
+      if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [24, 24], maxZoom: 17 });
+    }, 0);
+  }
+
+  function leaveView(resizeMap = true) {
+    viewPanel?.destroy();
+    viewLegend?.remove();
+    viewPanel = null;
+    viewLegend = null;
+    screen.classList.remove('dynamic', 'snapping');
+    screen.style.removeProperty('--sheet-h');
+    if (resizeMap) setTimeout(() => { if (state.mode !== 'view') map.invalidateSize(); }, 0);
   }
 
   // ---------- Sheet contents per mode ----------
@@ -276,22 +312,33 @@ export async function render(root, ctx, { slot }) {
       place ? h('small', { class: 'muted place-label' }, place.label) : null);
   }
 
-  // Choosing the opening view: everything is drawn; the person moves and zooms the map.
+  // Choosing the opening view: everything is drawn; the person moves and zooms the map,
+  // sets how high the panel is and whether the key is open. The buttons come first, so
+  // they stay in reach when the panel is low.
+  const panelNames = () => ({ small: t('Low'), half: t('Half'), large: t('High') });
   function paintView() {
+    const choice = (on, label, onclick) => h('button', { class: on ? 'primary' : '', 'aria-pressed': String(on), onclick }, label);
     return [
-      h('h2', {}, t('Opening view')),
-      h('p', { class: 'muted' }, t('Move and zoom the map until it shows what you want to see each time you open this Favorite Commute. Your stops, routes, start point and destination are drawn; they do not all have to be in view.')),
-      h('div', { class: 'row sticky' },
+      h('div', { class: 'row' },
         h('button', { onclick: () => go('summary') }, t('Cancel')),
         h('button', {
           class: 'primary',
           onclick: () => {
             const c = map.getCenter();
-            openingView = { lat: +c.lat.toFixed(5), lon: +c.lng.toFixed(5), zoom: map.getZoom() };
-            track('opening_view_set', { zoom: openingView.zoom });
+            openingView = { lat: +c.lat.toFixed(5), lon: +c.lng.toFixed(5), zoom: map.getZoom(), panel: viewDraft.panel, keyOpen: viewDraft.keyOpen };
+            track('opening_view_set', { zoom: openingView.zoom, panel: openingView.panel, key_open: openingView.keyOpen ? 1 : 0 });
             go('summary');
           },
         }, t('Use this view'))),
+      h('b', { class: 'small' }, t('Bottom panel')),
+      h('div', { class: 'row lang-row' }, ...Object.entries(panelNames()).map(([size, label]) =>
+        choice(viewDraft.panel === size, label, () => { viewDraft.panel = size; viewPanel.setSize(size); paint(); }))),
+      h('b', { class: 'small' }, t('Map key')),
+      h('div', { class: 'row lang-row' },
+        choice(viewDraft.keyOpen, t('Open'), () => { viewDraft.keyOpen = true; viewLegend.setOpen(true); paint(); }),
+        choice(!viewDraft.keyOpen, t('Folded'), () => { viewDraft.keyOpen = false; viewLegend.setOpen(false); paint(); })),
+      h('p', { class: 'muted small' }, t('Move and zoom the map until it shows what you want to see each time you open this Favorite Commute. Your stops, routes, start point and destination are drawn; they do not all have to be in view.'),
+        ' ', t('You can also drag this panel up or down, and tap the key on the map.')),
     ];
   }
 
@@ -303,7 +350,7 @@ export async function render(root, ctx, { slot }) {
           h('button', { class: 'link small', onclick: () => go('view') }, openingView ? t('Change') : t('Set')),
           openingView ? h('button', { class: 'link small danger', onclick: () => { openingView = null; paint(); } }, t('Automatic')) : null)),
       h('small', { class: 'muted place-label' }, openingView
-        ? t('The map opens the way you set it.')
+        ? `${t('The map opens the way you set it.')} ${t('Bottom panel')}: ${panelNames()[openingView.panel || 'half']} · ${t('Map key')}: ${openingView.keyOpen === false ? t('Folded') : t('Open')}`
         : t('Automatic: your stops and about 1 km of each route coming to them.')));
   }
 
@@ -395,6 +442,8 @@ export async function render(root, ctx, { slot }) {
   if (startStop) { map.setView([startStop.lat, startStop.lon], 16); pickStop(startStop, 'home'); }
 
   return () => {
+    if (state.mode === 'view') leaveView(false);
+    state.mode = 'closed';
     stopWatch();
     lines.destroy();
     stops.destroy();

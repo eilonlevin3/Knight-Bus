@@ -3,15 +3,15 @@
 
 import { h } from '../lib/dom.js';
 import { t, backArrow, locale } from '../i18n.js';
-import { createMap, stopLayer, userMarker, flagMarker, flagHtml, legendControl, lighten, escapeHtml } from '../map.js';
+import { createMap, stopLayer, userMarker, flagMarker, legendControl, legendHtml } from '../map.js';
 import { watchPosition } from '../location.js';
 import { LiveLines } from '../liveLines.js';
 import { commuteViewPoints } from '../lib/mapFit.js';
 import { readView } from '../lib/savedView.js';
-import { draggableSheet } from '../lib/sheetDrag.js';
+import { draggableSheet, PANEL_SIZES } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { track, trackDetail, bucket, hourOfDay, weekday } from '../analytics.js';
-import { liveSummary, routeBadge, routeTitle, isWeekendRoute } from './liveInfo.js';
+import { liveSummary, routeBadge, routeTitle } from './liveInfo.js';
 import { showRouteInfo } from './lineInfo.js';
 import { platformText, stopHazard } from './stopInfo.js';
 
@@ -72,24 +72,15 @@ export async function render(root, ctx, { slot }) {
   }
 
   function paintLegend() {
-    const items = lines.legendItems().map(({ route, color }) =>
-      `<div class="legend-row"><span class="legend-swatch${isWeekendRoute(route) ? ' dashed' : ''}" style="--in:${color};--out:${lighten(color, 0.3)}"></span>` +
-      `<b>${escapeHtml(route.short)}</b> <span class="legend-dest">${escapeHtml(route.dest)}</span></div>`);
-    const anyWeekend = lines.legendItems().some(({ route }) => isWeekendRoute(route));
-    const placeRows = ['origin', 'destination'].filter((k) => fav[k]).map((k) =>
-      `<div class="legend-row"><span class="legend-flag">${flagHtml(k)}</span>${k === 'origin' ? t('Start') : t('Destination')}</div>`);
-    const help = items.length
-      ? `<div class="legend-help"><span class="legend-swatch demo"></span> ${t('to stop → from stop')}</div>` +
-        `<div class="legend-help"><span class="legend-bus"></span> ${t('next')} <span class="legend-bus passed"></span> ${t('passed')}</div>` +
-        (anyWeekend ? `<div class="legend-help"><span class="legend-swatch demo dashed"></span> ${t('weekend route, no live')}</div>` : '')
-      : '';
-    legend.update(items.join('') + placeRows.join('') + help);
+    legend.update(legendHtml(lines.legendItems(), fav));
   }
 
   // Where the map opens. The view the person chose in the editor, if any (REQ-FAV-6).
   // Otherwise: the chosen stops and about one kilometer of each chosen route coming to
   // them (REQ-COMM-2). The start point and destination are drawn, but may be out of view.
+  // A chosen view also says how high the panel is and whether the map key is open.
   const ownView = readView(ctx.user, slot);
+  if (ownView && ownView.keyOpen === false) legend.setOpen(false);
   function fitCommute() {
     if (ownView) return map.setView([ownView.lat, ownView.lon], ownView.zoom);
     const pts = commuteViewPoints(city, fav);
@@ -155,6 +146,7 @@ export async function render(root, ctx, { slot }) {
 
   // Drag the panel down for more map, up for more list.
   const panel = draggableSheet(screen, sheet, {
+    start: PANEL_SIZES[ownView?.panel] || PANEL_SIZES.half,
     onResize: () => map.invalidateSize({ pan: false }),
     onSnap: (size) => track('panel_dragged', { size }),
   });
