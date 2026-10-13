@@ -11,7 +11,7 @@ import { readView } from '../lib/savedView.js';
 import { draggableSheet, PANEL_SIZES } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { track, trackDetail, bucket, hourOfDay, weekday } from '../analytics.js';
-import { liveSummary, routeBadge, routeTitle } from './liveInfo.js';
+import { liveSummary, routeBadge, routeTitle, selectAllRow } from './liveInfo.js';
 import { showRouteInfo } from './lineInfo.js';
 import { platformText, stopHazard } from './stopInfo.js';
 
@@ -131,11 +131,14 @@ export async function render(root, ctx, { slot }) {
 
     const scroll = sheet.scrollTop;
     sheet.replaceChildren(
-      h('div', { class: 'row between' },
+      h('div', { class: 'row between sticky-top' },
         h('button', { class: 'nav-button', onclick: () => ctx.go('#/home') }, `${backArrow()} ${t('Home')}`),
         h('h2', {}, commuteName(fav, slot)),
         h('button', { class: 'link', onclick: () => ctx.go(`#/edit/${slot}`) }, t('✎ Edit'))),
       h('p', { class: 'muted small' }, t('Uncheck a route to hide it here. Your Favorite Commute stays the same.')),
+      selectAllRow(
+        () => { hidden.clear(); track('routes_select_all', { where: 'commute' }); show(); },
+        () => { all.forEach((e) => hidden.add(key(e))); track('routes_clear_all', { where: 'commute' }); show(); }),
       ...sections,
       h('div', { class: 'row between' },
         h('small', { class: 'muted' }, updatedAt ? t('Updated {time} · refreshes every 30 s', { time: updatedAt.toLocaleTimeString(locale()) }) : t('Loading…')),

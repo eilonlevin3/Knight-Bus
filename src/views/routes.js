@@ -48,7 +48,7 @@ export function render(root, ctx) {
 
   root.append(
     h('main', { class: 'screen' },
-      h('header', { class: 'topbar' },
+      h('header', { class: 'topbar sticky-top' },
         h('button', { class: 'nav-button', onclick: () => ctx.go('#/home') }, `${backArrow()} ${t('Home')}`),
         h('h1', {}, t('Search routes'))),
       input,

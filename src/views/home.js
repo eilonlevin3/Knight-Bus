@@ -164,7 +164,7 @@ export async function render(root, ctx) {
       });
     });
     return h('div', { class: 'stop-section' },
-      h('div', { class: 'row between' },
+      h('div', { class: 'row between sticky-top' },
         h('span', { class: 'stop-head' },
           h('button', { class: 'stop-title', onclick: () => map.setView([s.lat, s.lon], 17) },
             `🚏 ${s.name}`, h('span', { class: 'muted' }, stopSuffix(s))),

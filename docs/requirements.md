@@ -111,7 +111,7 @@ Two places still say "line" for a route, on purpose:
 | REQ-EDIT-1 | A Favorite Commute has up to **2** bus stops. The user picks a stop by tapping it on the map or by searching its name or code. | Done |
 | REQ-EDIT-2 | When a stop is picked, the app shows all bus routes that serve it, as the same **small icons** as on the home screen (REQ-HOME-3): a checkbox and the route number; pressing the number opens the pop-up about the route. | Done |
 | REQ-EDIT-3 | Each route has a checkbox. **By default none are checked.** The user checks the routes they want; **Select all** and **Clear all** buttons check or uncheck every route at once. | Done |
-| REQ-NAV-1 | The buttons that leave a screen or close a pop-up (**Home**, **Back**, **Close**) are easy to find: framed, bold buttons, not underlined words. A pop-up's Close button stays in view at its bottom. | Done |
+| REQ-NAV-1 | The buttons that leave a screen or close a pop-up (**Home**, **Back**, **Close**) are easy to find: framed, bold buttons, not underlined words. They **stay in view while the screen scrolls**: at the top of a screen or panel, and at the bottom of a pop-up. | Done |
 | REQ-EDIT-4 | A checked route is drawn on the map as a line along its whole path, from its first stop to its last. | Done |
 | REQ-EDIT-5 | "Save stop" stores the stop and its checked routes. The user then adds the next stop or finishes. | Done |
 | REQ-EDIT-6 | "Save Favorite Commute" saves the Favorite Commute and returns to the home screen. | Done |
@@ -141,7 +141,7 @@ Two places still say "line" for a route, on purpose:
 | REQ-COMM-4 | Each route's line is drawn in two parts: before the chosen stop (incoming) **solid**; after the stop (outbound) lighter and partly transparent, but still clearly visible. | Done |
 | REQ-COMM-5 | Where routes share a street, their lines are drawn **side by side**, so every route passing there is visible. Shifting the lines must not create loops or knots at corners at any zoom. | Done |
 | REQ-COMM-6 | A **map key** in the top-left corner lists each route's color, number and destination, the flags, and the bus symbols. It can be collapsed. | Done |
-| REQ-COMM-7 | The panel lists every route of every stop in the Favorite Commute with a **checkbox, all checked** when the view opens. Unchecking hides that route from the current view (map, buses, key) but does **not** change the Favorite Commute. | Done |
+| REQ-COMM-7 | The panel lists every route of every stop in the Favorite Commute with a **checkbox, all checked** when the view opens. Unchecking hides that route from the current view (map, buses, key) but does **not** change the Favorite Commute. **Select all** and **Clear all** buttons show or hide every route at once. | Done |
 | REQ-COMM-8 | The panel can be **dragged**: down (by its handle, or swiping down while the list is at its top) for more map, up for more list. It settles at small, half or large. | Done |
 | REQ-COMM-9 | On installed phone apps, nothing is drawn under the status bar (clock/battery): the map, its key and buttons start below it, so they are sharp and can be tapped. | Done |
 

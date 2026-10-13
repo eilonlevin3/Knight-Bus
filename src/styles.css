@@ -375,6 +375,14 @@ details > summary { cursor: pointer; }
 @media (prefers-color-scheme: dark) { .nav-button { color: #c8a8ff; border-color: #c8a8ff; } }
 .modal-card > button:last-child { border: 2px solid var(--purple-2); color: var(--purple-2); font-weight: 700; }
 @media (prefers-color-scheme: dark) { .modal-card > button:last-child { color: #c8a8ff; border-color: #c8a8ff; } }
+/* The row that holds Home, Back or Close stays at the top while the rest scrolls
+   (REQ-NAV-1). In a panel it sticks to the panel's top; on a full screen, below the
+   phone's status bar. */
+.sticky-top {
+  position: sticky; top: 0; z-index: 20; background: var(--bg); padding: 6px 0;
+  box-shadow: 0 0 0 8px var(--bg); /* covers what scrolls past beside and above it */
+}
+.screen > .sticky-top { top: var(--safe-top); }
 /* Select all / Clear all above the route icons */
 .small-button { min-height: 34px; padding: 4px 12px; font-size: 0.85rem; border-radius: 999px; }
 .select-row { flex-wrap: wrap; }

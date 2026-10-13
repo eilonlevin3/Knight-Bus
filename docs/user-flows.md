@@ -22,8 +22,8 @@ flowchart TD
 ```
 
 **Finding your way out** (REQ-NAV-1). On every screen, **Home**, **Back** and **Close** are
-framed, bold buttons at the top; in a pop-up, **Close** is at the bottom and stays there
-while the rest scrolls.
+framed, bold buttons at the top, and their row **stays at the top while you scroll down**.
+In a pop-up, **Close** is at the bottom and stays there while the rest scrolls.
 
 ## 1. First launch
 
@@ -227,7 +227,8 @@ first one.
 flags, and the bus symbols. Tap *Key* to fold it away.
 
 **Panel** (REQ-COMM-7, REQ-COMM-8). Each stop lists its routes with a checkbox, all checked.
-Uncheck a route to hide it, its buses and its key entry. This is only for this visit; the
+Uncheck a route to hide it, its buses and its key entry; **☑ Select all** and **☐ Clear
+all** show or hide every route at once. This is only for this visit; the
 Favorite Commute is unchanged, and the route is back next time.
 
 To see more map, **drag the panel down**: either by the grey handle at its top, or by
