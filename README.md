@@ -104,6 +104,7 @@ Knight Bus/
 ├── pipeline/
 │   ├── cities.json          Which cities exist and their boundaries
 │   ├── build-city-data.mjs  National GTFS → data/cities/<city>.json + data/schedules/<route>.json
+│   ├── build-speeds.mjs     A month of real travel times between stops → data/speeds/<route>.json (for the ghost)
 │   └── sources/             Weekend routes from outside the government feed (Busofash, Sababus)
 ├── scripts/
 │   ├── build-site.sh        Builds one version (main or debug) for publishing

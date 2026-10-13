@@ -108,15 +108,25 @@ when the feed is late. The ghost (REQ-RT-12) shows where the bus has probably go
 - **Only on request.** Tap a bus, and in its pop-up press **Show the ghost on the map**.
   It is for that one bus. Tap the bus or its ghost again and press **Remove the ghost**.
 - **How it is worked out.** The last signal is placed on the route's path. The time since
-  the signal is then spent moving forward along the path at **timetable speed**: the
-  scheduled minutes between each pair of stops, spread evenly between them. Where the
-  route has no timetable, 18 km/h is used. The ghost never passes the last stop and never
-  runs more than 30 minutes ahead.
+  the signal is then spent moving forward along the path, stretch by stretch. How long a
+  stretch between two stops takes comes from, in this order:
+  1. **a month of real trips** (REQ-DATA-12): the average time buses took on that stretch
+     in this half hour of the day, weekdays and the weekend apart; if that half hour has
+     too few trips, the stretch's average over the whole day;
+  2. the **timetable**: the scheduled minutes between the two stops;
+  3. 18 km/h, where there is neither.
+
+  Within a stretch the ghost moves evenly. It never passes the last stop and never runs
+  more than 30 minutes ahead.
+- **The month's numbers are fetched only now.** Turning a ghost on downloads one small file
+  for that route ([data-model.md](data-model.md#travel-times-of-a-route)). With no ghost
+  on, the app never asks for it. How the numbers are made and kept up to date:
+  [data-pipeline.md](data-pipeline.md#travel-times-a-month-of-history).
 - **How it looks.** A see-through marker with a dashed edge and a 👻, in the route's color,
   with a dotted trail from the real position to it. It moves every 2 seconds. The real
   marker stays where the last signal was.
-- **What it does not know.** Traffic, how long the bus waits at stops, whether it left
-  late. It is an estimate, and the pop-up says so. When a new signal arrives, the ghost
+- **What it does not know.** Today's traffic: it knows what is usual for this hour, not
+  what is happening now. It is an estimate, and the pop-up says so. When a new signal arrives, the ghost
   starts again from it.
 - If the bus is more than 250 m from the route as our map has it, no ghost is offered.
 
@@ -124,6 +134,7 @@ when the feed is late. The ghost (REQ-RT-12) shows where the bus has probably go
 
 Code: [liveLines.js](../src/liveLines.js) (`ghostOf`, `drawGhosts`),
 [lib/routeGeometry.js](../src/lib/routeGeometry.js) (`advanceOnPath`),
+[lib/speeds.js](../src/lib/speeds.js),
 [views/busInfo.js](../src/views/busInfo.js).
 
 ## The "next two + last passed" rule

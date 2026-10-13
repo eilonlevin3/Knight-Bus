@@ -123,6 +123,32 @@ answers "which routes serve this stop" (REQ-EDIT-2).
 - `trips`: `[day mask, start minute of the day, pattern index]`. Day mask bit 0 is Sunday,
   bit 6 Saturday (62 = Monday to Friday). A time at a stop is start + that stop's offset.
 
+## Travel times of a route
+
+`data/speeds/<route id>.json`, made by [pipeline/build-speeds.mjs](../pipeline/build-speeds.mjs)
+(REQ-DATA-12). Loaded by [src/lib/speeds.js](../src/lib/speeds.js) only when a ghost is
+turned on for a bus of that route.
+
+```json
+{
+  "v": 1, "days": 30, "from": "2026-09-13", "to": "2026-10-12",
+  "segments": {
+    "12345>12346": [null, null, 41, 38, "…96 half hours…", 52, 44]
+  }
+}
+```
+
+- A key is a stretch: the stop id it starts at, `>`, the stop id it ends at.
+- The list has 98 entries, each the average **seconds** for that stretch, or `null` when
+  fewer than 3 trips were seen:
+  - 0–47: the half hours of a **weekday** (Sunday to Thursday); entry 34 is 17:00–17:30;
+  - 48–95: the half hours of the **weekend** (Friday and Saturday);
+  - 96: the whole-day average on weekdays; 97: on the weekend.
+- `days` says how many days are in the average (fewer than 30 while the month fills in).
+- Times are Israel time. A route with no measured stretch has no file.
+
+`data/speeds/index.json` lists the days in the average.
+
 ## Device storage
 
 | Store | Key | What |

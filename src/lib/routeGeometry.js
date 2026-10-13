@@ -106,17 +106,19 @@ export function pathBefore(path, pos, meters) {
   return slicePath(path, from, pos);
 }
 
-// Where a bus that was at position `pos` on the path would be `seconds` later, if it kept
-// to the timetable (REQ-RT-12). pattern.times are the scheduled minutes from the first stop
-// to each stop; between two stops the bus is taken to move evenly. Without a timetable, a
-// city bus speed of 18 km/h is assumed. The bus never passes the last stop.
-// Returns a position on the path.
-export function advanceOnPath(pattern, path, pos, seconds, stopPos = stopPositions(pattern.stops, path)) {
+// Where a bus that was at position `pos` on the path would be `seconds` later (REQ-RT-12).
+// Between two stops the bus is taken to move evenly. How long a stretch takes comes from,
+// in this order:
+//   1. secondsOf(i): seconds from stop i-1 to stop i, from a month of real trips (or null);
+//   2. the timetable: pattern.times, the scheduled minutes from the first stop to each stop;
+//   3. a city bus speed of 18 km/h.
+// The bus never passes the last stop. Returns a position on the path.
+export function advanceOnPath(pattern, path, pos, seconds, stopPos = stopPositions(pattern.stops, path), secondsOf = null) {
   const times = pattern.times;
   const last = stopPos.at(-1);
   if (seconds <= 0 || pos >= last) return Math.min(pos, last);
   const usable = times && times.length === stopPos.length && times.every((x) => Number.isFinite(x));
-  if (!usable) {
+  if (!usable && !secondsOf) {
     // By distance: walk along the path at 5 meters a second.
     let left = seconds * 5;
     let here = pos;
@@ -140,13 +142,27 @@ export function advanceOnPath(pattern, path, pos, seconds, stopPos = stopPositio
     const to = stopPos[i];
     if (to <= here) continue;
     const span = to - from;
-    // Scheduled minutes for the part of this stretch still ahead of the bus.
-    const need = span > 0 ? (times[i] - times[i - 1]) * ((to - Math.max(here, from)) / span) : 0;
+    // Minutes for the whole stretch, then for the part of it still ahead of the bus.
+    const known = secondsOf ? secondsOf(i) : null;
+    const whole = known != null ? known / 60 : usable ? times[i] - times[i - 1] : metersAlong(path, from, to) / 5 / 60;
+    const need = span > 0 ? whole * ((to - Math.max(here, from)) / span) : 0;
     if (need > left) return here + (to - Math.max(here, from)) * (left / need);
     left -= need;
     here = to;
   }
   return last;
+}
+
+// Meters along the path between two positions on it.
+function metersAlong(path, from, to) {
+  let meters = 0;
+  let here = from;
+  while (here < to) {
+    const next = Math.min(Math.floor(here) + 1, to);
+    meters += metersBetween(pointAt(path, here), pointAt(path, next));
+    here = next;
+  }
+  return meters;
 }
 
 // The stretch of the line a bus covers in the `minutes` before it reaches stop `stopIndex`.

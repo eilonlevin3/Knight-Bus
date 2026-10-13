@@ -151,6 +151,7 @@ The reasons behind these choices are in [adr/](adr/):
 | [patterns.test.mjs](../tests/patterns.test.mjs) | The plain-language summary of a route's stop patterns |
 | [report.test.mjs](../tests/report.test.mjs) | The admin report's counts and the 3-people rule for stops |
 | [i18n.test.mjs](../tests/i18n.test.mjs) | Every on-screen text has a Hebrew line; switching language |
+| [speeds.test.mjs](../tests/speeds.test.mjs) | The month of real travel times: half hours and weekend, signals into times between stops, the 30-day average, the ghost using it |
 | [late.test.mjs](../tests/late.test.mjs) | A late live feed: finished rides dropped, late positions flagged |
 | [relay.test.mjs](../tests/relay.test.mjs) | The live relay: finding each route's buses in a file, answering only our app; reading its answers as buses |
 | [chips.test.mjs](../tests/chips.test.mjs) | Route icons: repeated numbers; merged alternatives and old saved ids |

@@ -7,6 +7,7 @@
 #   channel   main | debug
 #   out-dir   where to put the finished site (created; replaced only when everything passed)
 # Env: GTFS_ZIP      reuse an already downloaded national GTFS zip
+#      SPEED_DAYS_DIR  where the daily travel-time summaries are kept between runs
 #      SKIP_INSTALL  set to 1 to use the node_modules you already have (local runs)
 set -euo pipefail
 
@@ -24,6 +25,12 @@ echo "::endgroup::"
 
 echo "::group::[$CHANNEL] city data"
 npm run build:data
+echo "::endgroup::"
+
+# A month of real travel times between stops, for the ghost (REQ-DATA-12). If it fails, the
+# site is still built: ghosts then move at timetable speed.
+echo "::group::[$CHANNEL] travel times"
+npm run build:speeds || echo "::warning::[$CHANNEL] travel times were not built; ghosts will use the timetable"
 echo "::endgroup::"
 
 # Assemble in a temp folder; copy to OUT only at the very end, so a failure leaves nothing half-built.

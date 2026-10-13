@@ -9,6 +9,7 @@ import { LINE_COLORS, busIcon, lighten } from './map.js';
 import { stopPositions, splitPath, samePath, projectOnPath, advanceOnPath, pointAt, slicePath } from './lib/routeGeometry.js';
 import { makeOffsetPolyline } from './lib/offsetLine.js';
 import { showBusInfo } from './views/busInfo.js';
+import { loadSpeeds, segmentSeconds, cellAt } from './lib/speeds.js';
 
 let OffsetPolyline = null; // created on first use, once Leaflet (global L) is loaded
 
@@ -26,6 +27,7 @@ export class LiveLines {
     // moved forward from its last signal along its route (REQ-RT-12).
     this.ghostLayer = L.layerGroup().addTo(map);
     this.ghosts = new Set(); // ride ids
+    this.speeds = new Map(); // route id -> a month of real travel times (loaded for ghosts only)
     this.shown = new Map(); // ride id -> { bus, row, kind, lines }: the buses on the map now
     this.ghostTimer = null;
     this.timer = null;
@@ -198,6 +200,11 @@ export class LiveLines {
         toggle: () => {
           if (this.ghosts.has(rideId)) this.ghosts.delete(rideId); else this.ghosts.add(rideId);
           this.drawGhosts();
+          // Now, and only now, fetch how fast this route's buses really go (REQ-DATA-12).
+          const routeId = m.row.route.id;
+          if (this.ghosts.has(rideId) && !this.speeds.has(routeId)) {
+            loadSpeeds(routeId).then((speeds) => { this.speeds.set(routeId, speeds); if (!this.destroyed) this.drawGhosts(); });
+          }
         },
       },
     });
@@ -211,7 +218,11 @@ export class LiveLines {
     const { pos, meters } = projectOnPath(bus, path);
     if (meters > realtime.maxOffRouteMeters) return null;
     const seconds = Math.min(realtime.ghostMaxMinutes * 60, (Date.now() - bus.recordedAt.getTime()) / 1000);
-    const to = advanceOnPath(pattern, path, pos, seconds);
+    // Real travel times for this half hour where known; the timetable otherwise.
+    const speeds = this.speeds.get(row.route.id);
+    const cell = cellAt();
+    const secondsOf = speeds ? (i) => segmentSeconds(speeds, pattern.stops[i - 1].id, pattern.stops[i].id, cell) : null;
+    const to = advanceOnPath(pattern, path, pos, seconds, undefined, secondsOf);
     return { path, from: pos, to, point: pointAt(path, to) };
   }
 

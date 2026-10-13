@@ -33,6 +33,9 @@ export function showBusInfo({ bus, route, where = [], ghost = null }) {
     has(raw.siri_route__operator_ref) ? [t('Operator code'), raw.siri_route__operator_ref] : null,
     has(bus.offRouteMeters) ? [t('Distance from the route on our map'), t('{n} m', { n: bus.offRouteMeters })] : null,
     has(raw.siri_snapshot__snapshot_id) ? [t('Batch it arrived in'), raw.siri_snapshot__snapshot_id] : null,
+    // Which way the signal reached the app: our relay is about a minute behind the bus,
+    // Open Bus Stride can be many minutes behind (REQ-RT-11).
+    [t('Came through'), raw.source === 'relay' ? t('Our relay') : t('Open Bus Stride (the slower way)')],
   ].filter(Boolean);
 
   const table = (rows, cls = '') => h('dl', { class: `facts ${cls}` },
@@ -56,7 +59,7 @@ export function showBusInfo({ bus, route, where = [], ghost = null }) {
       ghost ? h('div', { class: 'ghost-box stack' },
         h('b', {}, t('👻 Estimated position now')),
         h('small', { class: 'muted' }, ghost.possible
-          ? t('A ghost bus on the map, moved forward from the last signal along the route at timetable speed. It is an estimate, not a signal: traffic and waiting at stops are not known.')
+          ? t('A ghost bus on the map, moved forward from the last signal along the route. It goes as fast as buses really went on each stretch at this time of day over the last month; where that is not known, at timetable speed. It is an estimate, not a signal: today\'s traffic is not known.')
           : t('This bus is not on the route as our map has it, so its position cannot be estimated.')),
         ghost.possible || ghost.on ? h('button', {
           class: ghost.on ? '' : 'primary',

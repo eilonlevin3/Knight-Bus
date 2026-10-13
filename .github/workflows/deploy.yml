@@ -26,7 +26,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 100
     steps:
       - name: Check out main
         uses: actions/checkout@v4
@@ -54,10 +54,23 @@ jobs:
         with:
           node-version: 24
 
+      # One small summary per day of how long buses took between stops, for the last 30 days
+      # (pipeline/build-speeds.mjs, REQ-DATA-12). Each run adds the days that are missing and
+      # saves the folder again; if it is ever lost, the days are read again from the archive.
+      - name: Restore the daily travel-time summaries
+        uses: actions/cache@v4
+        with:
+          path: speed-days
+          key: speed-days-${{ github.run_id }}
+          restore-keys: speed-days-
+
       - name: Build main site
         run: bash main/scripts/build-site.sh main _site
         env:
           NODE_OPTIONS: --max-old-space-size=6144
+          SPEED_DAYS_DIR: ${{ github.workspace }}/speed-days
+          # A push should publish soon: read few new days. The nightly and by-hand runs read more.
+          SPEED_MAX_NEW_DAYS: ${{ github.event_name == 'push' && 2 || 10 }}
 
       - name: Build debug site (allowed to fail)
         id: debugbuild
@@ -67,6 +80,9 @@ jobs:
         env:
           NODE_OPTIONS: --max-old-space-size=6144
           GTFS_ZIP: ${{ github.workspace }}/main/.cache/gtfs.zip # reuse main's download
+          SPEED_DAYS_DIR: ${{ github.workspace }}/speed-days
+          # A push should publish soon: read few new days. The nightly and by-hand runs read more.
+          SPEED_MAX_NEW_DAYS: ${{ github.event_name == 'push' && 2 || 10 }}
 
       - name: Summary
         run: |

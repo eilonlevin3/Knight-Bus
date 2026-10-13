@@ -286,6 +286,12 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   merged by their two ends (`route_long_name`). They have live positions in the feed.
 - **Ghost** (owner, 2026-10-13): an estimated position, only for a bus the person picks in
   its pop-up (REQ-RT-12). Keep it visibly an estimate; do not use it for "stops away".
+- **A month of real travel times** (owner, 2026-10-13; REQ-DATA-12): `pipeline/build-speeds.mjs`
+  reads the per-minute bus files, keeps one summary per day (job cache `speed-days`), and
+  publishes `data/speeds/<route>.json`: per stretch between two stops, average seconds for
+  48 half hours × weekday / weekend (the owner asked for exactly this split), over a
+  rolling 30 days, updated nightly. Only the ghost uses it, and the file is fetched only
+  when a ghost is turned on (`src/lib/speeds.js`). A day takes ~4 minutes to read.
 - **Route search and directions** (owner, 2026-10-10): `#/routes` lists each two-direction
   service once (`city.routePairs()`); the route screen shows one direction with
   ⇄ Switch direction (`route.opposite`, paired in the pipeline from `route_desc`) and a

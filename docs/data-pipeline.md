@@ -130,6 +130,55 @@ rail stops is a **light rail stop**; the rest are bus stops.
 
 Not read: type `715` (on-demand buses) and `8` (shared taxis).
 
+## Travel times: a month of history
+
+For the ghost (REQ-RT-12), [pipeline/build-speeds.mjs](../pipeline/build-speeds.mjs) works
+out how long buses **really** take between stops (REQ-DATA-12). It runs after the city
+files are built, in the same nightly job.
+
+**Where the numbers come from.** The Open Bus project's per-minute files, the same ones
+the live relay reads ([realtime.md](realtime.md#the-relay)). They are kept for years, so
+any day can be read again.
+
+**Step 1: one summary per day.** A day is 1,440 files with about 8 million signals. Each
+bus is followed through the day:
+
+1. its position is placed on its route's path (a bus further than 120 m from every stop
+   pattern of its route is left out);
+2. between two signals of the same trip, at most 150 seconds apart, every stop in between
+   gets the time it was passed, by sharing the time evenly over the distance;
+3. the time from one stop to the next is added to that stretch's count, in the **half
+   hour** it started in (Israel time) and the **kind of day**: weekday (Sunday to
+   Thursday) or weekend (Friday, Saturday).
+
+A day gives about 2.4 million such times and a summary of about 5 MB. Buses report about
+once a minute, so one single time is only right to within about half a minute; the average
+over a month of trips is what is used.
+
+**Step 2: the average of 30 days.** The summaries of the last 30 whole days are added up.
+For each route (with the alternatives merged into it, REQ-DATA-10) and each stretch, the
+result is the average seconds for each of the 48 half hours of a weekday and the 48 of the
+weekend, plus the stretch's average over the whole day of each kind. A half hour with fewer
+than 3 trips gets no number; the app then uses the whole-day average, then the timetable.
+One file per route: [data-model.md](data-model.md#travel-times-of-a-route).
+
+**How it stays up to date.** Every run of the job:
+
+- reads the days of the window that have no summary yet, newest first, at most 10 per run
+  (a day takes about 4 minutes);
+- deletes the summaries of days that left the window;
+- writes the route files again from the summaries it has.
+
+So each night yesterday is added and the day that is now 31 days old drops out. The
+summaries are kept between runs in the job's cache (`speed-days`). The first runs fill the
+month in over three nights, with the route files getting better each night. If the cache
+is ever lost, the same thing happens again: nothing is lost for good, because the source
+files are still there.
+
+If this step fails, the site is still published; ghosts then move at timetable speed.
+
+To try it on your computer: `SPEED_ONLY_DAY=2026-10-12 node pipeline/build-speeds.mjs`.
+
 ## Which routes are included
 
 **All bus routes in the government feed, on every day they run** (REQ-DATA-5). The pipeline

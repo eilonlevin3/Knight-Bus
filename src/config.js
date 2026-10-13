@@ -50,5 +50,8 @@ export const dataBaseUrl = './data/cities/';
 // One small timetable file per line, loaded only when a stop's schedule is opened.
 export const scheduleBaseUrl = './data/schedules/';
 
+// A month of real travel times between stops, one file per route; loaded only for a ghost.
+export const speedsBaseUrl = './data/speeds/';
+
 export const MAX_STOPS_PER_FAVORITE = 2;
 export const FAVORITE_SLOTS = [1, 2, 3];
