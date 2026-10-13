@@ -87,6 +87,16 @@ const OPERATOR_COLORS = [
 ];
 export const operatorColor = (rank) => OPERATOR_COLORS[(rank || 0) % OPERATOR_COLORS.length];
 
+// At a train station, trains of one direction are listed at a time (REQ-DATA-13): which
+// direction that is, and the button for the other one. counts: { north, south } from
+// city.trainHeadings(). Nothing where trains run only one way (the end of a line).
+export function directionRow(counts, heading, onSwitch) {
+  if (!counts.north || !counts.south) return null;
+  return h('div', { class: 'row between direction-row' },
+    h('b', { class: 'small' }, heading === 'north' ? t('🚆 Trains heading north') : t('🚆 Trains heading south')),
+    h('button', { type: 'button', class: 'nav-button', onclick: onSwitch }, t('⇄ Other direction')));
+}
+
 // "Select all" and "Clear all" above a list of route icons (REQ-HOME-3, REQ-EDIT-3).
 export function selectAllRow(onAll, onNone) {
   return h('div', { class: 'row select-row' },

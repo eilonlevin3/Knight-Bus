@@ -284,6 +284,8 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   (`bus`/`light`/`train`), `route.label` (🚈1, or 🚆 for a train, which has no number: show
   `route.label`, never `route.short`, on screen), `stop.kind`/`stop.icon`. Trains are
   merged by their two ends (`route_long_name`). They have live positions in the feed.
+  A station lists one direction at a time (`route.heading` north/south, the owner's
+  "Other direction" button, REQ-DATA-13).
 - **Ghost** (owner, 2026-10-13): an estimated position, only for a bus the person picks in
   its pop-up (REQ-RT-12). Keep it visibly an estimate; do not use it for "stops away".
 - **A month of real travel times** (owner, 2026-10-13; REQ-DATA-12): `pipeline/build-speeds.mjs`
@@ -320,5 +322,5 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
 - Before a public launch: a lawyer should review docs/privacy.md; set Analytics data
   retention; the workflow actions still warn about an old Node runtime (`@v4` actions).
 - Ideas not requested yet: more cities, a version line on the main app's home screen,
-  grouping a train station's many "from A to B" icons by destination (Tel Aviv Merkaz
-  shows 61).
+  grouping a train station's "from A to B" icons by destination (Tel Aviv Merkaz has about
+  30 per direction).

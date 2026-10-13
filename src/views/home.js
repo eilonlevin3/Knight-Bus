@@ -14,7 +14,7 @@ import { draggableSheet } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { consent, setConsent, detailed, track, trackDetail, bucket } from '../analytics.js';
 import { safeSummary, debugSummary } from './privacy.js';
-import { routeChip, repeatedNumbers, selectAllRow } from './liveInfo.js';
+import { routeChip, repeatedNumbers, selectAllRow, directionRow } from './liveInfo.js';
 import { showRouteCard } from './lineInfo.js';
 import { stopSuffix, stopHazard } from './stopInfo.js';
 import { showOptions } from './options.js';
@@ -53,6 +53,7 @@ export async function render(root, ctx) {
   const state = {
     stop: null, // the stop being explored
     hidden: new Set(), // route ids unchecked for this stop
+    heading: 'north', // at a train station: which direction's trains are listed
     rows: [], // live rows from LiveLines
     updatedAt: null,
   };
@@ -90,13 +91,16 @@ export async function render(root, ctx) {
     onPick: selectStop,
   });
 
-  const shownEntries = () => city.routesAtStop(state.stop.id)
+  // The routes listed for the open stop. At a train station: the trains of one direction.
+  const listedRoutes = () => city.routesAtStopHeading(state.stop.id, state.heading);
+  const shownEntries = () => listedRoutes()
     .filter((r) => !state.hidden.has(r.id))
     .map((r) => ({ stopId: state.stop.id, routeId: r.id }));
 
   function selectStop(stop) {
     state.stop = stop;
-    const routes = city.routesAtStop(stop.id);
+    state.heading = city.defaultHeading(stop.id);
+    const routes = listedRoutes();
     state.hidden = new Set(routes.slice(MAX_ROUTES_SHOWN_AT_FIRST).map((r) => r.id));
     state.rows = [];
     lines.set(shownEntries());
@@ -145,7 +149,15 @@ export async function render(root, ctx) {
       return h('p', { class: 'muted' }, t('Tap a bus stop on the map to see its routes and live buses. Zoom in if you see no stops.'));
     }
     const s = state.stop;
-    const routes = city.routesAtStop(s.id);
+    const routes = listedRoutes();
+    const otherDirection = () => {
+      state.heading = state.heading === 'north' ? 'south' : 'north';
+      state.hidden = new Set(listedRoutes().slice(MAX_ROUTES_SHOWN_AT_FIRST).map((r) => r.id));
+      state.rows = [];
+      lines.set(shownEntries());
+      track('train_direction_switched', { where: 'home' });
+      paint();
+    };
     // One small icon per route: a checkbox (show on the map or not) and the route number.
     // Tapping the number opens more about the route (REQ-HOME-3).
     const repeated = repeatedNumbers(routes);
@@ -174,6 +186,7 @@ export async function render(root, ctx) {
         tn(routes.length, '1 route stops here.', '{n} routes stop here.'),
         t(' Tap a number for details; uncheck its box to hide the route. Solid line = coming to this stop, lighter = after it.'),
         routes.length > MAX_ROUTES_SHOWN_AT_FIRST ? t(' Showing the first {n}; check more below.', { n: MAX_ROUTES_SHOWN_AT_FIRST }) : ''),
+      directionRow(city.trainHeadings(s.id), state.heading, otherDirection),
       selectAllRow(
         () => { state.hidden = new Set(); lines.set(shownEntries()); paint(); track('routes_select_all', { where: 'home' }); },
         () => { state.hidden = new Set(routes.map((r) => r.id)); lines.set(shownEntries()); paint(); track('routes_clear_all', { where: 'home' }); }),

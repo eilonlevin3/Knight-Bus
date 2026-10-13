@@ -78,6 +78,13 @@ for that bus: an estimate of where it is now (REQ-RT-12,
 A light rail line is written 🚈1; a train has no number, so its icon reads
 *🚆 first station → last station*.
 
+A train station serves both directions from one place, so its trains are listed **one
+direction at a time** (REQ-DATA-13): the panel says *🚆 Trains heading north* or *…south*,
+and **⇄ Other direction** switches to the trains going the other way. It opens on the
+direction with more routes. "North" and "south" go by where a train ends compared with
+where it starts. The editor has the same button; routes you checked in one direction stay
+checked when you look at the other.
+
 **Route icons** (REQ-HOME-3). The panel shows the stop first, then its routes as small
 icons, several to a row: `[☑ 62] [☑ 66⚠] [☐ 189]`. Each is a checkbox and the route number
 in the route's map color (⚠ = more than one stop pattern; dashed ring = weekend route).
