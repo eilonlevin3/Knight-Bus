@@ -78,12 +78,13 @@ for that bus: an estimate of where it is now (REQ-RT-12,
 A light rail line is written 🚈1; a train has no number, so its icon reads
 *🚆 first station → last station*.
 
-A train station serves both directions from one place, so its trains are listed **one
-direction at a time** (REQ-DATA-13): the panel says *🚆 Trains heading north* or *…south*,
-and **⇄ Other direction** switches to the trains going the other way. It opens on the
-direction with more routes. "North" and "south" go by where a train ends compared with
-where it starts. The editor has the same button; routes you checked in one direction stay
-checked when you look at the other.
+A train station serves both directions from one place. So beside *Select all* and *Clear
+all* it has **a button per direction** (REQ-DATA-13): **⬆ Heading north (29)** and
+**⬇ Heading south (32)**. A button checks every train or light rail route going that way;
+when they are all checked already, it unchecks them. The two buttons work separately, so
+you can show one direction, both, or neither. "North" and "south" go by where a route ends
+compared with where it starts. A light rail platform usually serves one direction and has
+one button. The editor has the same buttons.
 
 **Route icons** (REQ-HOME-3). The panel shows the stop first, then its routes as small
 icons, several to a row: `[☑ 62] [☑ 66⚠] [☐ 189]`. Each is a checkbox and the route number
@@ -239,6 +240,11 @@ first one.
 
 **Map key** (REQ-COMM-6), top-left: the color, number and destination of each route, the
 flags, and the bus symbols. Tap *Key* to fold it away.
+
+**✕ Close** (REQ-COMM-10), at the top of the panel, closes the Favorite Commute the way
+closing a stop does: you are back on the home screen and **the map stays where you left
+it**, at the same place and zoom. It does not jump back to where you are; the ◎ button on
+the home map does that when you want it.
 
 **Panel** (REQ-COMM-7, REQ-COMM-8). Each stop lists its routes with a checkbox, all checked.
 Uncheck a route to hide it, its buses and its key entry; **☑ Select all** and **☐ Clear

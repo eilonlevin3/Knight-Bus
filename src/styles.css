@@ -389,8 +389,8 @@ details > summary { cursor: pointer; }
   box-shadow: 0 0 0 8px var(--bg); /* covers what scrolls past beside and above it */
 }
 .screen > .sticky-top { top: var(--safe-top); }
-/* A train station: which direction is listed, and the button for the other (REQ-DATA-13) */
-.direction-row { padding: 4px 0; }
+/* A station's direction buttons, beside Select all and Clear all (REQ-DATA-13) */
+.heading-button.on { border-color: var(--purple-2); font-weight: 700; }
 /* Select all / Clear all above the route icons */
 .small-button { min-height: 34px; padding: 4px 12px; font-size: 0.85rem; border-radius: 999px; }
 .select-row { flex-wrap: wrap; }

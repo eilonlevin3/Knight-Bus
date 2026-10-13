@@ -10,7 +10,7 @@ import { watchPosition, getPosition } from '../location.js';
 import { searchPlaces, placeName } from '../geocode.js';
 import { LiveLines } from '../liveLines.js';
 import { saveFavorite, deleteFavorite } from '../store.js';
-import { routeBadge, routeChip, repeatedNumbers, selectAllRow, directionRow } from './liveInfo.js';
+import { routeBadge, routeChip, repeatedNumbers, selectAllRow, headingButtons } from './liveInfo.js';
 import { showRouteCard } from './lineInfo.js';
 import { stopSuffix, stopHazard, platformText } from './stopInfo.js';
 import { commuteName, isDefaultName } from '../lib/names.js';
@@ -108,7 +108,7 @@ export async function render(root, ctx, { slot }) {
     if (state.mode === 'pick') track('stop_picked', { how });
     const saved = draft.stops[state.index];
     state.stop = s;
-    state.heading = city.defaultHeading(s.id);
+
     // Default: no lines shown, unless re-editing the same stop (keep what was saved).
     state.checked = new Set(saved?.stopId === s.id ? saved.routeIds : []);
     state.mode = 'lines';
@@ -205,9 +205,7 @@ export async function render(root, ctx, { slot }) {
 
   function paintLines() {
     const s = state.stop;
-    // At a train station the trains of one direction are listed at a time; routes checked
-    // in the other direction stay checked.
-    const routes = city.routesAtStopHeading(s.id, state.heading);
+    const routes = city.routesAtStop(s.id);
     // The same small icons as on the home screen: a checkbox and the route number; the
     // number opens more about the route (REQ-EDIT-2).
     const repeated = repeatedNumbers(routes);
@@ -233,14 +231,15 @@ export async function render(root, ctx, { slot }) {
       h('p', { class: 'muted' }, `${t('Stop code {code}', { code: s.code })}${platformText(s) ? ` · ${platformText(s)}` : ''} `, stopHazard(city, s, (other) => pickStop(other, 'platform')),
         ` · ${tn(routes.length, '1 route.', '{n} routes.')} ${t('Check the routes you want to see. Tap a number for details.')}`,
         ' ', h('button', { class: 'link small', onclick: () => go('pick') }, t('Change stop'))),
-      directionRow(city.trainHeadings(s.id), state.heading, () => {
-        state.heading = state.heading === 'north' ? 'south' : 'north';
-        track('train_direction_switched', { where: 'editor' });
-        paint();
-      }),
       selectAllRow(
-        () => { state.checked = new Set([...state.checked, ...routes.map((r) => r.id)]); update(); track('routes_select_all', { where: 'editor' }); },
-        () => { state.checked = new Set(); update(); track('routes_clear_all', { where: 'editor' }); }),
+        () => { state.checked = new Set(routes.map((r) => r.id)); update(); track('routes_select_all', { where: 'editor' }); },
+        () => { state.checked = new Set(); update(); track('routes_clear_all', { where: 'editor' }); },
+        // The direction buttons of a station: check or uncheck every route going one way.
+        headingButtons(routes, (id) => state.checked.has(id), (ids, on) => {
+          for (const id of ids) if (on) state.checked.add(id); else state.checked.delete(id);
+          track('heading_toggled', { where: 'editor', on: on ? 1 : 0 });
+          update();
+        })),
       h('div', { class: 'route-chips' }, ...rows),
       h('div', { class: 'row sticky' },
         h('button', { onclick: () => (draft.stops.length ? go('summary') : ctx.go('#/home')) }, t('Cancel')),

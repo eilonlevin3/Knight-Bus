@@ -1,8 +1,8 @@
 // Open a Favorite Commute: its stops, chosen routes and live buses. Docs: docs/user-flows.md#4-using-a-favorite-commute
-// @req REQ-COMM-1 @req REQ-COMM-2 @req REQ-COMM-3 @req REQ-COMM-6 @req REQ-COMM-7 @req REQ-COMM-8
+// @req REQ-COMM-10 @req REQ-COMM-1 @req REQ-COMM-2 @req REQ-COMM-3 @req REQ-COMM-6 @req REQ-COMM-7 @req REQ-COMM-8
 
 import { h } from '../lib/dom.js';
-import { t, backArrow, locale } from '../i18n.js';
+import { t, locale } from '../i18n.js';
 import { createMap, stopLayer, userMarker, flagMarker, legendControl, legendHtml } from '../map.js';
 import { watchPosition } from '../location.js';
 import { LiveLines } from '../liveLines.js';
@@ -132,9 +132,18 @@ export async function render(root, ctx, { slot }) {
     const scroll = sheet.scrollTop;
     sheet.replaceChildren(
       h('div', { class: 'row between sticky-top' },
-        h('button', { class: 'nav-button', onclick: () => ctx.go('#/home') }, `${backArrow()} ${t('Home')}`),
+        h('button', { class: 'link', onclick: () => ctx.go(`#/edit/${slot}`) }, t('✎ Edit')),
         h('h2', {}, commuteName(fav, slot)),
-        h('button', { class: 'link', onclick: () => ctx.go(`#/edit/${slot}`) }, t('✎ Edit'))),
+        // Close, like closing a stop: back to the home screen with the map left where it is,
+        // not moved back to the person (REQ-COMM-10).
+        h('button', {
+          class: 'nav-button', 'aria-label': t('Close this Favorite Commute'),
+          onclick: () => {
+            const c = map.getCenter();
+            ctx.homeView = { center: [c.lat, c.lng], zoom: map.getZoom() };
+            ctx.go('#/home');
+          },
+        }, t('✕ Close'))),
       h('p', { class: 'muted small' }, t('Uncheck a route to hide it here. Your Favorite Commute stays the same.')),
       selectAllRow(
         () => { hidden.clear(); track('routes_select_all', { where: 'commute' }); show(); },

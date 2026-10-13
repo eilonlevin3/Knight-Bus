@@ -14,7 +14,7 @@ import { draggableSheet } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { consent, setConsent, detailed, track, trackDetail, bucket } from '../analytics.js';
 import { safeSummary, debugSummary } from './privacy.js';
-import { routeChip, repeatedNumbers, selectAllRow, directionRow } from './liveInfo.js';
+import { routeChip, repeatedNumbers, selectAllRow, headingButtons } from './liveInfo.js';
 import { showRouteCard } from './lineInfo.js';
 import { stopSuffix, stopHazard } from './stopInfo.js';
 import { showOptions } from './options.js';
@@ -37,11 +37,15 @@ export async function render(root, ctx) {
   root.append(screen);
 
   // Start where you are (or were last time); the city center until the phone knows.
+  // Coming back from a Favorite Commute that was closed: the map stays where it was left
+  // (REQ-COMM-10). Otherwise it starts around the person.
+  const kept = ctx.homeView;
+  ctx.homeView = null;
   const known = ctx.position || readLastPosition();
-  const map = createMap(mapEl, known ? [known.lat, known.lon] : city.meta.center, 16);
+  const map = createMap(mapEl, kept ? kept.center : known ? [known.lat, known.lon] : city.meta.center, kept ? kept.zoom : 16);
   const showMe = userMarker(map);
   showMe(ctx.position);
-  let centeredOnMe = !!ctx.position;
+  let centeredOnMe = !!ctx.position || !!kept; // a kept view is not moved when the phone finds itself
   const stopWatch = watchPosition((p) => {
     ctx.position = p;
     saveLastPosition(p);
@@ -53,7 +57,7 @@ export async function render(root, ctx) {
   const state = {
     stop: null, // the stop being explored
     hidden: new Set(), // route ids unchecked for this stop
-    heading: 'north', // at a train station: which direction's trains are listed
+
     rows: [], // live rows from LiveLines
     updatedAt: null,
   };
@@ -91,15 +95,14 @@ export async function render(root, ctx) {
     onPick: selectStop,
   });
 
-  // The routes listed for the open stop. At a train station: the trains of one direction.
-  const listedRoutes = () => city.routesAtStopHeading(state.stop.id, state.heading);
+  const listedRoutes = () => city.routesAtStop(state.stop.id);
   const shownEntries = () => listedRoutes()
     .filter((r) => !state.hidden.has(r.id))
     .map((r) => ({ stopId: state.stop.id, routeId: r.id }));
 
   function selectStop(stop) {
     state.stop = stop;
-    state.heading = city.defaultHeading(stop.id);
+
     const routes = listedRoutes();
     state.hidden = new Set(routes.slice(MAX_ROUTES_SHOWN_AT_FIRST).map((r) => r.id));
     state.rows = [];
@@ -150,12 +153,11 @@ export async function render(root, ctx) {
     }
     const s = state.stop;
     const routes = listedRoutes();
-    const otherDirection = () => {
-      state.heading = state.heading === 'north' ? 'south' : 'north';
-      state.hidden = new Set(listedRoutes().slice(MAX_ROUTES_SHOWN_AT_FIRST).map((r) => r.id));
-      state.rows = [];
+    // The direction buttons of a station: check or uncheck every route going one way.
+    const setMany = (ids, on) => {
+      for (const id of ids) if (on) state.hidden.delete(id); else state.hidden.add(id);
       lines.set(shownEntries());
-      track('train_direction_switched', { where: 'home' });
+      track('heading_toggled', { where: 'home', on: on ? 1 : 0 });
       paint();
     };
     // One small icon per route: a checkbox (show on the map or not) and the route number.
@@ -186,10 +188,10 @@ export async function render(root, ctx) {
         tn(routes.length, '1 route stops here.', '{n} routes stop here.'),
         t(' Tap a number for details; uncheck its box to hide the route. Solid line = coming to this stop, lighter = after it.'),
         routes.length > MAX_ROUTES_SHOWN_AT_FIRST ? t(' Showing the first {n}; check more below.', { n: MAX_ROUTES_SHOWN_AT_FIRST }) : ''),
-      directionRow(city.trainHeadings(s.id), state.heading, otherDirection),
       selectAllRow(
         () => { state.hidden = new Set(); lines.set(shownEntries()); paint(); track('routes_select_all', { where: 'home' }); },
-        () => { state.hidden = new Set(routes.map((r) => r.id)); lines.set(shownEntries()); paint(); track('routes_clear_all', { where: 'home' }); }),
+        () => { state.hidden = new Set(routes.map((r) => r.id)); lines.set(shownEntries()); paint(); track('routes_clear_all', { where: 'home' }); },
+        headingButtons(routes, (id) => !state.hidden.has(id), setMany)),
       h('div', { class: 'route-chips' }, ...rows),
       h('div', { class: 'row between' },
         h('small', { class: 'muted' }, state.updatedAt

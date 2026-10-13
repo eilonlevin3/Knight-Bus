@@ -284,8 +284,12 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   (`bus`/`light`/`train`), `route.label` (🚈1, or 🚆 for a train, which has no number: show
   `route.label`, never `route.short`, on screen), `stop.kind`/`stop.icon`. Trains are
   merged by their two ends (`route_long_name`). They have live positions in the feed.
-  A station lists one direction at a time (`route.heading` north/south, the owner's
-  "Other direction" button, REQ-DATA-13).
+  A station lists every route and has a button per direction beside Select all / Clear
+  all (`route.heading` north/south, `headingButtons`, REQ-DATA-13). The owner rejected the
+  first version, which listed one direction at a time with an "Other direction" button.
+- **Closing a Favorite Commute** (owner, 2026-10-13): **✕ Close**, not "← Home", and the
+  home map stays where the Favorite Commute's map was (`ctx.homeView`), like closing a
+  stop (REQ-COMM-10). Do not recenter on the person when coming back.
 - **Ghost** (owner, 2026-10-13): an estimated position, only for a bus the person picks in
   its pop-up (REQ-RT-12). Keep it visibly an estimate; do not use it for "stops away".
 - **A month of real travel times** (owner, 2026-10-13; REQ-DATA-12): `pipeline/build-speeds.mjs`

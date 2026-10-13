@@ -39,27 +39,25 @@ test('a route knows the ids of the alternatives merged into it; old saved ids st
   assert.equal(city.routesAtStop('s1').length, 2);
 });
 
-test('a train station lists the trains of one direction at a time', () => {
+test('trains and light rail know which way they run; buses do not', () => {
   // REQ-DATA-13. Three stations south to north; trains both ways, and a bus at the middle one.
   const raw = {
     cityId: 'x', agencies: ['Rail', 'Dan'],
     stops: [['a', '1', 'South', 31.2, 34.8], ['b', '2', 'Middle', 32.0, 34.8], ['c', '3', 'North', 32.8, 35.0]],
     routes: [
       ['n1', '', 'North', 0, 2, [0, 1, 2], ''],
-      ['n2', '', 'North', 0, 2, [1, 2], ''],
       ['s1', '', 'South', 0, 2, [2, 1, 0], ''],
+      ['l1', '1', 'South', 0, 0, [1, 0], ''],
       ['bus', '5', 'Middle', 1, 3, [1, 0], ''],
     ],
   };
   const city = new CityData(raw, { version: 'v' });
   assert.equal(city.routes.get('n1').heading, 'north');
   assert.equal(city.routes.get('s1').heading, 'south');
+  assert.equal(city.routes.get('l1').heading, 'south'); // light rail
   assert.equal(city.routes.get('bus').heading, null);
-  assert.deepEqual(city.trainHeadings('b'), { north: 2, south: 1 });
-  assert.equal(city.defaultHeading('b'), 'north');
-  const ids = (heading) => city.routesAtStopHeading('b', heading).map((r) => r.id).sort();
-  assert.deepEqual(ids('north'), ['bus', 'n1', 'n2']); // the bus is listed either way
-  assert.deepEqual(ids('south'), ['bus', 's1']);
+  assert.equal(city.routesAtStop('b').length, 4); // a station lists every route, both ways
   assert.equal(city.stops.get('b').kind, 'train');
   assert.equal(city.routes.get('n1').label, '🚆');
+  assert.equal(city.routes.get('l1').label, '🚈1');
 });

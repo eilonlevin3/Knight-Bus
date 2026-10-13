@@ -87,21 +87,29 @@ const OPERATOR_COLORS = [
 ];
 export const operatorColor = (rank) => OPERATOR_COLORS[(rank || 0) % OPERATOR_COLORS.length];
 
-// At a train station, trains of one direction are listed at a time (REQ-DATA-13): which
-// direction that is, and the button for the other one. counts: { north, south } from
-// city.trainHeadings(). Nothing where trains run only one way (the end of a line).
-export function directionRow(counts, heading, onSwitch) {
-  if (!counts.north || !counts.south) return null;
-  return h('div', { class: 'row between direction-row' },
-    h('b', { class: 'small' }, heading === 'north' ? t('🚆 Trains heading north') : t('🚆 Trains heading south')),
-    h('button', { type: 'button', class: 'nav-button', onclick: onSwitch }, t('⇄ Other direction')));
-}
-
 // "Select all" and "Clear all" above a list of route icons (REQ-HOME-3, REQ-EDIT-3).
-export function selectAllRow(onAll, onNone) {
+// extra: more buttons for the same row (the direction buttons of a station).
+export function selectAllRow(onAll, onNone, extra = []) {
   return h('div', { class: 'row select-row' },
     h('button', { type: 'button', class: 'small-button', onclick: onAll }, t('☑ Select all')),
-    h('button', { type: 'button', class: 'small-button', onclick: onNone }, t('☐ Clear all')));
+    h('button', { type: 'button', class: 'small-button', onclick: onNone }, t('☐ Clear all')),
+    ...extra);
+}
+
+// At a train station or light rail stop: one button per direction, beside Select all and
+// Clear all (REQ-DATA-13). A button checks every train or light rail route going that way;
+// when they are all checked already, it unchecks them.
+// isOn(route id) says whether a route is checked; setMany(route ids, on) checks or unchecks.
+export function headingButtons(routes, isOn, setMany) {
+  return ['north', 'south'].map((heading) => {
+    const ids = routes.filter((r) => r.heading === heading).map((r) => r.id);
+    if (!ids.length) return null;
+    const allOn = ids.every(isOn);
+    return h('button', {
+      type: 'button', class: `small-button heading-button${allOn ? ' on' : ''}`, 'aria-pressed': String(allOn),
+      onclick: () => setMany(ids, !allOn),
+    }, `${allOn ? '☑' : '☐'} ${heading === 'north' ? t('⬆ Heading north ({n})', { n: ids.length }) : t('⬇ Heading south ({n})', { n: ids.length })}`);
+  }).filter(Boolean);
 }
 
 // The route numbers that appear more than once in a list of routes.

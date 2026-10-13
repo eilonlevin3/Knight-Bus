@@ -209,9 +209,9 @@ export const he = {
 
   'Stop {n}: {name}': 'תחנה {n}: {name}',
   'Stop code {code}': 'מספר תחנה {code}',
-  '🚆 Trains heading north': '🚆 רכבות לכיוון צפון',
-  '🚆 Trains heading south': '🚆 רכבות לכיוון דרום',
-  '⇄ Other direction': '⇄ הכיוון השני',
+  '⬆ Heading north ({n})': '⬆ לכיוון צפון ({n})',
+  '⬇ Heading south ({n})': '⬇ לכיוון דרום ({n})',
+  'Close this Favorite Commute': 'סגירת הנסיעה המועדפת',
   '☑ Select all': '☑ בחירת הכול',
   '☐ Clear all': '☐ ניקוי הכול',
   'Check the routes you want to see. Tap a number for details.': 'סמנו את הקווים שתרצו לראות. הקישו על מספר לפרטים.',

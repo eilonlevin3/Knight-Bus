@@ -129,9 +129,9 @@ export class CityData {
         stops: patterns[0].stops, times: patterns[0].times, // the most common pattern, for code that needs just one
         source, live: !source, hours: source ? this.sources[source]?.hours || null : null,
         opposite,
-        // Trains only: which way it runs, by where it ends relative to where it starts. A
-        // station shows one direction at a time (REQ-DATA-13).
-        heading: KIND_OF_TYPE[type] === 'train' ? (patterns[0].stops.at(-1).lat >= patterns[0].stops[0].lat ? 'north' : 'south') : null,
+        // Trains and light rail: which way it runs, by where it ends relative to where it
+        // starts. A station has a button per direction (REQ-DATA-13).
+        heading: KIND_OF_TYPE[type] ? (patterns[0].stops.at(-1).lat >= patterns[0].stops[0].lat ? 'north' : 'south') : null,
         // Every id live buses of this route report under: its own, and those of the
         // ministry's "alternatives" merged into it (REQ-DATA-10).
         liveIds: [id, ...members],
@@ -183,23 +183,6 @@ export class CityData {
       .sort((a, b) => a.short.localeCompare(b.short, 'he', { numeric: true }) || a.dest.localeCompare(b.dest, 'he'));
   }
 
-  // How many train routes at a stop run each way: { north, south }.
-  trainHeadings(stopId) {
-    const count = { north: 0, south: 0 };
-    for (const r of this.routesAtStop(stopId)) if (r.heading) count[r.heading]++;
-    return count;
-  }
-
-  // The direction a train station opens on: the one with more routes.
-  defaultHeading(stopId) {
-    const { north, south } = this.trainHeadings(stopId);
-    return south > north ? 'south' : 'north';
-  }
-
-  // The routes at a stop, with the trains of one direction only (REQ-DATA-13).
-  routesAtStopHeading(stopId, heading) {
-    return this.routesAtStop(stopId).filter((r) => !r.heading || r.heading === heading);
-  }
 
   stopsInBounds(south, west, north, east, limit = 800, railOnly = false) {
     const out = [];
