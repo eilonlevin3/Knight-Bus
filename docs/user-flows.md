@@ -21,6 +21,10 @@ flowchart TD
   E -- Save Favorite Commute --> M
 ```
 
+**Finding your way out** (REQ-NAV-1). On every screen, **Home**, **Back** and **Close** are
+framed, bold buttons at the top; in a pop-up, **Close** is at the bottom and stays there
+while the rest scrolls.
+
 ## 1. First launch
 
 1. **Sign in** (REQ-AUTH-1, REQ-AUTH-2). Choose *Continue with Google*, or enter an email
@@ -72,7 +76,8 @@ icons, several to a row: `[☑ 62] [☑ 66⚠] [☐ 189]`. Each is a checkbox an
 in the route's map color (⚠ = more than one stop pattern; dashed ring = weekend route).
 
 - **The box** shows or hides the route and its buses on the map. All start checked; at a
-  busy stop, the first 16.
+  busy stop, the first 16. **☑ Select all** and **☐ Clear all**, above the icons, check or
+  uncheck every route at once.
 - **The number** opens a pop-up about the route: where it goes, its operator, first and
   last stop, its live buses at this stop, *What is different?* for a route with several
   stop patterns, and **Full route: map, stops and timetable**, which opens
@@ -145,7 +150,8 @@ stop** as the same small icons as on the home screen: a checkbox and the route n
 - shows up to three live buses on that route: the **next two coming to your stop** (solid,
   pulsing) and **the last one that passed it** (faded, dashed).
 
-Unchecking removes the route and its buses. **Pressing the number** opens the pop-up about
+Unchecking removes the route and its buses. **☑ Select all** and **☐ Clear all** check or
+uncheck every route at once. **Pressing the number** opens the pop-up about
 the route: where it goes, its operator, its live status (*Next: 3 stops away, 9 stops away ·
 Passed 2 stops ago · 40s ago*) and **Full route: map, stops and timetable**. Opening the full
 route from the editor asks first, because it leaves the editor and unsaved changes are lost.

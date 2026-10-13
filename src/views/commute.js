@@ -132,7 +132,7 @@ export async function render(root, ctx, { slot }) {
     const scroll = sheet.scrollTop;
     sheet.replaceChildren(
       h('div', { class: 'row between' },
-        h('button', { class: 'link', onclick: () => ctx.go('#/home') }, `${backArrow()} ${t('Home')}`),
+        h('button', { class: 'nav-button', onclick: () => ctx.go('#/home') }, `${backArrow()} ${t('Home')}`),
         h('h2', {}, commuteName(fav, slot)),
         h('button', { class: 'link', onclick: () => ctx.go(`#/edit/${slot}`) }, t('✎ Edit'))),
       h('p', { class: 'muted small' }, t('Uncheck a route to hide it here. Your Favorite Commute stays the same.')),

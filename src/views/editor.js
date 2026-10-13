@@ -10,7 +10,7 @@ import { watchPosition, getPosition } from '../location.js';
 import { searchPlaces, placeName } from '../geocode.js';
 import { LiveLines } from '../liveLines.js';
 import { saveFavorite, deleteFavorite } from '../store.js';
-import { routeBadge, routeChip, repeatedNumbers } from './liveInfo.js';
+import { routeBadge, routeChip, repeatedNumbers, selectAllRow } from './liveInfo.js';
 import { showRouteCard } from './lineInfo.js';
 import { stopSuffix, stopHazard, platformText } from './stopInfo.js';
 import { commuteName, isDefaultName } from '../lib/names.js';
@@ -230,6 +230,9 @@ export async function render(root, ctx, { slot }) {
       h('p', { class: 'muted' }, `${t('Stop code {code}', { code: s.code })}${platformText(s) ? ` · ${platformText(s)}` : ''} `, stopHazard(city, s, (other) => pickStop(other, 'platform')),
         ` · ${tn(routes.length, '1 route.', '{n} routes.')} ${t('Check the routes you want to see. Tap a number for details.')}`,
         ' ', h('button', { class: 'link small', onclick: () => go('pick') }, t('Change stop'))),
+      selectAllRow(
+        () => { state.checked = new Set(routes.map((r) => r.id)); update(); track('routes_select_all', { where: 'editor' }); },
+        () => { state.checked = new Set(); update(); track('routes_clear_all', { where: 'editor' }); }),
       h('div', { class: 'route-chips' }, ...rows),
       h('div', { class: 'row sticky' },
         h('button', { onclick: () => (draft.stops.length ? go('summary') : ctx.go('#/home')) }, t('Cancel')),

@@ -86,6 +86,13 @@ const OPERATOR_COLORS = [
 ];
 export const operatorColor = (rank) => OPERATOR_COLORS[(rank || 0) % OPERATOR_COLORS.length];
 
+// "Select all" and "Clear all" above a list of route icons (REQ-HOME-3, REQ-EDIT-3).
+export function selectAllRow(onAll, onNone) {
+  return h('div', { class: 'row select-row' },
+    h('button', { type: 'button', class: 'small-button', onclick: onAll }, t('☑ Select all')),
+    h('button', { type: 'button', class: 'small-button', onclick: onNone }, t('☐ Clear all')));
+}
+
 // The route numbers that appear more than once in a list of routes.
 export function repeatedNumbers(routes) {
   const count = new Map();

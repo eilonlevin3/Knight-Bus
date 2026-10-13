@@ -200,6 +200,8 @@ export const he = {
 
   'Stop {n}: {name}': 'תחנה {n}: {name}',
   'Stop code {code}': 'מספר תחנה {code}',
+  '☑ Select all': '☑ בחירת הכול',
+  '☐ Clear all': '☐ ניקוי הכול',
   'Check the routes you want to see. Tap a number for details.': 'סמנו את הקווים שתרצו לראות. הקישו על מספר לפרטים.',
   'Open the full route? What you have not saved in this Favorite Commute will be lost.': 'לפתוח את הקו המלא? מה שלא שמרתם בנסיעה המועדפת הזו יאבד.',
   'Show the buttons': 'הצגת הכפתורים',

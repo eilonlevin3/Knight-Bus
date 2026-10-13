@@ -14,7 +14,7 @@ import { draggableSheet } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { consent, setConsent, detailed, track, trackDetail, bucket } from '../analytics.js';
 import { safeSummary, debugSummary } from './privacy.js';
-import { routeChip, repeatedNumbers } from './liveInfo.js';
+import { routeChip, repeatedNumbers, selectAllRow } from './liveInfo.js';
 import { showRouteCard } from './lineInfo.js';
 import { stopSuffix, stopHazard } from './stopInfo.js';
 import { showOptions } from './options.js';
@@ -169,11 +169,14 @@ export async function render(root, ctx) {
           h('button', { class: 'stop-title', onclick: () => map.setView([s.lat, s.lon], 17) },
             `🚏 ${s.name}`, h('span', { class: 'muted' }, stopSuffix(s))),
           stopHazard(city, s, selectStop)),
-        h('button', { class: 'link', 'aria-label': t('Close this stop'), onclick: closeStop }, t('✕ Close'))),
+        h('button', { class: 'nav-button', 'aria-label': t('Close this stop'), onclick: closeStop }, t('✕ Close'))),
       h('p', { class: 'muted small' },
         tn(routes.length, '1 route stops here.', '{n} routes stop here.'),
         t(' Tap a number for details; uncheck its box to hide the route. Solid line = coming to this stop, lighter = after it.'),
         routes.length > MAX_ROUTES_SHOWN_AT_FIRST ? t(' Showing the first {n}; check more below.', { n: MAX_ROUTES_SHOWN_AT_FIRST }) : ''),
+      selectAllRow(
+        () => { state.hidden = new Set(); lines.set(shownEntries()); paint(); track('routes_select_all', { where: 'home' }); },
+        () => { state.hidden = new Set(routes.map((r) => r.id)); lines.set(shownEntries()); paint(); track('routes_clear_all', { where: 'home' }); }),
       h('div', { class: 'route-chips' }, ...rows),
       h('div', { class: 'row between' },
         h('small', { class: 'muted' }, state.updatedAt

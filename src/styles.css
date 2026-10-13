@@ -367,6 +367,17 @@ details > summary { cursor: pointer; }
 
 /* Pop-ups: the Close button stays at the bottom of the pop-up while its content scrolls,
    so a long pop-up (a bus's details) can be closed without scrolling (REQ-RT-10). */
+/* "Home", "Back" and "Close" are easy to find: a framed pill, not an underlined word. @req REQ-NAV-1 */
+.nav-button {
+  min-height: 36px; padding: 6px 14px; border-radius: 999px; font-weight: 700; white-space: nowrap;
+  background: var(--card); color: var(--purple-2); border: 2px solid var(--purple-2);
+}
+@media (prefers-color-scheme: dark) { .nav-button { color: #c8a8ff; border-color: #c8a8ff; } }
+.modal-card > button:last-child { border: 2px solid var(--purple-2); color: var(--purple-2); font-weight: 700; }
+@media (prefers-color-scheme: dark) { .modal-card > button:last-child { color: #c8a8ff; border-color: #c8a8ff; } }
+/* Select all / Clear all above the route icons */
+.small-button { min-height: 34px; padding: 4px 12px; font-size: 0.85rem; border-radius: 999px; }
+.select-row { flex-wrap: wrap; }
 .modal-card > button:last-child {
   position: sticky; bottom: 0; flex: none; z-index: 1;
   box-shadow: 0 18px 0 6px var(--card), 0 -6px 0 6px var(--card); /* hides what scrolls past, above and below it */

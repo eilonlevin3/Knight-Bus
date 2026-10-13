@@ -194,7 +194,7 @@ export async function render(root, ctx, { cityId, routeId, stopId }) {
     const listWasOpen = sheet.querySelector('.stop-list')?.open;
     sheet.replaceChildren(...[
       h('div', { class: 'row' },
-        h('button', { class: 'link', onclick: () => (history.length > 1 ? history.back() : ctx.go('#/home')) }, `${backArrow()} ${t('Back')}`),
+        h('button', { class: 'nav-button', onclick: () => (history.length > 1 ? history.back() : ctx.go('#/home')) }, `${backArrow()} ${t('Back')}`),
         routeBadge(route, PATTERN_COLORS[0]),
         h('h2', { class: 'grow' }, `${arrow()} ${route.dest}`)),
       h('p', { class: 'muted small' }, t('From {a} to {b}', { a: first.name, b: last.name }), ' · ', route.agency, ' ', weekendTag(route)),

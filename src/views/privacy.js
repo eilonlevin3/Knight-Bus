@@ -25,7 +25,7 @@ export function render(root, ctx) {
   root.append(
     h('main', { class: 'screen' },
       h('header', { class: 'topbar' },
-        h('button', { class: 'link', onclick: () => ctx.go('#/home') }, `${backArrow()} ${t('Home')}`),
+        h('button', { class: 'nav-button', onclick: () => ctx.go('#/home') }, `${backArrow()} ${t('Home')}`),
         h('h1', {}, t('Privacy & usage data'))),
       h('div', { class: 'card stack' },
         h('h2', {}, t('What Knight Bus keeps to work')),

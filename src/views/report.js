@@ -90,7 +90,7 @@ export async function render(root, ctx) {
   root.append(
     h('main', { class: 'screen report' },
       h('header', { class: 'topbar' },
-        h('button', { class: 'link', onclick: () => ctx.go('#/home') }, `${backArrow()} ${t('Home')}`),
+        h('button', { class: 'nav-button', onclick: () => ctx.go('#/home') }, `${backArrow()} ${t('Home')}`),
         h('h1', {}, t('Favorite Commutes report'))),
       h('p', { class: 'muted small' }, t('Counts only. No names, emails or locations of people. For how the app is used (screens, time, active users), see Analytics in the Firebase console.')),
       tabs,
