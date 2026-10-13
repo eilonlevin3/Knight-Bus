@@ -100,6 +100,32 @@ counted as `bus_info_opened` (privacy.md); which bus is not recorded.
 
 Code: [views/busInfo.js](../src/views/busInfo.js), [liveLines.js](../src/liveLines.js).
 
+## The ghost: an estimate of where the bus is now
+
+A bus's last signal is always a little old: about a minute through the relay, much more
+when the feed is late. The ghost (REQ-RT-12) shows where the bus has probably got to since.
+
+- **Only on request.** Tap a bus, and in its pop-up press **Show the ghost on the map**.
+  It is for that one bus. Tap the bus or its ghost again and press **Remove the ghost**.
+- **How it is worked out.** The last signal is placed on the route's path. The time since
+  the signal is then spent moving forward along the path at **timetable speed**: the
+  scheduled minutes between each pair of stops, spread evenly between them. Where the
+  route has no timetable, 18 km/h is used. The ghost never passes the last stop and never
+  runs more than 30 minutes ahead.
+- **How it looks.** A see-through marker with a dashed edge and a 👻, in the route's color,
+  with a dotted trail from the real position to it. It moves every 2 seconds. The real
+  marker stays where the last signal was.
+- **What it does not know.** Traffic, how long the bus waits at stops, whether it left
+  late. It is an estimate, and the pop-up says so. When a new signal arrives, the ghost
+  starts again from it.
+- If the bus is more than 250 m from the route as our map has it, no ghost is offered.
+
+"Stops away" in the lists still counts from the real signal, not from the ghost.
+
+Code: [liveLines.js](../src/liveLines.js) (`ghostOf`, `drawGhosts`),
+[lib/routeGeometry.js](../src/lib/routeGeometry.js) (`advanceOnPath`),
+[views/busInfo.js](../src/views/busInfo.js).
+
 ## The "next two + last passed" rule
 
 For one route and one chosen stop:

@@ -28,7 +28,7 @@ export function showRouteCard(ctx, city, route, stop, { live = null, shown = tru
   const close = () => overlay.remove();
   track('route_card_opened', { multi: route.multi ? 1 : 0 });
   const overlay = h('div', {
-    class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': t('About route {n}', { n: route.short }),
+    class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': t('About route {n}', { n: route.label }),
     onclick: (e) => { if (e.target === overlay) close(); },
   },
     h('div', { class: 'card stack modal-card' },
@@ -83,7 +83,7 @@ export function showRouteInfo(ctx, city, route, stopId) {
   const summary = patternSummary(route, stop, (p) => city.shapeOf(p));
 
   const overlay = h('div', {
-    class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': t('About route {n}', { n: route.short }),
+    class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': t('About route {n}', { n: route.label }),
     onclick: (e) => { if (e.target === overlay) close(); },
   },
     h('div', { class: 'card stack modal-card' },

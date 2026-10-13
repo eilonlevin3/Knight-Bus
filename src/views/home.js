@@ -167,7 +167,7 @@ export async function render(root, ctx) {
       h('div', { class: 'row between sticky-top' },
         h('span', { class: 'stop-head' },
           h('button', { class: 'stop-title', onclick: () => map.setView([s.lat, s.lon], 17) },
-            `🚏 ${s.name}`, h('span', { class: 'muted' }, stopSuffix(s))),
+            `${s.icon} ${s.name}`, h('span', { class: 'muted' }, stopSuffix(s))),
           stopHazard(city, s, selectStop)),
         h('button', { class: 'nav-button', 'aria-label': t('Close this stop'), onclick: closeStop }, t('✕ Close'))),
       h('p', { class: 'muted small' },

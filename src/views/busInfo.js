@@ -1,6 +1,6 @@
 // The pop-up for one live bus: when its last signal arrived and everything that signal says.
 // Opened by tapping a bus on any map. Docs: docs/realtime.md#what-a-bus-tells-us
-// @req REQ-RT-10
+// @req REQ-RT-10 @req REQ-RT-12
 
 import { h } from '../lib/dom.js';
 import { t, arrow, locale } from '../i18n.js';
@@ -14,7 +14,8 @@ const has = (v) => v !== null && v !== undefined && v !== '';
 
 // bus: from fetchLiveBuses + classifyBuses. route: its route. where: sentences such as
 // "2 stops before Dizengoff" (one per chosen stop the bus matters for).
-export function showBusInfo({ bus, route, where = [] }) {
+// ghost: { on, possible, toggle } for the estimated ("ghost") position of this bus.
+export function showBusInfo({ bus, route, where = [], ghost = null }) {
   const raw = bus.raw || {};
   const close = () => overlay.remove();
   track('bus_info_opened', { late: isLate(bus.recordedAt) ? 1 : 0 });
@@ -51,6 +52,16 @@ export function showBusInfo({ bus, route, where = [] }) {
         isLate(bus.recordedAt)
           ? h('span', { class: 'late' }, t('⚠ This is late. The bus has moved on since; the map shows where it was then.'))
           : null),
+      // The ghost: only for this bus, and only when the person asks for it (REQ-RT-12).
+      ghost ? h('div', { class: 'ghost-box stack' },
+        h('b', {}, t('👻 Estimated position now')),
+        h('small', { class: 'muted' }, ghost.possible
+          ? t('A ghost bus on the map, moved forward from the last signal along the route at timetable speed. It is an estimate, not a signal: traffic and waiting at stops are not known.')
+          : t('This bus is not on the route as our map has it, so its position cannot be estimated.')),
+        ghost.possible || ghost.on ? h('button', {
+          class: ghost.on ? '' : 'primary',
+          onclick: () => { track('ghost_toggled', { on: ghost.on ? 0 : 1 }); ghost.toggle(); close(); },
+        }, ghost.on ? t('Remove the ghost') : t('Show the ghost on the map')) : null) : null,
       h('b', { class: 'small' }, t('What the signal says')),
       table(facts),
       h('details', {},

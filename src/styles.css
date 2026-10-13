@@ -365,6 +365,12 @@ details > summary { cursor: pointer; }
 .route-chip.by-operator, .route-chip.by-operator.off { border: 4px solid var(--op); padding: 2px 3px 2px 5px; }
 .route-chips { padding-right: 8px; } /* room for the tucked buttons' handle */
 
+/* A "ghost": the estimated position of a bus now (REQ-RT-12). Clearly not a real signal:
+   see-through, dashed, with a ghost mark. */
+.bus-ghost { background: color-mix(in srgb, var(--c) 35%, #ffffff); color: #1b0a2e; border: 3px dashed var(--c); opacity: 0.9; position: relative; }
+.ghost-mark { position: absolute; top: -12px; right: -12px; font-size: 16px; }
+.ghost-box { border: 2px dashed var(--purple-2); border-radius: 10px; padding: 10px 12px; gap: 8px; }
+
 /* Pop-ups: the Close button stays at the bottom of the pop-up while its content scrolls,
    so a long pop-up (a bus's details) can be closed without scrolling (REQ-RT-10). */
 /* "Home", "Back" and "Close" are easy to find: a framed pill, not an underlined word. @req REQ-NAV-1 */

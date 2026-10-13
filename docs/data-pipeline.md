@@ -109,6 +109,27 @@ for every published government route: the patterns with minutes to each stop, an
 entry per trip of the coming week. Only services whose dates overlap the next seven days
 count. 4,246 files, 3.5 MB in total, each loaded only on demand.
 
+## Trains and light rail
+
+`routeTypes` in `pipeline/cities.json` lists the GTFS route types that are read (REQ-DATA-11):
+`3` buses, `0` light rail, `2` trains, `5` funicular and cable car (Haifa's Carmelit and
+Rakavlit). A stop where a train stops is a **train station** in the app; one where light
+rail stops is a **light rail stop**; the rest are bus stops.
+
+- **Light rail** is published like buses (`code-direction-alternative`) and goes through
+  the same merging and pairing.
+- **Trains** have no route number and no code. Israel Railways publishes about a thousand
+  entries for 87 "from A to B" services; entries with the same two ends are merged into one
+  route, and A→B is paired with B→A after the direction check. A train's destination is
+  the name of its last station (its headsign in the data is only a code).
+- **Train paths are straight lines between stations**: the feed gives trains no shape.
+- A train route is kept whole in every city file it touches, so each file gains stations
+  far outside its city (the Tel Aviv file: 71 train routes, 6 light rail routes, 132
+  stations, about 0.5 MB more).
+- **Live positions exist** for trains and light rail in the same feed as buses.
+
+Not read: type `715` (on-demand buses) and `8` (shared taxis).
+
 ## Which routes are included
 
 **All bus routes in the government feed, on every day they run** (REQ-DATA-5). The pipeline

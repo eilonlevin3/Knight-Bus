@@ -1,6 +1,8 @@
 # ADR-0011: A small relay of our own for live buses
 
-**Status:** Accepted · 2026-10-13 (code written; goes live when the owner deploys it)
+**Status:** Accepted · 2026-10-13. Deployed the same day at
+`https://knight-bus-relay.eilonlevin3.workers.dev`. In a first three-minute watch: 26
+questions, no failures, newest bus positions 26–100 seconds old.
 
 ## The problem
 

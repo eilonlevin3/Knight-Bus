@@ -1,5 +1,5 @@
 // Builds one transit bundle per city from the national GTFS feed.
-// @req REQ-ROUTE-2 @req REQ-STOP-1 @req REQ-DATA-2 @req REQ-SCOPE-1 @req REQ-DATA-5 @req REQ-DATA-6 @req REQ-DATA-7 @req REQ-DATA-8 @req REQ-DATA-9 @req REQ-DATA-10
+// @req REQ-ROUTE-2 @req REQ-STOP-1 @req REQ-DATA-2 @req REQ-SCOPE-1 @req REQ-DATA-5 @req REQ-DATA-6 @req REQ-DATA-7 @req REQ-DATA-8 @req REQ-DATA-9 @req REQ-DATA-10 @req REQ-DATA-11
 // Docs: docs/data-pipeline.md (how it works), docs/data-model.md (output format).
 //
 // Usage:  npm run build:data
@@ -264,10 +264,14 @@ async function main() {
   // Otherwise a stop lists the same route number two or three times. The entry with the
   // most trips is kept; the others' ids are remembered, because live buses report them.
   const families = new Map(); // "operator|code|direction" -> [route]
+  // Trains (route type 2) have no number and no code: Israel Railways publishes about a
+  // thousand entries for 87 "from A to B" services. Entries with the same from and to are
+  // one route (REQ-DATA-11).
+  const TRAIN = 2;
   for (const r of routes.values()) {
     const [code, direction] = r.desc.split('-');
-    if (!code || !direction) continue;
-    const k = `${r.agency}|${code}|${direction}|${r.short}`;
+    if (r.type !== TRAIN && (!code || !direction)) continue;
+    const k = r.type === TRAIN ? `${r.agency}|train|${r.longName}` : `${r.agency}|${code}|${direction}|${r.short}`;
     if (!families.has(k)) families.set(k, []);
     families.get(k).push(r);
   }
@@ -334,7 +338,8 @@ async function main() {
   for (const r of routes.values()) {
     const [code] = r.desc.split('-');
     if (!code) continue;
-    const k = `${r.agency}|${code}|${r.short}`;
+    // For trains: the same two ends, in either order.
+    const k = r.type === TRAIN ? `${r.agency}|train|${r.longName.split('<->').sort().join('|')}` : `${r.agency}|${code}|${r.short}`;
     if (!byCode.has(k)) byCode.set(k, []);
     byCode.get(k).push(r);
   }
@@ -528,7 +533,8 @@ async function main() {
       const row = [
         r.id,
         r.short,
-        main.headsign || destinationFromLongName(r.longName),
+        // A train's headsign is only a code: name it by its last station.
+        r.type === TRAIN ? stops.get(main.stops.at(-1))?.name || destinationFromLongName(r.longName) : main.headsign || destinationFromLongName(r.longName),
         idxOf(agencyIdx, agencyRows, r.agency, agencies.get(r.agency) || r.agency),
         r.type,
         seq,

@@ -106,7 +106,7 @@ export async function render(root, ctx, { slot }) {
           h('input', {
             type: 'checkbox',
             checked: on,
-            'aria-label': t('Show route {n} on the map', { n: route.short }),
+            'aria-label': t('Show route {n} on the map', { n: route.label }),
             onchange: (e) => {
               if (e.target.checked) hidden.delete(k); else hidden.add(k);
               track('line_toggled', { on: e.target.checked ? 1 : 0 });
@@ -124,7 +124,7 @@ export async function render(root, ctx, { slot }) {
           h('button', {
             class: 'stop-title',
             onclick: () => stop && map.setView([stop.lat, stop.lon], 17),
-          }, `🚏 ${st.stopName}`, h('span', { class: 'muted' }, ` · ${st.stopCode}${platformText(stop) ? ` · ${platformText(stop)}` : ''}`)),
+          }, `${stop?.icon || '🚏'} ${st.stopName}`, h('span', { class: 'muted' }, ` · ${st.stopCode}${platformText(stop) ? ` · ${platformText(stop)}` : ''}`)),
           stop ? stopHazard(city, stop) : null),
         ...stopRows);
     });

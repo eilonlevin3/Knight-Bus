@@ -1,7 +1,7 @@
 // Unit tests for route geometry: the "5 minutes before your stop" zoom area and the line split.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { approachPath, pathBefore, splitPath, slicePath, stopPositions, metersBetween } from '../src/lib/routeGeometry.js';
+import { approachPath, pathBefore, advanceOnPath, splitPath, slicePath, stopPositions, metersBetween } from '../src/lib/routeGeometry.js';
 
 // 11 stops in a straight line heading north, ~111 m apart, 1 scheduled minute apart.
 const stops = Array.from({ length: 11 }, (_, i) => ({ id: `s${i}`, lat: 32 + i * 0.001, lon: 34.8 }));
@@ -71,4 +71,32 @@ test('the path before a stop ends at the start of the route when the route is sh
 test('the path before a point between two corners', () => {
   const p = pathBefore(path, 2.5, 100);
   assert.ok(Math.abs(lengthOf(p) - 100) < 2, `length ${lengthOf(p)}`);
+});
+
+// REQ-RT-12: the "ghost", an estimate of where a bus is now.
+test('a ghost moves along the route at timetable speed', () => {
+  // Stops are one scheduled minute apart: 90 seconds after stop 2, halfway between 3 and 4.
+  assert.ok(Math.abs(advanceOnPath(route, path, 2, 90) - 3.5) < 1e-6);
+  // Starting between two stops.
+  assert.ok(Math.abs(advanceOnPath(route, path, 2.5, 60) - 3.5) < 1e-6);
+  assert.equal(advanceOnPath(route, path, 4, 0), 4);
+});
+
+test('a ghost stops at the last stop', () => {
+  assert.equal(advanceOnPath(route, path, 8, 3600), 10);
+  assert.equal(advanceOnPath(route, path, 10, 60), 10);
+});
+
+test('a ghost goes faster where the timetable does', () => {
+  // Two minutes to the second stop, then one minute per stop.
+  const uneven = { stops, times: [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] };
+  assert.ok(Math.abs(advanceOnPath(uneven, path, 0, 60) - 0.5) < 1e-6);
+  assert.ok(Math.abs(advanceOnPath(uneven, path, 0, 180) - 2) < 1e-6);
+});
+
+test('without a timetable a ghost moves at city bus speed', () => {
+  const noTimes = { stops, times: null };
+  const pos = advanceOnPath(noTimes, path, 2, 60); // 300 m at 5 m/s; stops are ~111 m apart
+  assert.ok(pos > 4.6 && pos < 4.8, `position ${pos}`);
+  assert.equal(advanceOnPath(noTimes, path, 9, 600), 10);
 });

@@ -261,9 +261,12 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   (`fetchLiveMany` in `src/realtime.js`) and falls back to Stride (ADR-0011). The owner has
   a Cloudflare account (opened 2026-10-13). **The Worker is deployed by hand**: the owner
   pastes the file in Cloudflare's editor; Claude must not type passwords or create accounts
-  there. `realtime.relayUrl` in `src/config.js` is empty until the owner gives the Worker's
-  address. Open risk: the free plan's ~10 ms computing limit per request; check the
-  `x-relay` header and for error 1102 after deploying. A side effect: about one route in seven now has the ⚠ sign (was 1–2%).
+  there. Deployed 2026-10-13 at `https://knight-bus-relay.eilonlevin3.workers.dev`
+  (`realtime.relayUrl`). First check: no failures, positions 26–100 s old; the shared cache
+  never hit (`x-relay` said `built` or `memo`, never `cache`), so each warm copy unpacks
+  the file itself. Open risk: the free plan's ~10 ms computing limit per request; if live
+  buses vanish, look for error 1102 in Cloudflare and at the `x-relay` header. After any
+  change to `relay/worker.js` the owner must paste it into Cloudflare again. A side effect: about one route in seven now has the ⚠ sign (was 1–2%).
 - **Buttons while a stop is open** (owner, 2026-10-11): tucked to the right edge with a
   handle; swipe left to show, right to hide (REQ-HOME-4). The editor shows routes as the
   same icons as the home screen (`routeChip` in `views/liveInfo.js`).
@@ -277,6 +280,12 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   (`firestore.rules`, `hasOnly`), and the owner has not republished rules since 2026-10-10,
   so a new field would make every save fail. Move it into the document only together with
   a rules change the owner publishes.
+- **Trains and light rail** (owner, 2026-10-13): `routeTypes: [3, 0, 2, 5]`. `route.kind`
+  (`bus`/`light`/`train`), `route.label` (🚈1, or 🚆 for a train, which has no number: show
+  `route.label`, never `route.short`, on screen), `stop.kind`/`stop.icon`. Trains are
+  merged by their two ends (`route_long_name`). They have live positions in the feed.
+- **Ghost** (owner, 2026-10-13): an estimated position, only for a bus the person picks in
+  its pop-up (REQ-RT-12). Keep it visibly an estimate; do not use it for "stops away".
 - **Route search and directions** (owner, 2026-10-10): `#/routes` lists each two-direction
   service once (`city.routePairs()`); the route screen shows one direction with
   ⇄ Switch direction (`route.opposite`, paired in the pipeline from `route_desc`) and a
@@ -304,5 +313,6 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   arrival times through a proxy (REQ-RT-4).
 - Before a public launch: a lawyer should review docs/privacy.md; set Analytics data
   retention; the workflow actions still warn about an old Node runtime (`@v4` actions).
-- Ideas not requested yet: more cities, light rail and trains (pipeline is
-  bus-only: `routeTypes: [3]`), a version line on the main app's home screen.
+- Ideas not requested yet: more cities, a version line on the main app's home screen,
+  grouping a train station's many "from A to B" icons by destination (Tel Aviv Merkaz
+  shows 61).

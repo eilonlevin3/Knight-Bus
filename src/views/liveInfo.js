@@ -43,7 +43,7 @@ export function routeBadge(route, color) {
     class: `line-badge${isWeekendRoute(route) ? ' weekend' : ''}`,
     style: color ? `--c:${color}` : '',
     title: isWeekendRoute(route) ? t('Weekend route, no live tracking') : null,
-  }, route.short);
+  }, route.label);
 }
 
 export function weekendTag(route) {
@@ -65,15 +65,16 @@ export function routeChip(route, { on, color, repeated, onToggle, onInfo }) {
   },
     h('input', {
       type: 'checkbox', checked: on,
-      'aria-label': t('Show route {n} on the map', { n: route.short }),
+      'aria-label': t('Show route {n} on the map', { n: route.label }),
       onchange: (e) => onToggle(e.target.checked),
     }),
     h('button', {
       type: 'button', class: `chip-number${isWeekendRoute(route) ? ' weekend' : ''}`,
       style: on && color ? `--c:${color}` : '',
-      'aria-label': t('About route {n}', { n: route.short }),
+      'aria-label': t('About route {n}', { n: route.label }),
       onclick: onInfo,
-    }, route.short, route.multi ? h('span', { class: 'chip-mark' }, '⚠') : null));
+    // A train has no number: its icon says where it comes from and where it goes.
+    }, route.short ? route.label : `${route.label} ${route.stops[0].name} ${arrow()} ${route.dest}`, route.multi ? h('span', { class: 'chip-mark' }, '⚠') : null));
 }
 
 // One color per company, the same on every screen: by the company's place in the city's
@@ -96,7 +97,7 @@ export function selectAllRow(onAll, onNone) {
 // The route numbers that appear more than once in a list of routes.
 export function repeatedNumbers(routes) {
   const count = new Map();
-  for (const r of routes) count.set(r.short, (count.get(r.short) || 0) + 1);
+  for (const r of routes) if (r.short) count.set(r.short, (count.get(r.short) || 0) + 1); // trains have no number
   return new Set([...count].filter(([, n]) => n > 1).map(([short]) => short));
 }
 
@@ -106,7 +107,7 @@ export function routeTitle(route, onInfo) {
   const hazard = route.multi && onInfo
     ? h('button', {
         type: 'button', class: 'hazard', title: t('This route does not always follow the same stop pattern'),
-        'aria-label': t('Route {n} does not always follow the same stop pattern. Details', { n: route.short }),
+        'aria-label': t('Route {n} does not always follow the same stop pattern. Details', { n: route.label }),
         // Inside a checkbox row: do not tick the box.
         onclick: (e) => { e.preventDefault(); e.stopPropagation(); onInfo(); },
       }, '⚠')

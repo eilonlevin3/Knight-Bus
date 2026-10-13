@@ -1,12 +1,12 @@
 // Draws the chosen routes as lines on a map, with their live buses, and keeps the buses fresh.
 // Used by both the editor and the commute screen, so they behave the same (REQ-COMM-1).
-// @req REQ-RT-10 @req REQ-LINE-1a @req REQ-LINE-1b @req REQ-LINE-1c @req REQ-RT-8 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
+// @req REQ-RT-10 @req REQ-RT-12 @req REQ-LINE-1a @req REQ-LINE-1b @req REQ-LINE-1c @req REQ-RT-8 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
 
 import { realtime } from './config.js';
 import { t, tn, arrow } from './i18n.js';
 import { fetchLiveMany, classifyBuses, ageLabel, dropFinishedRides } from './realtime.js';
 import { LINE_COLORS, busIcon, lighten } from './map.js';
-import { stopPositions, splitPath, samePath } from './lib/routeGeometry.js';
+import { stopPositions, splitPath, samePath, projectOnPath, advanceOnPath, pointAt, slicePath } from './lib/routeGeometry.js';
 import { makeOffsetPolyline } from './lib/offsetLine.js';
 import { showBusInfo } from './views/busInfo.js';
 
@@ -22,6 +22,12 @@ export class LiveLines {
     this.lineLayers = new Map(); // routeId -> [incoming polyline, outbound polyline]
     this.colors = new Map(); // routeId -> color
     this.busLayer = L.layerGroup().addTo(map);
+    // "Ghosts": for buses the person asked for, an estimate of where the bus is now,
+    // moved forward from its last signal along its route (REQ-RT-12).
+    this.ghostLayer = L.layerGroup().addTo(map);
+    this.ghosts = new Set(); // ride ids
+    this.shown = new Map(); // ride id -> { bus, row, kind, lines }: the buses on the map now
+    this.ghostTimer = null;
     this.timer = null;
     this.generation = 0; // ignores slow responses that a newer refresh replaced
     this.destroyed = false;
@@ -74,7 +80,7 @@ export class LiveLines {
       // Lines without live buses (weekend service) are dashed, so they are never mistaken
       // for a line that simply has no bus on the way.
       const dashArray = route.live ? null : `${weight * 2} ${weight * 1.6}`;
-      const tip = `${t('Route {n}', { n: route.short })} ${arrow()} ${route.dest}${route.live ? '' : ` · ${route.agency} ${t('(weekend route, no live tracking)')}`}`;
+      const tip = `${t('Route {n}', { n: route.label })} ${arrow()} ${route.dest}${route.live ? '' : ` · ${route.agency} ${t('(weekend route, no live tracking)')}`}`;
       // A pattern that takes the same path as one already drawn gets no line of its own:
       // only the full line shows (REQ-LINE-1c).
       const drawn = [path];
@@ -142,7 +148,7 @@ export class LiveLines {
       const otherPaths = route.patterns.filter((p) => p !== pattern).map((p) => this.city.shapeOf(p));
       const { next, passed } = error || noLive ? { next: [], passed: [] }
         : classifyBuses(buses, pattern.stops, stopId, this.city.shapeOf(pattern), otherPaths);
-      return { stop, route, color: this.colorOf(routeId), next, passed, error, noLive };
+      return { stop, route, pattern, color: this.colorOf(routeId), next, passed, error, noLive };
     });
     this.drawBuses(rows);
     this.onUpdate(rows);
@@ -168,19 +174,72 @@ export class LiveLines {
       row.next.forEach((b) => add(b, 'next'));
       row.passed.forEach((b) => add(b, 'passed'));
     }
+    this.shown = markers;
+    this.drawGhosts();
     for (const { bus, row, kind, lines } of markers.values()) {
       // Tap a bus: everything we know about it (REQ-RT-10).
       L.marker([bus.lat, bus.lon], {
-        icon: busIcon(row.route.short, row.color, kind), zIndexOffset: kind === 'next' ? 1000 : 0,
-        title: `${t('Route {n}', { n: row.route.short })} ${arrow()} ${row.route.dest} · ${ageLabel(bus.recordedAt)}`,
+        icon: busIcon(row.route.label, row.color, kind), zIndexOffset: kind === 'next' ? 1000 : 0,
+        title: `${t('Route {n}', { n: row.route.label })} ${arrow()} ${row.route.dest} · ${ageLabel(bus.recordedAt)}`,
       })
-        .on('click', () => showBusInfo({ bus, route: row.route, where: lines }))
+        .on('click', () => this.openBus(bus.rideId))
         .addTo(this.busLayer);
     }
   }
 
+  openBus(rideId) {
+    const m = this.shown.get(rideId);
+    if (!m) return;
+    showBusInfo({
+      bus: m.bus, route: m.row.route, where: m.lines,
+      ghost: {
+        on: this.ghosts.has(rideId),
+        possible: !!this.ghostOf(m),
+        toggle: () => {
+          if (this.ghosts.has(rideId)) this.ghosts.delete(rideId); else this.ghosts.add(rideId);
+          this.drawGhosts();
+        },
+      },
+    });
+  }
+
+  // Where the bus would be now: { from, to, point } as positions on its route's path, or
+  // null when the bus is not on that path (then nothing can be estimated).
+  ghostOf({ bus, row }) {
+    const pattern = row.pattern;
+    const path = this.city.shapeOf(pattern);
+    const { pos, meters } = projectOnPath(bus, path);
+    if (meters > realtime.maxOffRouteMeters) return null;
+    const seconds = Math.min(realtime.ghostMaxMinutes * 60, (Date.now() - bus.recordedAt.getTime()) / 1000);
+    const to = advanceOnPath(pattern, path, pos, seconds);
+    return { path, from: pos, to, point: pointAt(path, to) };
+  }
+
+  // Draws the estimates and keeps them moving while any is on.
+  drawGhosts() {
+    this.ghostLayer.clearLayers();
+    clearTimeout(this.ghostTimer);
+    let any = false;
+    for (const rideId of this.ghosts) {
+      const m = this.shown.get(rideId);
+      const g = m && this.ghostOf(m);
+      if (!g) continue;
+      any = true;
+      // A dotted trail from the last signal to the estimate, and the ghost itself.
+      L.polyline(slicePath(g.path, g.from, g.to), { color: m.row.color, weight: 4, opacity: 0.9, dashArray: '2 8', lineCap: 'round', interactive: false }).addTo(this.ghostLayer);
+      L.marker(g.point, {
+        icon: busIcon(m.row.route.label, m.row.color, 'ghost'), zIndexOffset: 1500,
+        title: t('Estimated position of route {n} now', { n: m.row.route.label }),
+      })
+        .on('click', () => this.openBus(rideId))
+        .addTo(this.ghostLayer);
+    }
+    if (any && !this.destroyed && !document.hidden) this.ghostTimer = setTimeout(() => this.drawGhosts(), realtime.ghostStepMs);
+  }
+
   pause() {
     clearTimeout(this.timer);
+    clearTimeout(this.ghostTimer);
   }
 
   destroy() {
@@ -189,5 +248,6 @@ export class LiveLines {
     document.removeEventListener('visibilitychange', this.onVisibility);
     for (const layers of this.lineLayers.values()) layers.forEach((l) => l.remove());
     this.busLayer.remove();
+    this.ghostLayer.remove();
   }
 }

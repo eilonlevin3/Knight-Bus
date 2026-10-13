@@ -4,6 +4,13 @@
 import { t } from './i18n.js';
 
 const STOP_MIN_ZOOM = 15;
+const RAIL_MIN_ZOOM = 12; // train stations and light rail stops show from further out
+// How a stop is drawn: by what stops there (REQ-DATA-11).
+const STOP_STYLE = {
+  bus: { radius: 7, color: '#3c096c', weight: 2 },
+  light: { radius: 8, color: '#d00000', weight: 4 },
+  train: { radius: 10, color: '#0077b6', weight: 5 },
+};
 
 export const LINE_COLORS = [
   '#7b2cbf', '#e85d04', '#0077b6', '#2a9d8f', '#d00000', '#6a994e', '#b5179e', '#495057',
@@ -47,21 +54,24 @@ export function stopLayer(map, city, { onPick, selectedIds = () => [] }) {
       const s = city.stops.get(id);
       if (s) drawStop(s, true);
     }
-    if (map.getZoom() < STOP_MIN_ZOOM) return;
+    const zoom = map.getZoom();
+    if (zoom < RAIL_MIN_ZOOM) return;
     const b = map.getBounds();
-    for (const s of city.stopsInBounds(b.getSouth(), b.getWest(), b.getNorth(), b.getEast())) {
-      if (!selected.has(s.id)) drawStop(s, false);
-    }
+    const inView = city.stopsInBounds(b.getSouth(), b.getWest(), b.getNorth(), b.getEast(), 800, zoom < STOP_MIN_ZOOM);
+    // Bus stops first, so stations are drawn on top of them.
+    for (const s of inView) if (s.kind === 'bus' && !selected.has(s.id)) drawStop(s, false);
+    for (const s of inView) if (s.kind !== 'bus' && !selected.has(s.id)) drawStop(s, false);
   };
   function drawStop(s, selected) {
+    const style = STOP_STYLE[s.kind] || STOP_STYLE.bus;
     const m = L.circleMarker([s.lat, s.lon], {
-      radius: selected ? 10 : 7,
-      color: selected ? '#ffd60a' : '#3c096c',
-      weight: selected ? 4 : 2,
-      fillColor: selected ? '#3c096c' : '#ffffff',
+      radius: selected ? Math.max(10, style.radius + 2) : style.radius,
+      color: selected ? '#ffd60a' : style.color,
+      weight: selected ? 4 : style.weight,
+      fillColor: selected ? style.color : '#ffffff',
       fillOpacity: 1,
     }).addTo(group);
-    m.bindTooltip(`${s.name} · ${s.code}`, { direction: 'top' });
+    m.bindTooltip(`${s.icon} ${s.name} · ${s.code}`, { direction: 'top' });
     if (onPick) m.on('click', () => onPick(s));
   }
   map.on('moveend', refresh);
@@ -83,10 +93,11 @@ export function userMarker(map) {
   };
 }
 
+// kind: 'next' | 'passed' | 'ghost' (an estimated position, REQ-RT-12)
 export function busIcon(label, color, kind) {
   return L.divIcon({
     className: '',
-    html: `<div class="bus-marker bus-${kind}" style="--c:${color}">${escapeHtml(label)}</div>`,
+    html: `<div class="bus-marker bus-${kind}" style="--c:${color}">${escapeHtml(label)}${kind === 'ghost' ? '<span class="ghost-mark">👻</span>' : ''}</div>`,
     iconSize: [34, 34],
     iconAnchor: [17, 17],
   });
@@ -134,7 +145,7 @@ export function lighten(hex, amount) {
 export function legendHtml(items, places = {}) {
   const rows = items.map(({ route, color }) =>
     `<div class="legend-row"><span class="legend-swatch${route.source ? ' dashed' : ''}" style="--in:${color};--out:${lighten(color, 0.3)}"></span>` +
-    `<b>${escapeHtml(route.short)}</b> <span class="legend-dest">${escapeHtml(route.dest)}</span></div>`);
+    `<b>${escapeHtml(route.label)}</b> <span class="legend-dest">${escapeHtml(route.dest)}</span></div>`);
   const placeRows = ['origin', 'destination'].filter((k) => places[k]).map((k) =>
     `<div class="legend-row"><span class="legend-flag">${flagHtml(k)}</span>${k === 'origin' ? t('Start') : t('Destination')}</div>`);
   const help = rows.length

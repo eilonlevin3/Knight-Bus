@@ -171,7 +171,7 @@ export async function render(root, ctx, { cityId, routeId, stopId }) {
       h('div', { class: 'row between' },
         h('span', { class: 'stop-head' },
           h('button', { class: 'stop-title', onclick: () => map.setView([s.lat, s.lon], 17) },
-            `🚏 ${s.name}`, h('span', { class: 'muted' }, stopSuffix(s))),
+            `${s.icon} ${s.name}`, h('span', { class: 'muted' }, stopSuffix(s))),
           stopHazard(city, s)),
         state.showSchedule ? null : h('button', { class: 'link', onclick: openSchedule }, `${t('Full schedule')} ${arrow()}`)),
       servedText(s) ? h('small', { class: 'muted' }, servedText(s)) : null,

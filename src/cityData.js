@@ -1,11 +1,13 @@
 // Downloads and caches one city's transit bundle. Docs: docs/data-model.md#city-bundle
-// @req REQ-DATA-1 @req REQ-DATA-10 @req REQ-ROUTE-1 @req REQ-ROUTE-2
+// @req REQ-DATA-1 @req REQ-DATA-10 @req REQ-DATA-11 @req REQ-ROUTE-1 @req REQ-ROUTE-2
 
 import { dataBaseUrl, scheduleBaseUrl } from './config.js';
 import { t, cityName } from './i18n.js';
 import { decode } from './lib/polyline.js';
 
 const CACHE_NAME = 'kb-city-data-v1';
+// GTFS route types: 3 bus, 2 train, 0 light rail, 5 funicular and cable car (Haifa).
+const KIND_OF_TYPE = { 0: 'light', 2: 'train', 5: 'light' };
 const loaded = new Map(); // cityId -> CityData (in memory for this session)
 
 // The list of cities with the current version of each bundle.
@@ -88,7 +90,8 @@ export class CityData {
     this.byCode = new Map(); // stop number -> [stop, ...]
     this.stopList = raw.stops.map(([id, code, name, lat, lon, place = '']) => {
       const [platform = '', floor = ''] = place.split('/');
-      const s = { id, code, name, lat, lon, platform, floor, routeIds: [] };
+      // kind and icon are set below, from the routes that stop here (REQ-DATA-11).
+      const s = { id, code, name, lat, lon, platform, floor, routeIds: [], kind: 'bus', icon: '🚏' };
       this.stops.set(id, s);
       if (code) {
         if (!this.byCode.has(code)) this.byCode.set(code, []);
@@ -118,6 +121,10 @@ export class CityData {
       // opposite: id of the route that runs the same service the other way (REQ-ROUTE-2).
       const route = {
         id, short, dest, agency: this.agencies[agencyIdx], agencyRank: agencyRank.get(this.agencies[agencyIdx]), type,
+        // What it is, and what to write where a bus route shows its number. A train has no
+        // number; light rail lines are numbered 1, 2, 3 like buses, so they get a mark.
+        kind: KIND_OF_TYPE[type] || 'bus',
+        label: (KIND_OF_TYPE[type] || 'bus') === 'train' ? short || '🚆' : KIND_OF_TYPE[type] === 'light' ? `🚈${short}` : short,
         patterns, multi: patterns.length > 1,
         stops: patterns[0].stops, times: patterns[0].times, // the most common pattern, for code that needs just one
         source, live: !source, hours: source ? this.sources[source]?.hours || null : null,
@@ -128,8 +135,15 @@ export class CityData {
       };
       this.routes.set(id, route);
       // The route is listed at every stop that any of its patterns serves.
-      for (const s of new Set(patterns.flatMap((p) => p.stops))) s.routeIds.push(id);
+      for (const s of new Set(patterns.flatMap((p) => p.stops))) {
+        s.routeIds.push(id);
+        // A place where trains stop is a train station, whatever else stops there.
+        if (route.kind === 'train') { s.kind = 'train'; s.icon = '🚆'; }
+        else if (route.kind === 'light' && s.kind === 'bus') { s.kind = 'light'; s.icon = '🚈'; }
+      }
     }
+    // Train stations and light rail stops: few, and shown on the map from further out.
+    this.railStops = this.stopList.filter((s) => s.kind !== 'bus');
   }
 
   // Saved route ids as they are today: an id that was merged into another route becomes
@@ -166,9 +180,9 @@ export class CityData {
       .sort((a, b) => a.short.localeCompare(b.short, 'he', { numeric: true }) || a.dest.localeCompare(b.dest, 'he'));
   }
 
-  stopsInBounds(south, west, north, east, limit = 800) {
+  stopsInBounds(south, west, north, east, limit = 800, railOnly = false) {
     const out = [];
-    for (const s of this.stopList) {
+    for (const s of railOnly ? this.railStops : this.stopList) {
       if (s.lat >= south && s.lat <= north && s.lon >= west && s.lon <= east) {
         out.push(s);
         if (out.length >= limit) break;

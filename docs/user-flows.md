@@ -69,7 +69,14 @@ zooms to it and to where its buses are in their last ~5 minutes, and **every rou
 the stop is drawn**: solid where it comes to the stop, lighter after it, side by side where
 routes share a street. Live buses appear as in a Favorite Commute: the next two and the last that
 passed, per route. **Tap a bus** to see everything known about it (REQ-RT-10,
-[realtime.md](realtime.md#what-a-bus-tells-us)).
+[realtime.md](realtime.md#what-a-bus-tells-us)). From there you can turn on a **👻 ghost**
+for that bus: an estimate of where it is now (REQ-RT-12,
+[realtime.md](realtime.md#the-ghost-an-estimate-of-where-the-bus-is-now)).
+
+**Stations** (REQ-DATA-11). Train stations (blue ring, 🚆) and light rail stops (red ring,
+🚈) are on the map too, and show from further out than bus stops. Tap one like a bus stop.
+A light rail line is written 🚈1; a train has no number, so its icon reads
+*🚆 first station → last station*.
 
 **Route icons** (REQ-HOME-3). The panel shows the stop first, then its routes as small
 icons, several to a row: `[☑ 62] [☑ 66⚠] [☐ 189]`. Each is a checkbox and the route number

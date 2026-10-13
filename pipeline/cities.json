@@ -1,7 +1,7 @@
 {
   "country": "IL",
   "gtfsUrl": "https://gtfs.mot.gov.il/gtfsfiles/israel-public-transportation.zip",
-  "routeTypes": [3],
+  "routeTypes": [3, 0, 2, 5],
   "extraSources": [
     {
       "id": "busofash",

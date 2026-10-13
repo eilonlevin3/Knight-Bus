@@ -40,7 +40,7 @@ export function showStopInfo(city, stop, onPick) {
   track('stop_info_opened', { stops: group.length, told_apart: distinct ? 1 : 0 });
 
   const rows = group.map((s, i) => {
-    const numbers = [...new Set(city.routesAtStop(s.id).map((r) => r.short))];
+    const numbers = [...new Set(city.routesAtStop(s.id).map((r) => r.label))];
     const current = s.id === stop.id;
     return h('li', { class: current ? 'current' : '' },
       h('div', { class: 'row between' },
