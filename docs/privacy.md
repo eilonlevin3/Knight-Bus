@@ -27,6 +27,18 @@ you change what is collected, change this file, the screen text and the code tog
 | Opening view | The map view chosen for a Favorite Commute (center, zoom, panel height, key open or folded) is remembered **on the phone only** (`kb.view.…`) | Never sent |
 | Language | The language chosen in Options is remembered **on the phone only** (`kb.language`) | Never sent, except the usage event `language_changed` below, if you agreed |
 
+## Who else sees a request
+
+The app fetches things from other services, and each of them sees the phone's network
+address, as any website does:
+
+| Service | What it is asked | What that reveals |
+|---------|------------------|-------------------|
+| GitHub Pages | The app and the city data | That the app is in use |
+| OpenStreetMap | Map tiles; address searches you type | The area you look at; the address you searched |
+| Our live relay (Cloudflare), or Open Bus Stride | Live buses of route ids | Which routes are on your screen. Not which stop, not who you are. The relay stores nothing ([realtime.md](realtime.md#the-relay)) |
+| Google Firebase | Sign-in, Favorite Commutes, usage data if you agreed | See the tables in this file |
+
 ## Safe usage data: everyone who agreed (user and debug versions)
 
 Sent to **Google Analytics for Firebase** with `track()`. Each phone is a random Analytics

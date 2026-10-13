@@ -256,8 +256,14 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   The pipeline compares the order in which they pass each other's stops (`sameWay`): same
   order = merge, opposite order = `opposite`. Any claim about "both directions" must use
   `opposite` from the built data, never the direction code.
-- **Live data source** (owner, 2026-10-12): stay on Stride for now and see how it behaves.
-  The faster options are written up above; do not build them until asked. A side effect: about one route in seven now has the ⚠ sign (was 1–2%).
+- **Live relay** (owner chose it on 2026-10-13, after Stride stayed 14+ minutes late and
+  then stopped answering): `relay/worker.js`, a Cloudflare Worker; the app asks it first
+  (`fetchLiveMany` in `src/realtime.js`) and falls back to Stride (ADR-0011). The owner has
+  a Cloudflare account (opened 2026-10-13). **The Worker is deployed by hand**: the owner
+  pastes the file in Cloudflare's editor; Claude must not type passwords or create accounts
+  there. `realtime.relayUrl` in `src/config.js` is empty until the owner gives the Worker's
+  address. Open risk: the free plan's ~10 ms computing limit per request; check the
+  `x-relay` header and for error 1102 after deploying. A side effect: about one route in seven now has the ⚠ sign (was 1–2%).
 - **Buttons while a stop is open** (owner, 2026-10-11): tucked to the right edge with a
   handle; swipe left to show, right to hide (REQ-HOME-4). The editor shows routes as the
   same icons as the home screen (`routeChip` in `views/liveInfo.js`).

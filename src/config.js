@@ -28,6 +28,12 @@ export const FIREBASE_SDK = 'https://www.gstatic.com/firebasejs/10.12.2/';
 // Live bus positions (docs/realtime.md).
 export const realtime = {
   baseUrl: 'https://open-bus-stride-api.hasadna.org.il',
+  // Our own relay (relay/worker.js, docs/realtime.md#the-relay): positions about a minute
+  // old. Empty = not set up; the app then asks baseUrl (Open Bus Stride) directly. Stride is
+  // also the fallback whenever the relay does not answer. No trailing slash.
+  relayUrl: '',
+  relayTimeoutMs: 8000, // no answer from the relay in this time: ask Stride
+  timeoutMs: 20_000, // no answer from Stride in this time: say live data is unavailable
   refreshMs: 30_000,
   // The public mirror sometimes runs 15-25 minutes behind (seen all day on 2026-10-11).
   // Positions up to this old are still shown, marked as late (REQ-RT-9).

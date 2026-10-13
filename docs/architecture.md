@@ -47,6 +47,7 @@ flowchart LR
 | Side-by-side lines | Shifted lines without knots, recomputed per zoom | [src/lib/offsetLine.js](../src/lib/offsetLine.js) | [ADR-0007](adr/0007-address-search.md) |
 | Draggable panel | Bottom panel you drag for more map or more list | [src/lib/sheetDrag.js](../src/lib/sheetDrag.js) | [user-flows.md](user-flows.md#4-using-a-favorite-commute) |
 | Usage insights | Consent, safe events, debug-only details | [src/analytics.js](../src/analytics.js), [src/views/privacy.js](../src/views/privacy.js) | [privacy.md](privacy.md) |
+| Live relay | Reads the per-minute bus files and answers the app with only the routes asked for. Runs on Cloudflare, not on GitHub Pages | [relay/worker.js](../relay/worker.js) | [realtime.md](realtime.md#the-relay) |
 | Route search | Every route of the city, one row per two-direction service | [src/views/routes.js](../src/views/routes.js), [src/cityData.js](../src/cityData.js) | [user-flows.md](user-flows.md#6-search-routes) |
 | Languages | English and Hebrew, right-to-left layout, the Options pop-up | [src/i18n.js](../src/i18n.js), [src/i18n/he.js](../src/i18n/he.js), [src/views/options.js](../src/views/options.js) | [user-flows.md](user-flows.md#language) |
 | Stops sharing a number | Platform labels, the stop ⚠ pop-up | [src/views/stopInfo.js](../src/views/stopInfo.js) | [user-flows.md](user-flows.md#stops-that-share-a-number) |
@@ -136,6 +137,7 @@ The reasons behind these choices are in [adr/](adr/):
 - [ADR-0008](adr/0008-usage-insights.md) Usage insights: consent first, safe data for users, details for debug only
 - [ADR-0009](adr/0009-languages.md) English and Hebrew, with the English text as the key
 - [ADR-0010](adr/0010-one-route-many-entries.md) One route for the rider: stop patterns, merged alternatives, opposite directions
+- [ADR-0011](adr/0011-live-relay.md) A small relay of our own for live buses (Cloudflare Worker), with Stride as fallback
 
 ## Tests
 
@@ -150,6 +152,7 @@ The reasons behind these choices are in [adr/](adr/):
 | [report.test.mjs](../tests/report.test.mjs) | The admin report's counts and the 3-people rule for stops |
 | [i18n.test.mjs](../tests/i18n.test.mjs) | Every on-screen text has a Hebrew line; switching language |
 | [late.test.mjs](../tests/late.test.mjs) | A late live feed: finished rides dropped, late positions flagged |
+| [relay.test.mjs](../tests/relay.test.mjs) | The live relay: finding each route's buses in a file, answering only our app; reading its answers as buses |
 | [chips.test.mjs](../tests/chips.test.mjs) | Route icons: repeated numbers; merged alternatives and old saved ids |
 
 Screens are checked by hand on the debug version before a release

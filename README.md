@@ -67,7 +67,7 @@ a broken doc link. Why and how: [ADR-0005](docs/adr/0005-docs-as-code.md).
 | [privacy.md](docs/privacy.md) | **What is recorded about use, and what never is:** consent, the safe event list, debug-only details, where to see the numbers | [src/analytics.js](src/analytics.js), [src/views/privacy.js](src/views/privacy.js), [firestore.rules](firestore.rules) |
 | [release-process.md](docs/release-process.md) | **Test on your phone first:** the debug version, releasing to users, how updates reach phones, rollback | [deploy.yml](.github/workflows/deploy.yml), [scripts/build-site.sh](scripts/build-site.sh), [sw.js](sw.js), [src/updates.js](src/updates.js) |
 | [fun-facts/](docs/fun-facts/README.md) | Curiosities found in the bus data (for example: the same route stopping both ways at one stop) | [pipeline/build-city-data.mjs](pipeline/build-city-data.mjs) |
-| [adr/](docs/adr/) | Why we chose what we chose ([PWA](docs/adr/0001-pwa.md), [live data](docs/adr/0002-realtime-source.md), [maps](docs/adr/0003-maps.md), [Firebase](docs/adr/0004-firebase.md), [docs as code](docs/adr/0005-docs-as-code.md), [debug version](docs/adr/0006-release-channels.md), [address search](docs/adr/0007-address-search.md), [usage insights](docs/adr/0008-usage-insights.md), [languages](docs/adr/0009-languages.md), [routes and alternatives](docs/adr/0010-one-route-many-entries.md)) | — |
+| [adr/](docs/adr/) | Why we chose what we chose ([PWA](docs/adr/0001-pwa.md), [live data](docs/adr/0002-realtime-source.md), [maps](docs/adr/0003-maps.md), [Firebase](docs/adr/0004-firebase.md), [docs as code](docs/adr/0005-docs-as-code.md), [debug version](docs/adr/0006-release-channels.md), [address search](docs/adr/0007-address-search.md), [usage insights](docs/adr/0008-usage-insights.md), [languages](docs/adr/0009-languages.md), [routes and alternatives](docs/adr/0010-one-route-many-entries.md), [live relay](docs/adr/0011-live-relay.md)) | — |
 
 ### Where the code sits
 
@@ -99,6 +99,8 @@ Knight Bus/
 │   │                        patterns.js (stop-pattern summary), schedule.js (timetables), sheetDrag.js (the draggable panel), …
 │   └── views/               One file per screen: login, city, home, editor, commute, line (a route in full), routes (search),
 │                            privacy, report; and the pop-ups: options, lineInfo, stopInfo, busInfo
+├── relay/
+│   └── worker.js            The live relay (a Cloudflare Worker): fresh bus positions. Deployed by hand, see docs/setup.md §6
 ├── pipeline/
 │   ├── cities.json          Which cities exist and their boundaries
 │   ├── build-city-data.mjs  National GTFS → data/cities/<city>.json + data/schedules/<route>.json

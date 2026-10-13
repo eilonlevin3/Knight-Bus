@@ -4,7 +4,7 @@
 
 import { realtime } from './config.js';
 import { t, tn, arrow } from './i18n.js';
-import { fetchLiveBuses, classifyBuses, ageLabel, dropFinishedRides } from './realtime.js';
+import { fetchLiveMany, classifyBuses, ageLabel, dropFinishedRides } from './realtime.js';
 import { LINE_COLORS, busIcon, lighten } from './map.js';
 import { stopPositions, splitPath, samePath } from './lib/routeGeometry.js';
 import { makeOffsetPolyline } from './lib/offsetLine.js';
@@ -119,11 +119,17 @@ export class LiveLines {
     }
     const routeIds = [...new Set(this.entries.map((e) => e.routeId))];
     // Lines outside the government feed have no live positions: don't ask for them.
-    // A route can report under several ids (REQ-DATA-10): ask for each and put them together.
-    const fetchRoute = (route) => Promise.all(route.liveIds.map(fetchLiveBuses)).then((lists) => dropFinishedRides(lists.flat()));
-    const results = await Promise.all(routeIds.map((id) => (this.city.routes.get(id).live
-      ? fetchRoute(this.city.routes.get(id)).then((buses) => [id, { buses }], (error) => [id, { error }])
-      : [id, { buses: [], noLive: true }])));
+    // A route can report under several ids (REQ-DATA-10): all ids of all routes are asked for
+    // in one go (REQ-RT-11), then each route's answers are put together.
+    const liveRoutes = routeIds.map((id) => this.city.routes.get(id)).filter((r) => r.live);
+    const byLiveId = liveRoutes.length ? await fetchLiveMany(liveRoutes.flatMap((r) => r.liveIds)) : new Map();
+    const results = routeIds.map((id) => {
+      const route = this.city.routes.get(id);
+      if (!route.live) return [id, { buses: [], noLive: true }];
+      const answers = route.liveIds.map((liveId) => byLiveId.get(String(liveId)) || { buses: [] });
+      const error = answers.find((a) => a.error)?.error;
+      return [id, error ? { error } : { buses: dropFinishedRides(answers.flatMap((a) => a.buses)) }];
+    });
     if (gen !== this.generation || this.destroyed) return;
     const byRoute = new Map(results);
     const rows = this.entries.map(({ stopId, routeId }) => {

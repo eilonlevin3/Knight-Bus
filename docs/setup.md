@@ -87,3 +87,29 @@ node scripts/check-docs.mjs --matrix   # which file implements each requirement
 ```
 
 CI runs the same check, and a pull request fails if it does not pass.
+
+## 6. The live relay
+
+Optional. Without it the app reads live buses from Open Bus Stride, which can be 15–25
+minutes late. With it, about one minute ([realtime.md](realtime.md#the-relay)).
+
+It runs on Cloudflare's free plan. The steps are done once, in a browser:
+
+1. **Account.** Sign up at `https://dash.cloudflare.com/sign-up` (free, no card). Skip
+   adding a domain.
+2. **Create the Worker.** *Create app* (or *Workers & Pages* → *Create*) → *Start with
+   Hello World* → name it `knight-bus-relay` → **Deploy**. The first time, Cloudflare asks
+   you to choose your `workers.dev` name; it becomes part of the address.
+3. **Put our code in.** *Edit code* → select everything in the editor and delete it →
+   paste the whole of [relay/worker.js](../relay/worker.js) → **Deploy**.
+4. **Check.** Open `https://knight-bus-relay.<your name>.workers.dev/live?routes=23918` in a
+   browser. You should see `{"snapshot":"…","at":"…","routes":{"23918":[…]}}`.
+   - If it says the Worker threw an error about `node:zlib`: *Settings* → *Runtime* →
+     *Compatibility flags* → add `nodejs_compat` → **Deploy** again.
+   - If it says the Worker exceeded its limits (error 1102): see
+     [ADR-0011](adr/0011-live-relay.md), "What it costs".
+5. **Tell the app.** Put that address, without `/live…` and without a slash at the end,
+   in `realtime.relayUrl` in [src/config.js](../src/config.js), and push.
+
+After changing `relay/worker.js` in the repo, repeat step 3: the Worker does not update by
+itself.

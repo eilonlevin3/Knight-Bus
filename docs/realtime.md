@@ -34,6 +34,50 @@ it has moved on since. This is another reason for REQ-RT-4 (reading the ministry
 The upper time bound matters: the feed has some rows with wrong future timestamps (year
 2038), and they would otherwise sort first.
 
+## The relay
+
+Stride's delay comes from its loading step, not from the buses (REQ-RT-11,
+[ADR-0011](adr/0011-live-relay.md)). The Open Bus project also publishes what it loads
+*from*: one file a minute with every bus in the country.
+
+```
+https://openbus-stride-public.s3.eu-west-1.amazonaws.com/stride-siri-requester/YYYY/MM/DD/HH/MM.br   (UTC)
+```
+
+Each file appears less than a minute after its minute, is about 250 KB packed (brotli) and
+4 MB unpacked, and holds about 9,000 bus records in the ministry's own wording. A browser
+cannot read it directly, so [relay/worker.js](../relay/worker.js) stands in between:
+
+```mermaid
+sequenceDiagram
+  participant App
+  participant Relay as Relay (Cloudflare Worker)
+  participant Files as Open Bus files
+  participant Stride as Open Bus Stride
+  App->>Relay: /live?routes=23918,24041
+  Relay->>Files: newest file (once a minute)
+  Relay-->>App: only those routes' buses
+  Note over App,Stride: relay not set up, or no answer in 8 s
+  App->>Stride: one request per route id (as before)
+```
+
+- **The question:** `GET <relay>/live?routes=<id>,<id>…`, up to 80 route ids. One request
+  covers every route on the screen, with all the ids of merged alternatives (REQ-DATA-10).
+- **The answer:** `{ snapshot, at, routes: { "<id>": [records…] } }`. `snapshot` is the
+  file's minute, `at` the time it was made. The app turns each record into the same bus
+  object as a Stride row (`busFromRecord`), so everything after it is unchanged.
+- **The file also holds buses last heard long ago.** The app keeps positions from the last
+  30 minutes and drops finished rides, exactly as with Stride (REQ-RT-9).
+- **Only our app may read the answers from a browser:** the relay allows
+  `https://eilonlevin3.github.io` and a developer's `localhost`.
+- **Turning it on:** `realtime.relayUrl` in [src/config.js](../src/config.js). Empty means
+  Stride only. Putting the relay online: [setup.md](setup.md#6-the-live-relay).
+- **Time limits:** 8 seconds for the relay, then Stride; 20 seconds for Stride, then the
+  row says *Live data unavailable right now*.
+
+The header `x-relay` on every answer says how the relay got its data (`built`, `cache` or
+`memo`) and how long it took, for checking that it runs within Cloudflare's limits.
+
 ## What a bus tells us
 
 Tap a bus on any map (REQ-RT-10). The pop-up shows the route, where the bus is relative to

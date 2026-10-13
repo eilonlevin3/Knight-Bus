@@ -1,5 +1,5 @@
 // Live bus positions and "next two + last passed" logic. Docs: docs/realtime.md
-// @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-8 @req REQ-RT-9
+// @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-8 @req REQ-RT-9 @req REQ-RT-11
 
 import { realtime } from './config.js';
 import { t } from './i18n.js';
@@ -18,7 +18,8 @@ export async function fetchLiveBuses(routeId) {
     order_by: 'recorded_at_time desc',
     limit: '300',
   });
-  const res = await fetch(`${realtime.baseUrl}/siri_vehicle_locations/list?${params}`);
+  // Without a time limit a source that hangs would leave "Loading live buses…" forever.
+  const res = await fetch(`${realtime.baseUrl}/siri_vehicle_locations/list?${params}`, { signal: AbortSignal.timeout(realtime.timeoutMs) });
   if (!res.ok) throw new Error(t('Live data error (HTTP {status})', { status: res.status }));
   const rows = await res.json();
 
@@ -36,6 +37,78 @@ export async function fetchLiveBuses(routeId) {
     });
   }
   return dropFinishedRides([...latestByRide.values()]);
+}
+
+// One bus record from the relay (the ministry's own wording) as the app's bus. `raw` uses
+// the same field names as the Stride answers, so the bus pop-up reads both alike.
+export function busFromRecord(record, snapshot) {
+  const j = record.MonitoredVehicleJourney || {};
+  const frame = j.FramedVehicleJourneyRef || {};
+  const call = j.MonitoredCall || {};
+  const lat = Number(j.VehicleLocation?.Latitude);
+  const lon = Number(j.VehicleLocation?.Longitude);
+  const recordedAt = new Date(record.RecordedAtTime);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon) || Number.isNaN(recordedAt.getTime())) return null;
+  const num = (v) => (v === undefined || v === '' ? null : Number(v));
+  return {
+    rideId: `${frame.DatedVehicleJourneyRef || ''}|${j.VehicleRef || ''}`,
+    vehicle: j.VehicleRef || null,
+    lat,
+    lon,
+    recordedAt,
+    raw: {
+      source: 'relay',
+      recorded_at_time: record.RecordedAtTime,
+      lon,
+      lat,
+      bearing: num(j.Bearing),
+      velocity: num(j.Velocity),
+      siri_snapshot__snapshot_id: snapshot,
+      siri_route__line_ref: num(j.LineRef),
+      siri_route__operator_ref: num(j.OperatorRef),
+      siri_ride__journey_ref: frame.DataFrameRef && frame.DatedVehicleJourneyRef ? `${frame.DataFrameRef}-${frame.DatedVehicleJourneyRef}` : null,
+      siri_ride__scheduled_start_time: j.OriginAimedDepartureTime || null,
+      siri_ride__vehicle_ref: j.VehicleRef || null,
+      next_stop_code: call.StopPointRef || null,
+      next_stop_order: num(call.Order),
+      distance_from_stop: num(call.DistanceFromStop),
+    },
+  };
+}
+
+// Live buses of several route ids in one go: Map(route id -> { buses } or { error }).
+// Asks our relay when it is set up (positions about a minute old); if it is not, or it
+// does not answer, asks Open Bus Stride for each id as before (REQ-RT-11).
+export async function fetchLiveMany(routeIds, now = Date.now()) {
+  const ids = [...new Set(routeIds.map(String))];
+  if (realtime.relayUrl && ids.length) {
+    try {
+      const out = new Map();
+      for (let i = 0; i < ids.length; i += 80) {
+        const res = await fetch(`${realtime.relayUrl}/live?routes=${ids.slice(i, i + 80).join(',')}`, { signal: AbortSignal.timeout(realtime.relayTimeoutMs) });
+        if (!res.ok) throw new Error(`relay HTTP ${res.status}`);
+        const answer = await res.json();
+        for (const [id, records] of Object.entries(answer.routes)) {
+          const buses = records.map((r) => busFromRecord(r, answer.snapshot)).filter((b) => b &&
+            // The file also holds buses last heard long ago, and a few with a wrong future time.
+            now - b.recordedAt.getTime() <= realtime.windowMinutes * 60000 && b.recordedAt.getTime() <= now + 2 * 60000);
+          out.set(id, { buses: dropFinishedRides(latestPerRide(buses)) });
+        }
+      }
+      return out;
+    } catch (e) {
+      console.warn('Live relay did not answer; asking Open Bus Stride instead', e);
+    }
+  }
+  const settled = await Promise.all(ids.map((id) => fetchLiveBuses(id).then((buses) => [id, { buses }], (error) => [id, { error }])));
+  return new Map(settled);
+}
+
+// One position per ride: the newest.
+function latestPerRide(buses) {
+  const byRide = new Map();
+  for (const b of buses) if (!byRide.has(b.rideId) || byRide.get(b.rideId).recordedAt < b.recordedAt) byRide.set(b.rideId, b);
+  return [...byRide.values()];
 }
 
 // The feed can run late, so "old" is judged against the newest position the feed has for

@@ -9,7 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const CODE_DIRS = ['src', 'pipeline', 'scripts'];
+const CODE_DIRS = ['src', 'pipeline', 'scripts', 'relay'];
 const CODE_FILES = ['index.html', 'sw.js', 'manifest.webmanifest', 'firestore.rules'];
 const errors = [];
 
