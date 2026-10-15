@@ -36,7 +36,9 @@ export const realtime = {
   ghostMaxMinutes: 30, // an estimate never runs further ahead than this
   relayTimeoutMs: 8000, // no answer from the relay in this time: ask Stride
   timeoutMs: 20_000, // no answer from Stride in this time: say live data is unavailable
-  refreshMs: 30_000,
+  // The relay's file changes once a minute; asking twice as often shows a new one sooner.
+  refreshMs: 15_000,
+  freshFeedMinutes: 3, // the feed's newest file is at most this old: it is up to date
   // The public mirror sometimes runs 15-25 minutes behind (seen all day on 2026-10-11).
   // Positions up to this old are still shown, marked as late (REQ-RT-9).
   windowMinutes: 30,

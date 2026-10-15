@@ -292,6 +292,15 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   stop (REQ-COMM-10). Do not recenter on the person when coming back.
 - **Ghost** (owner, 2026-10-13): an estimated position, only for a bus the person picks in
   its pop-up (REQ-RT-12). Keep it visibly an estimate; do not use it for "stops away".
+- **Live delay complaints** (owner, 2026-10-13 and 2026-10-15): the relay tested healthy
+  each time (120 parallel requests, positions ~1 min old). Found on 2026-10-15: buses that
+  stopped sending stayed in the answer up to 30 min and showed as "late" — now dropped when
+  the feed is fresh. Refresh is 15 s. The line under each list now says the newest
+  position's age and *via our relay* / *via Open Bus Stride (reason)*: ask the owner what it
+  says before digging further.
+- **Automatic ghosts in a Favorite Commute** (owner, 2026-10-15, REQ-RT-13): the next bus to
+  each stop gets a ghost; the one behind it from a minute before arrival; off a minute
+  after passing (`pickAutoGhosts`).
 - **A month of real travel times** (owner, 2026-10-13; REQ-DATA-12): `pipeline/build-speeds.mjs`
   reads the per-minute bus files, keeps one summary per day (job cache `speed-days`), and
   publishes `data/speeds/<route>.json`: per stretch between two stops, average seconds for

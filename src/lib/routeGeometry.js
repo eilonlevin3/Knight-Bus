@@ -153,6 +153,26 @@ export function advanceOnPath(pattern, path, pos, seconds, stopPos = stopPositio
   return last;
 }
 
+// Seconds a bus takes from position `from` to position `to` on the path, by the same
+// rules as advanceOnPath (real travel times, then the timetable, then 18 km/h).
+export function travelSeconds(pattern, path, from, to, stopPos = stopPositions(pattern.stops, path), secondsOf = null) {
+  if (to <= from) return 0;
+  const times = pattern.times;
+  const usable = times && times.length === stopPos.length && times.every((x) => Number.isFinite(x));
+  let total = 0;
+  for (let i = 1; i < stopPos.length; i++) {
+    const a = stopPos[i - 1];
+    const b = stopPos[i];
+    const lo = Math.max(a, from);
+    const hi = Math.min(b, to);
+    if (hi <= lo || b <= a) continue;
+    const known = secondsOf ? secondsOf(i) : null;
+    const whole = known != null ? known : usable ? (times[i] - times[i - 1]) * 60 : metersAlong(path, a, b) / 5;
+    total += whole * ((hi - lo) / (b - a));
+  }
+  return total;
+}
+
 // Meters along the path between two positions on it.
 function metersAlong(path, from, to) {
   let meters = 0;

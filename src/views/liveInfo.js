@@ -3,8 +3,8 @@
 // @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-RT-9 @req REQ-LINE-2
 
 import { h } from '../lib/dom.js';
-import { t, tn, arrow } from '../i18n.js';
-import { ageLabel, isLate } from '../realtime.js';
+import { t, tn, arrow, locale } from '../i18n.js';
+import { ageLabel, isLate, liveStatus } from '../realtime.js';
 
 export function liveSummary(row) {
   if (!row) return h('small', { class: 'muted' }, t('Loading live buses…'));
@@ -32,6 +32,20 @@ export function liveSummary(row) {
     parts.push(h('span', { class: 'muted' }, ` · ${ageLabel(newest)}`));
   }
   return h('small', {}, ...parts);
+}
+
+// The line under a list of live buses: when it was updated, how old the newest position
+// is, and which way the data came (REQ-RT-11). rows: from LiveLines.
+export function liveStatusLine(rows, updatedAt) {
+  const newest = rows.flatMap((r) => [...(r.next || []), ...(r.passed || [])]).map((b) => b.recordedAt.getTime()).sort((a, b) => b - a)[0];
+  const via = liveStatus.source === 'relay' ? t('via our relay')
+    : liveStatus.reason === 'not set up' ? t('via Open Bus Stride')
+      : liveStatus.reason ? t('via Open Bus Stride (the relay did not answer: {reason})', { reason: liveStatus.reason }) : t('via Open Bus Stride');
+  return [
+    t('Updated {time}', { time: updatedAt.toLocaleTimeString(locale()) }),
+    newest ? t('newest position {age}', { age: ageLabel(new Date(newest)) }) : null,
+    via,
+  ].filter(Boolean).join(' · ');
 }
 
 // Routes from outside the government feed (the weekend services) are marked the same way

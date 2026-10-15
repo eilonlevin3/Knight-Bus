@@ -11,7 +11,7 @@ import { readView } from '../lib/savedView.js';
 import { draggableSheet, PANEL_SIZES } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { track, trackDetail, bucket, hourOfDay, weekday } from '../analytics.js';
-import { liveSummary, routeBadge, routeTitle, selectAllRow } from './liveInfo.js';
+import { liveSummary, routeBadge, routeTitle, selectAllRow, liveStatusLine } from './liveInfo.js';
 import { showRouteInfo } from './lineInfo.js';
 import { platformText, stopHazard } from './stopInfo.js';
 
@@ -44,7 +44,9 @@ export async function render(root, ctx, { slot }) {
   let rows = [];
   let updatedAt = null;
   let reportedLive = false;
+  // In a Favorite Commute the ghost of the bus coming next shows by itself (REQ-RT-13).
   const lines = new LiveLines(map, city, {
+    autoGhosts: true,
     onUpdate: (r) => {
       rows = r;
       updatedAt = new Date();
@@ -150,7 +152,7 @@ export async function render(root, ctx, { slot }) {
         () => { all.forEach((e) => hidden.add(key(e))); track('routes_clear_all', { where: 'commute' }); show(); }),
       ...sections,
       h('div', { class: 'row between' },
-        h('small', { class: 'muted' }, updatedAt ? t('Updated {time} · refreshes every 30 s', { time: updatedAt.toLocaleTimeString(locale()) }) : t('Loading…')),
+        h('small', { class: 'muted' }, updatedAt ? liveStatusLine(rows, updatedAt) : t('Loading…')),
         h('button', { class: 'link small', onclick: () => lines.refresh() }, t('↻ Refresh'))),
     );
     sheet.scrollTop = scroll;

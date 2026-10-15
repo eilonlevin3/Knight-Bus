@@ -14,7 +14,7 @@ import { draggableSheet } from '../lib/sheetDrag.js';
 import { commuteName } from '../lib/names.js';
 import { consent, setConsent, detailed, track, trackDetail, bucket } from '../analytics.js';
 import { safeSummary, debugSummary } from './privacy.js';
-import { routeChip, repeatedNumbers, selectAllRow, headingButtons } from './liveInfo.js';
+import { routeChip, repeatedNumbers, selectAllRow, headingButtons, liveStatusLine } from './liveInfo.js';
 import { showRouteCard } from './lineInfo.js';
 import { stopSuffix, stopHazard } from './stopInfo.js';
 import { showOptions } from './options.js';
@@ -195,7 +195,7 @@ export async function render(root, ctx) {
       h('div', { class: 'route-chips' }, ...rows),
       h('div', { class: 'row between' },
         h('small', { class: 'muted' }, state.updatedAt
-          ? t('Updated {time} · refreshes every 30 s', { time: state.updatedAt.toLocaleTimeString(locale()) })
+          ? liveStatusLine(state.rows, state.updatedAt)
           : t('Loading live buses…')),
         h('button', { class: 'link small', onclick: () => lines.refresh() }, t('↻ Refresh'))));
   }

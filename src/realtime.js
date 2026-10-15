@@ -76,6 +76,10 @@ export function busFromRecord(record, snapshot) {
   };
 }
 
+// How the last live answer came, for the line under each list (REQ-RT-11):
+// { source: 'relay' | 'stride', reason: why the relay was not used, or null }
+export const liveStatus = { source: null, reason: null };
+
 // Live buses of several route ids in one go: Map(route id -> { buses } or { error }).
 // Asks our relay when it is set up (positions about a minute old); if it is not, or it
 // does not answer, asks Open Bus Stride for each id as before (REQ-RT-11).
@@ -88,18 +92,30 @@ export async function fetchLiveMany(routeIds, now = Date.now()) {
         const res = await fetch(`${realtime.relayUrl}/live?routes=${ids.slice(i, i + 80).join(',')}`, { signal: AbortSignal.timeout(realtime.relayTimeoutMs) });
         if (!res.ok) throw new Error(`relay HTTP ${res.status}`);
         const answer = await res.json();
+        // The file also holds buses last heard long ago: a bus that stopped sending (its trip
+        // ended, its radio went quiet) stays in it for half an hour. When the file itself is
+        // up to date, a bus that has said nothing for 7 minutes is not running: leave it out.
+        // Only when the whole feed is late are older positions shown, marked late (REQ-RT-9).
+        const fileTime = Date.parse(answer.at);
+        const feedFresh = Number.isFinite(fileTime) && now - fileTime <= realtime.freshFeedMinutes * 60000;
+        const maxAge = (feedFresh ? realtime.rideGapMinutes : realtime.windowMinutes) * 60000;
         for (const [id, records] of Object.entries(answer.routes)) {
           const buses = records.map((r) => busFromRecord(r, answer.snapshot)).filter((b) => b &&
-            // The file also holds buses last heard long ago, and a few with a wrong future time.
-            now - b.recordedAt.getTime() <= realtime.windowMinutes * 60000 && b.recordedAt.getTime() <= now + 2 * 60000);
+            now - b.recordedAt.getTime() <= maxAge && b.recordedAt.getTime() <= now + 2 * 60000); // a few have a wrong future time
           out.set(id, { buses: dropFinishedRides(latestPerRide(buses)) });
         }
       }
+      liveStatus.source = 'relay';
+      liveStatus.reason = null;
       return out;
     } catch (e) {
       console.warn('Live relay did not answer; asking Open Bus Stride instead', e);
+      liveStatus.reason = e.name === 'TimeoutError' ? 'timeout' : e.message || e.name;
     }
+  } else {
+    liveStatus.reason = realtime.relayUrl ? null : 'not set up';
   }
+  liveStatus.source = 'stride';
   const settled = await Promise.all(ids.map((id) => fetchLiveBuses(id).then((buses) => [id, { buses }], (error) => [id, { error }])));
   return new Map(settled);
 }

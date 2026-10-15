@@ -74,6 +74,16 @@ sequenceDiagram
   Stride only. Putting the relay online: [setup.md](setup.md#6-the-live-relay).
 - **Time limits:** 8 seconds for the relay, then Stride; 20 seconds for Stride, then the
   row says *Live data unavailable right now*.
+- **Buses that went quiet.** A bus stays in the file for about half an hour after its last
+  signal (its trip ended, or its radio stopped). When the file itself is up to date (made
+  in the last 3 minutes), such a bus is left out once it has said nothing for 7 minutes.
+  Only when the whole feed is late are older positions shown, marked as late (REQ-RT-9).
+  Until 2026-10-15 these quiet buses were shown as "late" positions up to 30 minutes old.
+- **Every 15 seconds.** The file changes once a minute; asking every 15 seconds picks up a
+  new one within 15 seconds of the relay having it.
+- **The line under each list** says when it was updated, how old the newest position is,
+  and which way it came: *via our relay*, or *via Open Bus Stride (the relay did not
+  answer: …)* with the reason. That is the first thing to look at when buses seem late.
 
 The header `x-relay` on every answer says how the relay got its data (`built`, `cache` or
 `memo`) and how long it took, for checking that it runs within Cloudflare's limits.
@@ -131,6 +141,24 @@ when the feed is late. The ghost (REQ-RT-12) shows where the bus has probably go
 - If the bus is more than 250 m from the route as our map has it, no ghost is offered.
 
 "Stops away" in the lists still counts from the real signal, not from the ghost.
+
+## Ghosts in a Favorite Commute
+
+In a Favorite Commute (REQ-RT-13) ghosts come on by themselves, so the bus you wait for is
+always moving on the map between signals:
+
+- For **every route shown at every stop**, the ghost of the bus whose ghost will reach the
+  stop next is on.
+- When that ghost is **one minute or less from the stop**, the ghost of the bus behind it
+  comes on as well.
+- **One minute after a ghost passes the stop**, it goes off; the one behind it is then the
+  closest.
+- A route that is unchecked shows no ghost. A ghost you remove in the bus's pop-up stays
+  off for that bus; you can turn it on again there.
+
+The rule is checked every 2 seconds, with the same estimate as a ghost turned on by hand.
+Code: [lib/ghosts.js](../src/lib/ghosts.js) (`pickAutoGhosts`), [liveLines.js](../src/liveLines.js)
+(`autoGhostIds`).
 
 Code: [liveLines.js](../src/liveLines.js) (`ghostOf`, `drawGhosts`),
 [lib/routeGeometry.js](../src/lib/routeGeometry.js) (`advanceOnPath`),

@@ -58,6 +58,7 @@ export function showBusInfo({ bus, route, where = [], ghost = null }) {
       // The ghost: only for this bus, and only when the person asks for it (REQ-RT-12).
       ghost ? h('div', { class: 'ghost-box stack' },
         h('b', {}, t('👻 Estimated position now')),
+        ghost.auto ? h('small', {}, t('Shown by itself: in a Favorite Commute, the bus coming next to your stop gets a ghost.')) : null,
         h('small', { class: 'muted' }, ghost.possible
           ? t('A ghost bus on the map, moved forward from the last signal along the route. It goes as fast as buses really went on each stretch at this time of day over the last month; where that is not known, at timetable speed. It is an estimate, not a signal: today\'s traffic is not known.')
           : t('This bus is not on the route as our map has it, so its position cannot be estimated.')),

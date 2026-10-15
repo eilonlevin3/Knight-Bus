@@ -105,3 +105,25 @@ test('a ghost uses the real travel time of a stretch where it is known', () => {
   const noTimes = { stops, times: null };
   assert.ok(Math.abs(advanceOnPath(noTimes, shape, 2, 60, undefined, secondsOf) - 2.5) < 1e-6);
 });
+
+// REQ-RT-13: the ghosts a Favorite Commute shows by itself.
+import { pickAutoGhosts } from '../src/lib/ghosts.js';
+import { travelSeconds } from '../src/lib/routeGeometry.js';
+
+test('the ghost closest to the stop is shown; the one behind it from a minute before it arrives', () => {
+  assert.deepEqual(pickAutoGhosts([{ id: 'far', seconds: 400 }, { id: 'near', seconds: 120 }]), ['near']);
+  assert.deepEqual(pickAutoGhosts([{ id: 'far', seconds: 400 }, { id: 'near', seconds: 60 }]), ['near', 'far']);
+  // It passed the stop 30 seconds ago: still shown, with the next one.
+  assert.deepEqual(pickAutoGhosts([{ id: 'far', seconds: 400 }, { id: 'near', seconds: -30 }]), ['near', 'far']);
+  // It passed more than a minute ago: gone; the next one is now the closest.
+  assert.deepEqual(pickAutoGhosts([{ id: 'far', seconds: 400 }, { id: 'near', seconds: -61 }]), ['far']);
+  assert.deepEqual(pickAutoGhosts([{ id: 'x', seconds: NaN }]), []);
+  assert.deepEqual(pickAutoGhosts([]), []);
+});
+
+test('travel time between two points of a route', () => {
+  assert.equal(travelSeconds(pattern, shape, 2, 4), 120); // the timetable: a minute per stop
+  assert.equal(travelSeconds(pattern, shape, 2.5, 3), 30);
+  assert.equal(travelSeconds(pattern, shape, 4, 2), 0);
+  assert.equal(travelSeconds(pattern, shape, 2, 4, undefined, (i) => (i === 3 ? 30 : null)), 90); // a known stretch
+});

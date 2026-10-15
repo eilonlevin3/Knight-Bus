@@ -1,12 +1,13 @@
 // Draws the chosen routes as lines on a map, with their live buses, and keeps the buses fresh.
 // Used by both the editor and the commute screen, so they behave the same (REQ-COMM-1).
-// @req REQ-RT-10 @req REQ-RT-12 @req REQ-LINE-1a @req REQ-LINE-1b @req REQ-LINE-1c @req REQ-RT-8 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
+// @req REQ-RT-10 @req REQ-RT-12 @req REQ-RT-13 @req REQ-LINE-1a @req REQ-LINE-1b @req REQ-LINE-1c @req REQ-RT-8 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
 
 import { realtime } from './config.js';
 import { t, tn, arrow } from './i18n.js';
 import { fetchLiveMany, classifyBuses, ageLabel, dropFinishedRides } from './realtime.js';
 import { LINE_COLORS, busIcon, lighten } from './map.js';
-import { stopPositions, splitPath, samePath, projectOnPath, advanceOnPath, pointAt, slicePath } from './lib/routeGeometry.js';
+import { stopPositions, splitPath, samePath, projectOnPath, advanceOnPath, travelSeconds, pointAt, slicePath } from './lib/routeGeometry.js';
+import { pickAutoGhosts } from './lib/ghosts.js';
 import { makeOffsetPolyline } from './lib/offsetLine.js';
 import { showBusInfo } from './views/busInfo.js';
 import { loadSpeeds, segmentSeconds, cellAt } from './lib/speeds.js';
@@ -15,7 +16,12 @@ let OffsetPolyline = null; // created on first use, once Leaflet (global L) is l
 
 export class LiveLines {
   // onUpdate(rows): rows = [{ stop, route, color, next: [bus], passed: [bus], error }]
-  constructor(map, city, { onUpdate = () => {} } = {}) {
+  // autoGhosts: show by itself the ghost of the bus coming next to each stop (the Favorite
+  // Commute view, REQ-RT-13).
+  constructor(map, city, { onUpdate = () => {}, autoGhosts = false } = {}) {
+    this.autoGhosts = autoGhosts;
+    this.ghostsOff = new Set(); // ride ids whose automatic ghost the person removed
+    this.rows = [];
     this.map = map;
     this.city = city;
     this.onUpdate = onUpdate;
@@ -152,6 +158,17 @@ export class LiveLines {
         : classifyBuses(buses, pattern.stops, stopId, this.city.shapeOf(pattern), otherPaths);
       return { stop, route, pattern, color: this.colorOf(routeId), next, passed, error, noLive };
     });
+    this.rows = rows;
+    if (this.autoGhosts) {
+      // A ghost needs the route's real travel times: fetch them for every route on screen.
+      for (const row of rows) {
+        const id = row.route.id;
+        if (row.route.live && !this.speeds.has(id)) {
+          this.speeds.set(id, null);
+          loadSpeeds(id).then((speeds) => { this.speeds.set(id, speeds); });
+        }
+      }
+    }
     this.drawBuses(rows);
     this.onUpdate(rows);
     if (!document.hidden) this.timer = setTimeout(() => this.refresh(), realtime.refreshMs);
@@ -192,13 +209,21 @@ export class LiveLines {
   openBus(rideId) {
     const m = this.shown.get(rideId);
     if (!m) return;
+    const auto = this.autoGhostIds().has(rideId);
     showBusInfo({
       bus: m.bus, route: m.row.route, where: m.lines,
       ghost: {
-        on: this.ghosts.has(rideId),
+        on: this.ghosts.has(rideId) || auto,
+        auto,
         possible: !!this.ghostOf(m),
         toggle: () => {
-          if (this.ghosts.has(rideId)) this.ghosts.delete(rideId); else this.ghosts.add(rideId);
+          if (this.ghosts.has(rideId) || auto) {
+            this.ghosts.delete(rideId);
+            if (auto) this.ghostsOff.add(rideId); // removed by hand: not shown again by itself
+          } else {
+            this.ghosts.add(rideId);
+            this.ghostsOff.delete(rideId);
+          }
           this.drawGhosts();
           // Now, and only now, fetch how fast this route's buses really go (REQ-DATA-12).
           const routeId = m.row.route.id;
@@ -219,19 +244,54 @@ export class LiveLines {
     if (meters > realtime.maxOffRouteMeters) return null;
     const seconds = Math.min(realtime.ghostMaxMinutes * 60, (Date.now() - bus.recordedAt.getTime()) / 1000);
     // Real travel times for this half hour where known; the timetable otherwise.
-    const speeds = this.speeds.get(row.route.id);
-    const cell = cellAt();
-    const secondsOf = speeds ? (i) => segmentSeconds(speeds, pattern.stops[i - 1].id, pattern.stops[i].id, cell) : null;
-    const to = advanceOnPath(pattern, path, pos, seconds, undefined, secondsOf);
+    const to = advanceOnPath(pattern, path, pos, seconds, undefined, this.secondsOfFor(row));
     return { path, from: pos, to, point: pointAt(path, to) };
+  }
+
+  // The ghosts a Favorite Commute shows by itself (REQ-RT-13): for every route at every
+  // stop on screen, the bus whose ghost is next to reach the stop; one minute after its
+  // ghost passes the stop it goes; one minute before, the bus behind it comes on too.
+  autoGhostIds() {
+    const ids = new Set();
+    if (!this.autoGhosts) return ids;
+    for (const row of this.rows) {
+      if (row.noLive || row.error) continue;
+      const pattern = row.pattern;
+      const path = this.city.shapeOf(pattern);
+      const stopPos = stopPositions(pattern.stops, path);
+      const at = stopPos[pattern.stops.findIndex((s) => s.id === row.stop.id)];
+      if (at === undefined) continue;
+      const secondsOf = this.secondsOfFor(row);
+      const buses = [...row.passed, ...row.next].map((bus) => {
+        const g = this.ghostOf({ bus, row });
+        if (!g) return { id: bus.rideId, seconds: NaN };
+        // When the ghost reaches the stop: from where it is now, or (if it is past the
+        // stop) when it got there, counted from the bus's last signal.
+        const seconds = g.to < at
+          ? travelSeconds(pattern, path, g.to, at, stopPos, secondsOf)
+          : (bus.recordedAt.getTime() + travelSeconds(pattern, path, g.from, at, stopPos, secondsOf) * 1000 - Date.now()) / 1000;
+        return { id: bus.rideId, seconds };
+      });
+      for (const id of pickAutoGhosts(buses)) if (!this.ghostsOff.has(id)) ids.add(id);
+    }
+    return ids;
+  }
+
+  // Real travel times of a row's route for this half hour, or null (then the timetable).
+  secondsOfFor(row) {
+    const speeds = this.speeds.get(row.route.id);
+    if (!speeds) return null;
+    const cell = cellAt();
+    const stops = row.pattern.stops;
+    return (i) => segmentSeconds(speeds, stops[i - 1].id, stops[i].id, cell);
   }
 
   // Draws the estimates and keeps them moving while any is on.
   drawGhosts() {
     this.ghostLayer.clearLayers();
     clearTimeout(this.ghostTimer);
-    let any = false;
-    for (const rideId of this.ghosts) {
+    let any = this.autoGhosts && this.rows.length > 0; // keep checking which ghosts to show
+    for (const rideId of new Set([...this.ghosts, ...this.autoGhostIds()])) {
       const m = this.shown.get(rideId);
       const g = m && this.ghostOf(m);
       if (!g) continue;
