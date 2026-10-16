@@ -302,8 +302,9 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   `israel-rail-api` and Home Assistant). Undocumented; called only by the relay
   (`/rail-board`), never by the app. Station numbers differ from GTFS: `lib/railStations.js`
   (3 eastern-line stations missing). Times differ by a few minutes at times; matching is by
-  end station and nearest time (`addPlatforms`). The relay must be re-pasted by the owner
-  after this change (2026-10-16).
+  end station and nearest time (`addPlatforms`). Deployed 2026-10-16: from Cloudflare,
+  Israel Railways only answered once the relay sent the website's own headers (origin,
+  referer, a browser user-agent).
 - **Closing a Favorite Commute** (owner, 2026-10-13): **✕ Close**, not "← Home", and the
   home map stays where the Favorite Commute's map was (`ctx.homeView`), like closing a
   stop (REQ-COMM-10). Do not recenter on the person when coming back.
