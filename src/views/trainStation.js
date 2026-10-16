@@ -14,10 +14,10 @@
 // one with its own settings; the RAIL argument says which kind of station it is.
 
 import { h } from '../lib/dom.js';
-import { t, tn, arrow } from '../i18n.js';
+import { t, tn, arrow, locale } from '../i18n.js';
 import { track } from '../analytics.js';
-import { israelMinutesOf, clock } from '../lib/israelTime.js';
-import { departures } from '../lib/railTimetable.js';
+import { israelNow, israelMinutesOf, clock } from '../lib/israelTime.js';
+import { departures, searchTrips, israelToday } from '../lib/railTimetable.js';
 import { liveSummary, routeBadge } from './liveInfo.js';
 import { stopSuffix } from './stopInfo.js';
 
@@ -33,7 +33,7 @@ export const TRAIN = {
   searchTitle: () => t('Train from… to…'),
   toPlaceholder: () => t('Destination station'),
   noneToday: () => t('No more trains from this station today.'),
-  noTrips: () => t('No direct train between these stations for the rest of today.'),
+  noTrips: () => t('No direct train between these stations in the coming week.'),
   notRunning: () => t('No live signal from this train right now. It shows on the map while it runs.'),
 };
 
@@ -62,6 +62,8 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
     trip: null, // the departure shown on the map
     onMap: false, // "see all trains" is on
     picking: null, // 'from' | 'to' while choosing a station
+    // When to travel: today, leaving now, until changed (REQ-TRAIN-3).
+    mode: 'leave', // 'leave' at the time, or 'arrive' by it
   };
   track('rail_station_opened', { kind: rail.kind });
 
@@ -81,11 +83,21 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
   const toInput = h('input', { type: 'search', placeholder: rail.toPlaceholder(), 'aria-label': t('To'), oninput: () => suggest('to') });
   const suggestions = h('div', { class: 'results' });
   const tripsBox = h('div', { class: 'stack' });
+  // The date and time, and whether that is when to leave or when to arrive.
+  const nowHHMM = () => clock(israelNow().minutes);
+  const dateInput = h('input', { type: 'date', value: israelToday(), 'aria-label': t('Date'), onchange: () => search() });
+  const timeInput = h('input', { type: 'time', value: nowHHMM(), 'aria-label': t('Time'), onchange: () => search() });
+  const modeButton = (mode, label) => h('button', { type: 'button', class: 'small-button', onclick: () => { state.mode = mode; search(); } }, label);
+  const leaveButton = modeButton('leave', t('Leave at'));
+  const arriveButton = modeButton('arrive', t('Arrive by'));
+  const nowButton = h('button', { type: 'button', class: 'link small', onclick: () => { dateInput.value = israelToday(); timeInput.value = nowHHMM(); state.mode = 'leave'; search(); } }, t('Now'));
   searchBox.append(
     h('b', {}, rail.searchTitle()),
     h('label', { class: 'field' }, t('From'), fromInput),
     h('label', { class: 'field' }, t('To'), toInput),
     suggestions,
+    h('div', { class: 'row when-row' }, leaveButton, arriveButton, nowButton),
+    h('div', { class: 'row when-row' }, h('label', { class: 'field grow' }, t('Date'), dateInput), h('label', { class: 'field grow' }, t('Time'), timeInput)),
     tripsBox);
   root.append(header, h('div', { class: 'row' }, mapButton), tripBox, searchBox, boardBox);
 
@@ -117,8 +129,11 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
     state.trips = 'loading';
     update();
     const fromRoutes = city.routesAtStop(state.from.id).filter((r) => r.kind === rail.kind);
-    state.trips = await departures(city, fromRoutes, sameName(state.from), sameName(state.to));
-    track('rail_search', { kind: rail.kind, found: state.trips.length ? 1 : 0 });
+    const [hh, mm] = (timeInput.value || nowHHMM()).split(':').map(Number);
+    const when = { date: dateInput.value || israelToday(), minutes: hh * 60 + mm, mode: state.mode };
+    // The next five trains (or the last five that arrive in time), even if not on that day.
+    state.trips = await searchTrips(city, fromRoutes, sameName(state.from), sameName(state.to), when, 5);
+    track('rail_search', { kind: rail.kind, found: state.trips.length ? 1 : 0, mode: state.mode, today: when.date === israelToday() ? 1 : 0 });
     update();
   }
 
@@ -135,10 +150,13 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
   }
 
   // One train: its route on the map, and the train itself if it is running.
+  // A train can be live only if it runs today (or started yesterday and runs past midnight).
+  const runsToday = (dep) => !dep.date || dep.date === israelToday() || dep.serviceDate === israelToday();
+
   function showTrip(dep) {
     state.trip = dep;
     state.onMap = false;
-    lines.busFilter = isTrip(dep);
+    lines.busFilter = runsToday(dep) ? isTrip(dep) : () => false;
     lines.set([{ stopId: stop.id, routeId: dep.route.id }]);
     setTimeout(() => lines.fit(), 0);
     track('rail_trip_shown', { kind: rail.kind });
@@ -155,8 +173,12 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
 
   // ----- Drawing -----
 
+  // "Sat 17/10" for a train that is not today.
+  const dayLabel = (date) => new Date(`${date}T12:00:00Z`).toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'UTC' });
   const departureRow = (dep, withArrival = false) => h('button', { class: 'result departure', onclick: () => showTrip(dep) },
-    h('b', { class: 'dep-time' }, clock(dep.minute)),
+    h('span', { class: 'dep-when' },
+      dep.date && dep.date !== israelToday() ? h('small', { class: 'muted block' }, dayLabel(dep.date)) : null,
+      h('b', { class: 'dep-time' }, clock(dep.minute))),
     routeBadge(dep.route),
     h('span', { class: 'line-text' },
       h('span', {}, `${arrow()} ${dep.dest}`),
@@ -172,8 +194,10 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
     const ghostOn = bus && lines.ghosts.has(bus.rideId);
     return [h('div', { class: 'card stack trip-card' },
       h('div', { class: 'row' }, routeBadge(dep.route), h('b', { class: 'grow' }, `${clock(dep.minute)} ${arrow()} ${dep.dest}`)),
-      h('small', { class: 'muted' }, t('Leaves {station} at {time}', { station: stop.name, time: clock(dep.minute) })),
-      bus ? liveSummary(row) : h('small', { class: 'muted' }, rail.notRunning()),
+      h('small', { class: 'muted' }, dep.date && dep.date !== israelToday()
+        ? t('Leaves on {date} at {time}', { date: dayLabel(dep.date), time: clock(dep.minute) })
+        : t('Leaves {station} at {time}', { station: stop.name, time: clock(dep.minute) })),
+      bus ? liveSummary(row) : h('small', { class: 'muted' }, runsToday(dep) ? rail.notRunning() : t('Not today: its live position shows on the day it runs.')),
       bus ? h('button', {
         onclick: () => { lines.setGhost(bus.rideId, !ghostOn); update(); },
       }, ghostOn ? t('Remove the ghost') : t('👻 Show its ghost')) : null,
@@ -184,8 +208,10 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
     if (state.trips === null) return [];
     if (state.trips === 'loading') return [h('p', { class: 'muted small' }, t('Looking for trains…'))];
     if (!state.trips.length) return [h('p', { class: 'muted small' }, rail.noTrips())];
-    return [h('small', { class: 'muted' }, t('{from} to {to}, from now on:', { from: state.from.name, to: state.to.name })),
-      ...state.trips.slice(0, 12).map((dep) => departureRow(dep, true))];
+    return [h('small', { class: 'muted' }, state.mode === 'leave'
+      ? t('{from} to {to}: the next trains', { from: state.from.name, to: state.to.name })
+      : t('{from} to {to}: the last trains that arrive in time', { from: state.from.name, to: state.to.name })),
+    ...state.trips.map((dep) => departureRow(dep, true))];
   }
 
   function drawBoard() {
@@ -203,6 +229,8 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
 
   function update() {
     mapButton.textContent = state.onMap ? rail.offMapButton() : rail.onMapButton();
+    leaveButton.classList.toggle('primary', state.mode === 'leave');
+    arriveButton.classList.toggle('primary', state.mode === 'arrive');
     tripBox.replaceChildren(...drawTrip().filter(Boolean));
     tripsBox.replaceChildren(...drawTrips().filter(Boolean));
     boardBox.replaceChildren(...drawBoard().filter(Boolean));

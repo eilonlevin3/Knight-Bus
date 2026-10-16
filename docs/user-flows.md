@@ -446,8 +446,14 @@ has. **Nothing is drawn on the map** when it opens.
   Trains that end here are not listed. These are timetable times, Israel time; trains that
   left late yesterday and run past midnight are included.
 - **From… to…** (REQ-TRAIN-3): type in the **To** box and pick a station; *From* starts as
-  this station and can be changed the same way. The list shows the direct trains between
-  the two for the rest of today, with when each arrives and how long it takes.
+  this station and can be changed the same way. Below them: **Leave at** or **Arrive by**,
+  a **date** and a **time**. It starts as today, leaving now; **Now** goes back to that.
+  The list shows **five** direct trains: the next five leaving at that time or later, or the
+  last five arriving by it, with when each arrives and how long it takes. When the day has
+  fewer, the list goes on into the next days (a Friday afternoon search shows Saturday
+  night and Sunday trains), each marked with its day. The timetable files cover the coming
+  week; further ahead, the same weekday's trains are shown. A train on another day can be
+  shown on the map, but its live position only appears on the day.
 - **The map only on request** (REQ-TRAIN-4): **🗺 See all trains through this station on the
   map** draws every train route through the station, with the live trains on them. Pressed
   again (*Hide the trains from the map*), the map is cleared.

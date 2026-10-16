@@ -393,6 +393,9 @@ details > summary { cursor: pointer; }
 .rail-station .departure { display: flex; gap: 10px; align-items: center; }
 .dep-time { min-width: 3.2em; font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
 .rail-search { gap: 8px; }
+.when-row { flex-wrap: wrap; }
+.when-row input { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
+.dep-when { min-width: 3.6em; text-align: center; }
 .trip-card { border-color: var(--purple-2); }
 /* A station's direction buttons, beside Select all and Clear all (REQ-DATA-13) */
 .heading-button.on { border-color: var(--purple-2); font-weight: 700; }

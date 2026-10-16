@@ -52,3 +52,59 @@ export async function departures(city, routes, fromIds, toIds = null, now = isra
   return out.sort((a, b) => a.minute - b.minute);
 }
 
+
+// ---------- The From / To search with a date and a time (REQ-TRAIN-3) ----------
+
+// Today's date in Israel, "YYYY-MM-DD".
+const ymd = typeof Intl !== 'undefined' ? new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }) : null;
+export const israelToday = (date = new Date()) => ymd.format(date);
+
+// "2026-10-16" + 2 days -> "2026-10-18"; and the weekday (0 = Sunday) of a date.
+export function addDays(date, days) {
+  const [y, m, d] = date.split('-').map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+export const weekdayOf = (date) => new Date(`${date}T12:00:00Z`).getUTCDay();
+
+// Trains from one station to another, around a date and time.
+//   when: { date: "YYYY-MM-DD", minutes: minutes since midnight, mode: 'leave' | 'arrive' }
+//   leave:  the first `count` trains leaving at that time or later, on that day or the next;
+//   arrive: the last `count` trains arriving at that time or earlier.
+// Returns [{ route, start, minute, arrive, dest, date, serviceDate }]: `minute` and `arrive`
+// count from midnight of `date` (the day the train leaves); `serviceDate` is the day of the
+// timetable it runs on (a train after midnight belongs to the day before).
+// The timetable files cover a week, by weekday; further ahead the weekday is used again.
+export async function searchTrips(city, routes, fromIds, toIds, { date, minutes, mode = 'leave' }, count = 5, timetableOf = scheduleOf) {
+  const found = [];
+  const days = mode === 'leave' ? [-1, 0, 1, 2, 3, 4, 5, 6, 7] : [-8, -7, -6, -5, -4, -3, -2, -1, 0];
+  for (const route of routes) {
+    const schedule = await timetableOf(route);
+    if (!schedule) continue;
+    schedule.patterns.forEach((pattern, pi) => {
+      const at = pattern.stops.findIndex((id) => fromIds.has(id));
+      if (at < 0) return;
+      const to = pattern.stops.findIndex((id, k) => k > at && toIds.has(id));
+      const off = pattern.offsets || [];
+      if (to < 0 || off[at] == null || off[to] == null) return;
+      const lastStop = city.stops.get(pattern.stops.at(-1));
+      for (const k of days) {
+        const serviceDate = addDays(date, k);
+        const bit = 1 << weekdayOf(serviceDate);
+        for (const [mask, start, tpi] of schedule.trips) {
+          if (tpi !== pi || !(mask & bit)) continue;
+          const leave = k * 1440 + start + off[at]; // minutes from midnight of `date`
+          const arrive = k * 1440 + start + off[to];
+          if (mode === 'leave' ? leave < minutes : arrive > minutes) continue;
+          found.push({ route, start, leave, arrive, dest: lastStop ? lastStop.name : route.dest, serviceDate });
+        }
+      }
+    });
+  }
+  found.sort((a, b) => (mode === 'leave' ? a.leave - b.leave : b.arrive - a.arrive));
+  const chosen = found.slice(0, count);
+  if (mode === 'arrive') chosen.reverse();
+  return chosen.map((x) => {
+    const day = Math.floor(x.leave / 1440);
+    return { route: x.route, start: x.start, minute: x.leave - day * 1440, arrive: x.arrive - day * 1440, dest: x.dest, date: addDays(date, day), serviceDate: x.serviceDate };
+  });
+}

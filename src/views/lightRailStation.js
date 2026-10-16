@@ -19,7 +19,7 @@ export const LIGHT_RAIL = {
   searchTitle: () => t('Light rail from… to…'),
   toPlaceholder: () => t('Destination stop'),
   noneToday: () => t('No more light rail from this stop today.'),
-  noTrips: () => t('No direct light rail between these stops for the rest of today.'),
+  noTrips: () => t('No direct light rail between these stops in the coming week.'),
   notRunning: () => t('No live signal from this tram right now. It shows on the map while it runs.'),
 };
 

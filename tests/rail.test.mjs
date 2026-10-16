@@ -53,3 +53,29 @@ test('From / To: only trains that go from one to the other, with the arrival tim
   assert.deepEqual(back.map((d) => `${clock(d.minute)}-${clock(d.arrive)}`), ['07:45-08:10']);
   assert.deepEqual(await departures(city, [up, down], ids('D'), ids('D'), now, of), []);
 });
+
+import { searchTrips, addDays, weekdayOf } from '../src/lib/railTimetable.js';
+
+test('dates: adding days and weekdays', () => {
+  assert.equal(addDays('2026-10-16', 2), '2026-10-18');
+  assert.equal(addDays('2026-12-31', 1), '2027-01-01');
+  assert.equal(weekdayOf('2026-10-16'), 5); // a Friday
+});
+
+// 2026-10-19 is a Monday, 2026-10-18 a Sunday.
+test('leave at: the next five trains, going on to the next days when today has fewer', async () => {
+  const trips = await searchTrips(city, [up], ids('B'), ids('D'), { date: '2026-10-19', minutes: 8 * 60, mode: 'leave' }, 5, of);
+  assert.deepEqual(trips.map((d) => `${d.date} ${clock(d.minute)}-${clock(d.arrive)}`), [
+    '2026-10-19 08:10-08:40',
+    '2026-10-20 00:00-00:30', // Monday's 23:50 from A is at B after midnight
+    '2026-10-26 00:00-00:30', // Sunday's 23:50, the next week (trains repeat by weekday)
+    '2026-10-26 07:10-07:40',
+    '2026-10-26 08:10-08:40',
+  ]);
+  assert.equal(trips[1].serviceDate, '2026-10-19');
+});
+
+test('arrive by: the last trains that get there in time, earliest first', async () => {
+  const trips = await searchTrips(city, [up], ids('B'), ids('D'), { date: '2026-10-19', minutes: 8 * 60 + 45, mode: 'arrive' }, 2, of);
+  assert.deepEqual(trips.map((d) => `${d.date} ${clock(d.minute)}-${clock(d.arrive)}`), ['2026-10-19 07:10-07:40', '2026-10-19 08:10-08:40']);
+});

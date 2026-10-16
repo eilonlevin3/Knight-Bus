@@ -177,7 +177,7 @@ Two places still say "line" for a route, on purpose:
 |----|-------------|--------|
 | REQ-TRAIN-1 | Tapping a **train station** on the home map opens a train station panel, not the bus-stop list of route icons. Opening it draws **nothing** on the map. | Done |
 | REQ-TRAIN-2 | The panel shows the **timetable of all trains through the station**, both directions, from now on, by time: departure time, where the train goes, and between which stations it runs. | Done |
-| REQ-TRAIN-3 | The panel has a **From / To search for trains only**. *From* is filled in with the station that was tapped and can be changed; both are chosen from the train stations. It lists the direct trains between them for the rest of the day, with arrival times. | Done |
+| REQ-TRAIN-3 | The panel has a **From / To search for trains only**. *From* is filled in with the station that was tapped and can be changed; both are chosen from the train stations. The user picks a **date** and a **time**, and whether that is when to **leave** or when to **arrive by**; it starts as today, leaving now. It lists **five** direct trains with their arrival times: the next five that leave at that time or later, or the last five that arrive by it, **even when they are on another day**. | Done |
 | REQ-TRAIN-4 | Train routes are drawn on the map **only** when the user presses **See all trains through this station on the map** (all of them, with their live trains), or chooses one train (REQ-TRAIN-5). | Done |
 | REQ-TRAIN-5 | Tapping a train in the timetable or the search results shows **that train** on the map: its route, and the train itself if it is running (matched by the scheduled start of its trip), with the option to turn on its **ghost**. | Done |
 
