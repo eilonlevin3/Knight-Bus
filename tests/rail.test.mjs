@@ -79,3 +79,36 @@ test('arrive by: the last trains that get there in time, earliest first', async 
   const trips = await searchTrips(city, [up], ids('B'), ids('D'), { date: '2026-10-19', minutes: 8 * 60 + 45, mode: 'arrive' }, 2, of);
   assert.deepEqual(trips.map((d) => `${d.date} ${clock(d.minute)}-${clock(d.arrive)}`), ['2026-10-19 07:10-07:40', '2026-10-19 08:10-08:40']);
 });
+
+// REQ-TRAIN-6: platforms from Israel Railways, put on the timetable's departures.
+import { addPlatforms, byPlatform } from '../src/lib/railTimetable.js';
+
+test('platforms are matched to departures by time and end station, then grouped', () => {
+  const end = (code) => ({ code });
+  const board = [
+    { minute: 7 * 60 + 10, destStop: end('A1') },
+    { minute: 7 * 60 + 10, destStop: end('B1') }, // two trains at the same minute, other ways
+    { minute: 7 * 60 + 20, destStop: end('A1') },
+    { minute: 7 * 60 + 30, destStop: end('A1') },
+    { minute: 7 * 60 + 40, destStop: end('A1') },
+    { minute: 7 * 60 + 50, destStop: end('A1') }, // no platform known
+  ];
+  const trains = [
+    { train: 1, time: '07:10', platform: 1, to: 100 }, { train: 2, time: '07:10', platform: 2, to: 200 },
+    { train: 3, time: '07:20', platform: 1, to: 100 }, { train: 4, time: '07:30', platform: 1, to: 100 },
+    { train: 5, time: '07:40', platform: 1, to: 100 },
+  ];
+  addPlatforms(board, trains, (stop) => ({ A1: 100, B1: 200 })[stop.code]);
+  assert.deepEqual(board.map((d) => d.platform ?? null), [1, 2, 1, 1, 1, null]);
+  assert.equal(board[1].train, 2);
+  const groups = byPlatform(board, 3);
+  assert.deepEqual(groups.map((g) => [g.platform, g.departures.length]), [[1, 3], [2, 1], [null, 1]]);
+  assert.equal(groups[0].departures[2].minute, 7 * 60 + 30); // only the next three
+});
+
+test('a train a few minutes off in the other timetable still gets its platform', () => {
+  const board = [{ minute: 11 * 60 + 3, destStop: { code: 'B' } }, { minute: 11 * 60 + 15, destStop: { code: 'C' } }];
+  const trains = [{ train: 9, time: '11:11', platform: 1, to: 2 }, { train: 8, time: '11:17', platform: 3, to: 3 }, { train: 7, time: '11:40', platform: 2, to: 2 }];
+  addPlatforms(board, trains, (s) => ({ B: 2, C: 3 })[s.code]);
+  assert.deepEqual(board.map((d) => [d.platform, d.railTime]), [[1, '11:11'], [3, '11:17']]);
+});

@@ -36,6 +36,7 @@ address, as any website does:
 |---------|------------------|-------------------|
 | GitHub Pages | The app and the city data | That the app is in use |
 | OpenStreetMap | Map tiles; address searches you type | The area you look at; the address you searched |
+| Our live relay, asking Israel Railways for a train station's platforms | Which train station is open | Israel Railways sees the relay, not the phone |
 | Our live relay (Cloudflare), or Open Bus Stride | Live buses of route ids | Which routes are on your screen. Not which stop, not who you are. The relay stores nothing ([realtime.md](realtime.md#the-relay)) |
 | Google Firebase | Sign-in, Favorite Commutes, usage data if you agreed | See the tables in this file |
 

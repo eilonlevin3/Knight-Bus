@@ -13,6 +13,7 @@ import { openRailStation } from './trainStation.js';
 export const LIGHT_RAIL = {
   kind: 'light',
   icon: '🚈',
+  platforms: false, // Israel Railways does not run the light rail: no platform data yet
   boardTitle: () => t('Light rail from this stop'),
   onMapButton: () => t('🗺 See all light rail lines through this stop on the map'),
   offMapButton: () => t('Hide the light rail from the map'),

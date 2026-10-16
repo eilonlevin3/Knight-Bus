@@ -47,6 +47,7 @@ const SHELL = [
   'src/lib/ghosts.js',
   'src/lib/israelTime.js',
   'src/lib/railTimetable.js',
+  'src/lib/railStations.js',
   'src/views/trainStation.js',
   'src/views/lightRailStation.js',
   'src/geocode.js',

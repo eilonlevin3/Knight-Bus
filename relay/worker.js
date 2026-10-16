@@ -1,6 +1,6 @@
 // Knight Bus live relay: a small Cloudflare Worker that makes live bus positions arrive
 // about one minute old instead of 15-25. Docs: docs/realtime.md#the-relay
-// @req REQ-RT-11
+// @req REQ-RT-11 @req REQ-TRAIN-6
 //
 // Why it exists: the Open Bus project saves one file a minute with every bus in the country,
 // less than a minute after the buses report. A phone browser may not read those files (the
@@ -10,6 +10,13 @@
 //   GET /live?routes=23918,24041
 //   -> { "snapshot": "2026/10/13/15/56", "at": "<time the file was made>",
 //        "routes": { "23918": [ <the bus's record, as the ministry sent it>, ... ], "24041": [] } }
+//
+// It also answers, for a train station, which platform each train leaves from (REQ-TRAIN-6):
+//   GET /rail-board?station=3700&ends=2800,1600&date=2026-10-16
+//   -> { "station": "3700", "date": "...", "trains": [{ "train": 2, "time": "00:27",
+//        "platform": 1, "to": 2300, "from": 400 }, ...] }
+// Platforms are not in the ministry's data; they come from Israel Railways' own timetable
+// service (the one its website uses), asked from this station to each end station given.
 //
 // It keeps nothing about who asks: no accounts, no logs of its own, no cookies.
 // To put it online: docs/setup.md#6-the-live-relay
@@ -24,6 +31,14 @@ const CACHE_BASE = 'https://knight-bus-relay.internal/';
 const RECORD_START = '{"RecordedAtTime"';
 const LINE_REF = '"LineRef": "';
 const BACKSLASH = String.fromCharCode(92);
+
+// Israel Railways' timetable service. Not a documented, public API: it is what rail.co.il
+// itself calls, with the key that site sends to every visitor. It can change without notice;
+// the app then shows its timetable without platforms.
+const RAIL_API = 'https://rail-api.rail.co.il/rjpa/api/v1/timetable/searchTrain';
+const RAIL_KEY = '5e64d66cf03f4547bcac5de2de06b566';
+const RAIL_BOARD_FOR_MS = 10 * 60000; // a station's day of platforms is asked again after this
+const railBoards = new Map(); // "station|date|ends" -> { at, trains }
 
 // Kept between requests while this copy of the Worker stays warm.
 let memo = null; // { id, at, text, index: Map(route id -> [start, end, start, end, ...]) }
@@ -152,11 +167,62 @@ const json = (request, status, body, extra = {}) => new Response(typeof body ===
   headers: { 'content-type': 'application/json; charset=utf-8', ...corsHeaders(request), ...extra },
 });
 
+// The day's trains leaving a station, with their platforms: from this station to each end
+// station given (every train going that way). Asked from Israel Railways, kept 10 minutes.
+async function railBoard(request, url) {
+  const station = url.searchParams.get('station') || '';
+  const date = url.searchParams.get('date') || '';
+  const ends = [...new Set((url.searchParams.get('ends') || '').split(',').filter((s) => /^[0-9]{1,5}$/.test(s) && s !== station))].slice(0, 25);
+  if (!/^[0-9]{1,5}$/.test(station) || !/^\d{4}-\d\d-\d\d$/.test(date) || !ends.length) {
+    return json(request, 400, { error: 'Give station, ends and date: /rail-board?station=3700&ends=2800&date=2026-10-16' });
+  }
+  const key = `${station}|${date}|${ends.sort().join(',')}`;
+  const kept = railBoards.get(key);
+  if (kept && Date.now() - kept.at < RAIL_BOARD_FOR_MS) return json(request, 200, { station, date, trains: kept.trains }, { 'x-relay': 'rail memo' });
+  const trains = new Map(); // train number + time -> train
+  const answers = await Promise.all(ends.map(async (end) => {
+    try {
+      const res = await fetch(RAIL_API, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'ocp-apim-subscription-key': RAIL_KEY },
+        body: JSON.stringify({ fromStation: station, toStation: end, date, hour: '00:00', scheduleType: 'ByDeparture', systemType: '2', languageId: 'Hebrew' }),
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) return false;
+      const travels = (await res.json())?.result?.travels || [];
+      for (const travel of travels) {
+        for (const train of travel.trains || []) {
+          if (String(train.orignStation) !== station) continue; // a connection's later leg
+          const stops = train.routeStations || [];
+          const here = stops.find((s) => String(s.stationId) === station);
+          const time = (here?.arrivalTime || train.departureTime?.slice(11, 16) || '').slice(0, 5);
+          const k = `${train.trainNumber}|${time}`;
+          if (!trains.has(k)) {
+            trains.set(k, {
+              train: train.trainNumber, time, platform: here?.platform ?? train.originPlatform ?? null,
+              to: stops.at(-1)?.stationId ?? train.destinationStation, from: stops[0]?.stationId ?? null,
+            });
+          }
+        }
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  }));
+  if (!answers.some(Boolean)) return json(request, 502, { error: 'Israel Railways did not answer.' });
+  const list = [...trains.values()].sort((a, b) => a.time.localeCompare(b.time));
+  railBoards.set(key, { at: Date.now(), trains: list });
+  if (railBoards.size > 300) railBoards.delete(railBoards.keys().next().value);
+  return json(request, 200, { station, date, trains: list }, { 'x-relay': 'rail' });
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: { ...corsHeaders(request), 'access-control-allow-methods': 'GET' } });
     if (request.method !== 'GET') return json(request, 405, { error: 'GET only' });
+    if (url.pathname === '/rail-board') return railBoard(request, url);
     if (url.pathname !== '/live') {
       return json(request, 200, { name: 'Knight Bus live relay', use: '/live?routes=<route id>,<route id>', docs: 'https://github.com/eilonlevin3/Knight-Bus/blob/main/docs/realtime.md' });
     }

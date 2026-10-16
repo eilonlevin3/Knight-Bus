@@ -1,6 +1,6 @@
 // The train station panel: what opens when a train station is tapped on the home map.
 // Docs: docs/user-flows.md#train-stations
-// @req REQ-TRAIN-1 @req REQ-TRAIN-2 @req REQ-TRAIN-3 @req REQ-TRAIN-4 @req REQ-TRAIN-5
+// @req REQ-TRAIN-1 @req REQ-TRAIN-2 @req REQ-TRAIN-3 @req REQ-TRAIN-4 @req REQ-TRAIN-5 @req REQ-TRAIN-6
 //
 // Unlike a bus stop, a station serves trains going both ways from one place, so it opens on
 // a timetable rather than a list of routes:
@@ -17,7 +17,9 @@ import { h } from '../lib/dom.js';
 import { t, tn, arrow, locale } from '../i18n.js';
 import { track } from '../analytics.js';
 import { israelNow, israelMinutesOf, clock } from '../lib/israelTime.js';
-import { departures, searchTrips, israelToday } from '../lib/railTimetable.js';
+import { departures, searchTrips, israelToday, addPlatforms, byPlatform } from '../lib/railTimetable.js';
+import { railIdOf } from '../lib/railStations.js';
+import { realtime } from '../config.js';
 import { liveSummary, routeBadge } from './liveInfo.js';
 import { stopSuffix } from './stopInfo.js';
 
@@ -27,6 +29,7 @@ const FIRST_SHOWN = 30; // departures listed at first; "Show more" adds as many 
 export const TRAIN = {
   kind: 'train',
   icon: '🚆',
+  platforms: true, // the board is by platform, from Israel Railways (REQ-TRAIN-6)
   boardTitle: () => t('Trains from this station'),
   onMapButton: () => t('🗺 See all trains through this station on the map'),
   offMapButton: () => t('Hide the trains from the map'),
@@ -176,12 +179,14 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
   // "Sat 17/10" for a train that is not today.
   const dayLabel = (date) => new Date(`${date}T12:00:00Z`).toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', month: 'numeric', timeZone: 'UTC' });
   const departureRow = (dep, withArrival = false) => h('button', { class: 'result departure', onclick: () => showTrip(dep) },
+    dep.platform != null && state.allByTime ? h('span', { class: 'platform-tag' }, dep.platform) : null,
     h('span', { class: 'dep-when' },
       dep.date && dep.date !== israelToday() ? h('small', { class: 'muted block' }, dayLabel(dep.date)) : null,
       h('b', { class: 'dep-time' }, clock(dep.minute))),
     routeBadge(dep.route),
     h('span', { class: 'line-text' },
       h('span', {}, `${arrow()} ${dep.dest}`),
+      dep.railTime ? h('small', { class: 'muted' }, t('Israel Railways says {time}', { time: dep.railTime })) : null,
       withArrival && dep.arrive != null
         ? h('small', { class: 'muted' }, t('Arrives {time} · {n} min', { time: clock(dep.arrive), n: dep.arrive - dep.minute }))
         : h('small', { class: 'muted' }, t('From {a} to {b}', { a: dep.route.stops[0].name, b: dep.route.stops.at(-1).name }))));
@@ -194,6 +199,7 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
     const ghostOn = bus && lines.ghosts.has(bus.rideId);
     return [h('div', { class: 'card stack trip-card' },
       h('div', { class: 'row' }, routeBadge(dep.route), h('b', { class: 'grow' }, `${clock(dep.minute)} ${arrow()} ${dep.dest}`)),
+      dep.platform != null ? h('b', { class: 'small' }, t('Platform {p}', { p: dep.platform }) + (dep.train ? ` · ${t('Train {n}', { n: dep.train })}` : '')) : null,
       h('small', { class: 'muted' }, dep.date && dep.date !== israelToday()
         ? t('Leaves on {date} at {time}', { date: dayLabel(dep.date), time: clock(dep.minute) })
         : t('Leaves {station} at {time}', { station: stop.name, time: clock(dep.minute) })),
@@ -217,6 +223,18 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
   function drawBoard() {
     if (state.board === null) return [h('p', { class: 'muted small' }, t('Loading the timetable…'))];
     if (!state.board.length) return [h('b', {}, rail.boardTitle()), h('p', { class: 'muted small' }, rail.noneToday())];
+    // By platform: the next three trains from each (REQ-TRAIN-6).
+    if (state.platforms && !state.allByTime) {
+      return [
+        h('b', {}, rail.boardTitle()),
+        h('small', { class: 'muted' }, t('The next three trains from each platform. Platforms from Israel Railways; times from the timetable. Tap a train to see it on the map.')),
+        ...byPlatform(state.board, 3).flatMap(({ platform, departures: list }) => [
+          h('h3', { class: 'platform-head' }, platform === null ? t('Platform not known') : t('Platform {p}', { p: platform })),
+          ...list.map((dep) => departureRow(dep)),
+        ]),
+        h('button', { class: 'link small', onclick: () => { state.allByTime = true; update(); } }, t('All trains by time')),
+      ];
+    }
     return [
       h('b', {}, rail.boardTitle()),
       h('small', { class: 'muted' }, t('Timetable times, from now on. Tap a train to see it on the map.')),
@@ -224,7 +242,25 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
       state.board.length > state.shown
         ? h('button', { class: 'link small', onclick: () => { state.shown += FIRST_SHOWN; update(); } }, t('Show more'))
         : null,
+      state.platforms ? h('button', { class: 'link small', onclick: () => { state.allByTime = false; update(); } }, t('By platform')) : null,
     ];
+  }
+
+  // Platforms come from Israel Railways through our relay. Without them (light rail, a
+  // station not matched, or no answer) the board stays by time.
+  async function loadPlatforms() {
+    const here = railIdOf(stop);
+    if (!rail.platforms || !here || !realtime.relayUrl || !state.board?.length) return;
+    const ends = [...new Set(state.board.map((d) => railIdOf(d.destStop)).filter(Boolean))];
+    if (!ends.length) return;
+    try {
+      const res = await fetch(`${realtime.relayUrl}/rail-board?station=${here}&ends=${ends.join(',')}&date=${israelToday()}`, { signal: AbortSignal.timeout(12000) });
+      if (!res.ok) return;
+      addPlatforms(state.board, (await res.json()).trains || [], railIdOf);
+      state.platforms = state.board.some((d) => d.platform != null);
+      track('rail_platforms', { found: state.platforms ? 1 : 0 });
+      update();
+    } catch { /* no platforms: the board by time */ }
   }
 
   function update() {
@@ -241,7 +277,7 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
   lines.set([]);
   map.setView([stop.lat, stop.lon], Math.max(map.getZoom(), 15));
   update();
-  departures(city, routes(), sameName(stop)).then((list) => { state.board = list; update(); });
+  departures(city, routes(), sameName(stop)).then((list) => { state.board = list; update(); loadPlatforms(); });
 
   return {
     root,

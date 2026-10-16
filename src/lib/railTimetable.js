@@ -43,7 +43,7 @@ export async function departures(city, routes, fromIds, toIds = null, now = isra
           const lastStop = city.stops.get(pattern.stops.at(-1));
           out.push({
             route, start: start + shift, minute, arrive: off[to] != null ? start + off[to] + shift : null,
-            dest: lastStop ? lastStop.name : route.dest,
+            dest: lastStop ? lastStop.name : route.dest, destStop: lastStop || null,
           });
         }
       }
@@ -52,6 +52,61 @@ export async function departures(city, routes, fromIds, toIds = null, now = isra
   return out.sort((a, b) => a.minute - b.minute);
 }
 
+
+// ---------- Platforms (REQ-TRAIN-6) ----------
+
+// Puts each departure's platform on it, from the relay's answer for the station (Israel
+// Railways' own data). The two timetables do not always agree to the minute, so a departure
+// takes the Israel Railways train to the same end station that is closest in time (up to
+// 10 minutes), each train used once; failing that, a train at the very same minute.
+// railId(stop) gives Israel Railways' number of a stop. Sets dep.platform, dep.train and,
+// when the times differ, dep.railTime (Israel Railways' time).
+export function addPlatforms(board, trains, railId, maxApart = 10) {
+  const minuteOf = (time) => { const [hh, mm] = time.split(':').map(Number); return hh * 60 + mm; };
+  const apart = (a, b) => { const d = Math.abs(a - b) % 1440; return Math.min(d, 1440 - d); };
+  const pairs = [];
+  board.forEach((dep, i) => {
+    const end = dep.destStop ? railId(dep.destStop) : null;
+    if (!end) return;
+    trains.forEach((tr, k) => {
+      const d = apart(dep.minute, minuteOf(tr.time));
+      if (String(tr.to) === String(end) && d <= maxApart) pairs.push([d, i, k]);
+    });
+  });
+  pairs.sort((x, y) => x[0] - y[0]);
+  const usedDep = new Set();
+  const usedTrain = new Set();
+  const give = (i, k) => {
+    const dep = board[i];
+    const tr = trains[k];
+    dep.platform = tr.platform;
+    dep.train = tr.train;
+    if (apart(dep.minute, minuteOf(tr.time)) >= 1) dep.railTime = tr.time;
+    usedDep.add(i);
+    usedTrain.add(k);
+  };
+  for (const [, i, k] of pairs) if (!usedDep.has(i) && !usedTrain.has(k)) give(i, k);
+  board.forEach((dep, i) => {
+    if (usedDep.has(i)) return;
+    const k = trains.findIndex((tr, n) => !usedTrain.has(n) && apart(dep.minute, minuteOf(tr.time)) === 0);
+    if (k >= 0) give(i, k);
+  });
+  return board;
+}
+
+// The board by platform: [{ platform, departures: the next `count` }], platforms in order,
+// then the departures whose platform is not known (platform null).
+export function byPlatform(board, count = 3) {
+  const groups = new Map();
+  for (const dep of board) {
+    const p = dep.platform ?? null;
+    if (!groups.has(p)) groups.set(p, []);
+    if (groups.get(p).length < count) groups.get(p).push(dep);
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => (a === null) - (b === null) || Number(a) - Number(b))
+    .map(([platform, departures]) => ({ platform, departures }));
+}
 
 // ---------- The From / To search with a date and a time (REQ-TRAIN-3) ----------
 

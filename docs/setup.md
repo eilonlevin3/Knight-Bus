@@ -112,4 +112,5 @@ It runs on Cloudflare's free plan. The steps are done once, in a browser:
    in `realtime.relayUrl` in [src/config.js](../src/config.js), and push.
 
 After changing `relay/worker.js` in the repo, repeat step 3: the Worker does not update by
-itself.
+itself. (On 2026-10-16 the relay gained `/rail-board`, for train platforms: until it is
+pasted again, train stations show their timetable by time.)

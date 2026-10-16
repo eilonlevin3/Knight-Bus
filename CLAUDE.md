@@ -295,6 +295,15 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   only on request, one train at a time (live train matched by its trip's scheduled start,
   `siri_ride__scheduled_start_time`), with ghost. The bus-stop route icons are no longer
   shown for stations on the home screen (the editor still uses them).
+- **Train platforms** (owner, 2026-10-16: "the information is available, do what you need"):
+  not in the ministry's GTFS. They come from Israel Railways' website timetable service
+  (`rail-api.rail.co.il/rjpa/api/v1/timetable/searchTrain`, POST, header
+  `ocp-apim-subscription-key` = the key in rail.co.il's own JS, also used by the open-source
+  `israel-rail-api` and Home Assistant). Undocumented; called only by the relay
+  (`/rail-board`), never by the app. Station numbers differ from GTFS: `lib/railStations.js`
+  (3 eastern-line stations missing). Times differ by a few minutes at times; matching is by
+  end station and nearest time (`addPlatforms`). The relay must be re-pasted by the owner
+  after this change (2026-10-16).
 - **Closing a Favorite Commute** (owner, 2026-10-13): **✕ Close**, not "← Home", and the
   home map stays where the Favorite Commute's map was (`ctx.homeView`), like closing a
   stop (REQ-COMM-10). Do not recenter on the person when coming back.

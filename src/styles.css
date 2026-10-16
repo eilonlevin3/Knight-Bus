@@ -396,6 +396,8 @@ details > summary { cursor: pointer; }
 .when-row { flex-wrap: wrap; }
 .when-row input { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
 .dep-when { min-width: 3.6em; text-align: center; }
+.platform-head { font-size: 0.95rem; margin: 8px 0 0; padding-bottom: 2px; border-bottom: 2px solid var(--purple-2); }
+.platform-tag { flex: none; min-width: 1.8em; text-align: center; font-weight: 800; border: 2px solid var(--purple-2); border-radius: 6px; }
 .trip-card { border-color: var(--purple-2); }
 /* A station's direction buttons, beside Select all and Clear all (REQ-DATA-13) */
 .heading-button.on { border-color: var(--purple-2); font-weight: 700; }

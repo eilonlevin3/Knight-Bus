@@ -88,6 +88,31 @@ sequenceDiagram
 The header `x-relay` on every answer says how the relay got its data (`built`, `cache` or
 `memo`) and how long it took, for checking that it runs within Cloudflare's limits.
 
+## Train platforms
+
+Platforms are not in the ministry's timetable data. Israel Railways has them, in the
+timetable service its own website (rail.co.il) uses. The relay asks it (REQ-TRAIN-6):
+
+```
+GET <relay>/rail-board?station=3700&ends=2800,1600,7320&date=2026-10-16
+-> { station, date, trains: [{ train: 6131, time: "10:47", platform: 3, to: 400, from: 3700 }, …] }
+```
+
+- `station` and `ends` are **Israel Railways' station numbers**, which differ from the
+  ministry's. The table that links the two is
+  [lib/railStations.js](../src/lib/railStations.js), matched by name and checked by hand.
+- The service only answers "from A to B", so the relay asks from this station to each end
+  station of the trains leaving it (the app sends those), and keeps the trains that leave
+  from this station. It keeps a station's answer for 10 minutes. At Tel Aviv Merkaz that is
+  about 110 trains a day, in under a second.
+- The app puts each platform on its own timetable: the Israel Railways train to the same
+  end station that is closest in time (up to 10 minutes apart), each used once.
+- **This is not a documented, public interface.** It is what the website calls, with the
+  key the website gives every visitor. It can change or stop without notice; then the
+  station timetable is simply shown by time, without platforms. Israel Railways sees the
+  relay's address, not the person's.
+- The light rail is not run by Israel Railways, so light rail stops have no platforms.
+
 ## What a bus tells us
 
 Tap a bus on any map (REQ-RT-10). The pop-up shows the route, where the bus is relative to

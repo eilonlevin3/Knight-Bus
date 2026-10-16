@@ -442,9 +442,16 @@ has. **Nothing is drawn on the map** when it opens.
 ```
 
 - **The timetable** (REQ-TRAIN-2): every train leaving this station, in both directions,
-  from now on, by time: when it leaves, where it goes, and between which stations it runs.
-  Trains that end here are not listed. These are timetable times, Israel time; trains that
-  left late yesterday and run past midnight are included.
+  from now on: when it leaves, where it goes, and between which stations it runs. Trains
+  that end here are not listed. These are timetable times, Israel time; trains that left
+  late yesterday and run past midnight are included.
+- **By platform** (REQ-TRAIN-6): the timetable is grouped by platform, **the next three
+  trains from each**: *Platform 1*, *Platform 2*… and, for trains Israel Railways did not
+  give a platform for, *Platform not known*. *All trains by time* shows the plain list
+  (with each train's platform beside it); *By platform* goes back. The platforms come from
+  Israel Railways ([realtime.md](realtime.md#train-platforms)); the times are the ministry's.
+  Where the two differ by a few minutes, the row adds *Israel Railways says 11:11*. The
+  train card shows the platform and the train number.
 - **From… to…** (REQ-TRAIN-3): type in the **To** box and pick a station; *From* starts as
   this station and can be changed the same way. Below them: **Leave at** or **Arrive by**,
   a **date** and a **time**. It starts as today, leaving now; **Now** goes back to that.
