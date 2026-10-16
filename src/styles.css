@@ -396,6 +396,13 @@ details > summary { cursor: pointer; }
 .when-row { flex-wrap: wrap; }
 .when-row input { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
 .dep-when { min-width: 3.6em; text-align: center; }
+/* One train's stations, with times (REQ-TRAIN-7) */
+.plain-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.trip-stop button.link { text-decoration: none; color: inherit; text-align: start; padding: 4px 0; display: flex; gap: 8px; align-items: baseline; width: 100%; }
+.trip-stop { border-inline-start: 4px solid #0077b6; padding-inline-start: 10px; }
+.trip-stop.here { border-color: #ffd60a; font-weight: 700; }
+.trip-stop.end { border-color: #2b9348; font-weight: 700; }
+.trip-stop.before, .trip-stop.after { border-color: #9aa0a6; opacity: 0.75; }
 .platform-head { font-size: 0.95rem; margin: 8px 0 0; padding-bottom: 2px; border-bottom: 2px solid var(--purple-2); }
 .platform-tag { flex: none; min-width: 1.8em; text-align: center; font-weight: 800; border: 2px solid var(--purple-2); border-radius: 6px; }
 .trip-card { border-color: var(--purple-2); }

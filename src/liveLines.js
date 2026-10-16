@@ -22,6 +22,7 @@ export class LiveLines {
     this.autoGhosts = autoGhosts;
     this.ghostsOff = new Set(); // ride ids whose automatic ghost the person removed
     this.busFilter = null; // (route, bus) -> keep? null shows every bus
+    this.hideLines = false;
     this.rows = [];
     this.map = map;
     this.city = city;
@@ -64,6 +65,8 @@ export class LiveLines {
   drawLines() {
     for (const layers of this.lineLayers.values()) layers.forEach((l) => l.remove());
     this.lineLayers.clear();
+    // hideLines: live buses only, the line is drawn by someone else (one train, REQ-TRAIN-7).
+    if (this.hideLines) return;
     OffsetPolyline ||= makeOffsetPolyline(L);
     const routeIds = [...new Set(this.entries.map((e) => e.routeId))];
     const n = routeIds.length;

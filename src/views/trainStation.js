@@ -1,6 +1,6 @@
 // The train station panel: what opens when a train station is tapped on the home map.
 // Docs: docs/user-flows.md#train-stations
-// @req REQ-TRAIN-1 @req REQ-TRAIN-2 @req REQ-TRAIN-3 @req REQ-TRAIN-4 @req REQ-TRAIN-5 @req REQ-TRAIN-6
+// @req REQ-TRAIN-1 @req REQ-TRAIN-2 @req REQ-TRAIN-3 @req REQ-TRAIN-4 @req REQ-TRAIN-5 @req REQ-TRAIN-6 @req REQ-TRAIN-7
 //
 // Unlike a bus stop, a station serves trains going both ways from one place, so it opens on
 // a timetable rather than a list of routes:
@@ -17,7 +17,7 @@ import { h } from '../lib/dom.js';
 import { t, tn, arrow, locale } from '../i18n.js';
 import { track } from '../analytics.js';
 import { israelNow, israelMinutesOf, clock } from '../lib/israelTime.js';
-import { departures, searchTrips, israelToday, addPlatforms, byPlatform } from '../lib/railTimetable.js';
+import { departures, searchTrips, israelToday, addPlatforms, byPlatform, tripStations } from '../lib/railTimetable.js';
 import { railIdOf } from '../lib/railStations.js';
 import { realtime } from '../config.js';
 import { liveSummary, routeBadge } from './liveInfo.js';
@@ -145,6 +145,9 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
   function toggleMap() {
     state.onMap = !state.onMap;
     state.trip = null;
+    tripLayer?.remove();
+    tripLayer = null;
+    lines.hideLines = false;
     lines.busFilter = null;
     lines.set(state.onMap ? routes().map((r) => ({ stopId: stop.id, routeId: r.id })) : []);
     if (state.onMap) setTimeout(() => lines.fit(), 0);
@@ -156,12 +159,41 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
   // A train can be live only if it runs today (or started yesterday and runs past midnight).
   const runsToday = (dep) => !dep.date || dep.date === israelToday() || dep.serviceDate === israelToday();
 
+  // The chosen train's own trip on the map: its line through the stations it calls at, each
+  // station a dot with its time, where it is caught and where the rider gets off marked
+  // (REQ-TRAIN-7). The live train comes from LiveLines, which here draws no line of its own.
+  let tripLayer = null;
+  function drawTripMap(dep) {
+    tripLayer?.remove();
+    tripLayer = null;
+    const list = tripStations(city, dep).filter((x) => x.stop.lat != null);
+    if (!list.length) return;
+    tripLayer = L.layerGroup().addTo(map);
+    const color = '#0077b6';
+    L.polyline(list.map((x) => [x.stop.lat, x.stop.lon]), { color, weight: 5, opacity: 0.85 }).addTo(tripLayer);
+    for (const x of list) {
+      const key = x.part === 'here' || x.part === 'end';
+      const marker = L.circleMarker([x.stop.lat, x.stop.lon], {
+        radius: key ? 10 : 6, weight: key ? 4 : 2, fillOpacity: 1,
+        color: x.part === 'end' ? '#2b9348' : x.part === 'here' ? '#ffd60a' : x.part === 'before' || x.part === 'after' ? '#9aa0a6' : color,
+        fillColor: '#ffffff',
+      }).addTo(tripLayer);
+      const label = `${x.minute != null ? `${clock(x.minute)} ` : ''}${x.stop.name}`;
+      // Where it is caught and where to get off: always labelled. The others on tap.
+      marker.bindTooltip(x.part === 'end' ? `🏁 ${label}` : label, { permanent: key, direction: 'top' });
+    }
+    // Fit the trip from where it is caught to where the rider gets off.
+    const ride = list.filter((x) => x.part === 'here' || x.part === 'on' || x.part === 'end');
+    map.fitBounds(L.latLngBounds((ride.length > 1 ? ride : list).map((x) => [x.stop.lat, x.stop.lon])), { padding: [40, 40], maxZoom: 15 });
+  }
+
   function showTrip(dep) {
     state.trip = dep;
     state.onMap = false;
     lines.busFilter = runsToday(dep) ? isTrip(dep) : () => false;
-    lines.set([{ stopId: stop.id, routeId: dep.route.id }]);
-    setTimeout(() => lines.fit(), 0);
+    lines.hideLines = true;
+    lines.set([{ stopId: (dep.fromStop || stop).id, routeId: dep.route.id }]);
+    drawTripMap(dep);
     track('rail_trip_shown', { kind: rail.kind });
     update();
     root.scrollIntoView({ block: 'start' });
@@ -169,7 +201,10 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
 
   function hideTrip() {
     state.trip = null;
+    tripLayer?.remove();
+    tripLayer = null;
     lines.busFilter = null;
+    lines.hideLines = false;
     lines.set([]);
     update();
   }
@@ -202,12 +237,33 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
       dep.platform != null ? h('b', { class: 'small' }, t('Platform {p}', { p: dep.platform }) + (dep.train ? ` · ${t('Train {n}', { n: dep.train })}` : '')) : null,
       h('small', { class: 'muted' }, dep.date && dep.date !== israelToday()
         ? t('Leaves on {date} at {time}', { date: dayLabel(dep.date), time: clock(dep.minute) })
-        : t('Leaves {station} at {time}', { station: stop.name, time: clock(dep.minute) })),
+        : t('Leaves {station} at {time}', { station: (dep.fromStop || stop).name, time: clock(dep.minute) })),
       bus ? liveSummary(row) : h('small', { class: 'muted' }, runsToday(dep) ? rail.notRunning() : t('Not today: its live position shows on the day it runs.')),
       bus ? h('button', {
         onclick: () => { lines.setGhost(bus.rideId, !ghostOn); update(); },
       }, ghostOn ? t('Remove the ghost') : t('👻 Show its ghost')) : null,
+      tripTimetable(dep),
       h('button', { class: 'link small', onclick: hideTrip }, t('Back to the timetable')))];
+  }
+
+  // The trip station by station, with times (REQ-TRAIN-7). Stations before the one it is
+  // caught at, and after where the rider gets off, are folded away until asked for.
+  function tripTimetable(dep) {
+    const list = tripStations(city, dep);
+    if (!list.length) return null;
+    const row = (x) => h('li', { class: `trip-stop ${x.part}` },
+      h('button', { class: 'link', onclick: () => map.setView([x.stop.lat, x.stop.lon], 14) },
+        h('b', { class: 'dep-time' }, x.minute != null ? clock(x.minute) : '—'),
+        ` ${x.part === 'end' ? '🏁 ' : ''}${x.stop.name}`,
+        x.part === 'here' ? h('small', { class: 'muted' }, t(' · you get on here')) : null));
+    const before = list.filter((x) => x.part === 'before');
+    const after = list.filter((x) => x.part === 'after');
+    const ride = list.filter((x) => x.part === 'here' || x.part === 'on' || x.part === 'end');
+    return h('div', { class: 'stack trip-timetable' },
+      h('b', { class: 'small' }, tn(ride.length - 1, 'Its stations, 1 stop to go', 'Its stations, {n} stops to go')),
+      before.length ? h('details', {}, h('summary', { class: 'small muted' }, tn(before.length, 'Before: 1 station', 'Before: {n} stations')), h('ol', { class: 'plain-list' }, ...before.map(row))) : null,
+      h('ol', { class: 'plain-list' }, ...ride.map(row)),
+      after.length ? h('details', {}, h('summary', { class: 'small muted' }, tn(after.length, 'The train goes on: 1 station', 'The train goes on: {n} stations')), h('ol', { class: 'plain-list' }, ...after.map(row))) : null);
   }
 
   function drawTrips() {
@@ -283,7 +339,9 @@ export function openRailStation({ ctx, city, stop, lines, map, onClose, rail = T
     root,
     update,
     destroy() {
+      tripLayer?.remove();
       lines.busFilter = null;
+      lines.hideLines = false;
       lines.set([]);
     },
   };

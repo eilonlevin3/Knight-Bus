@@ -44,6 +44,8 @@ export async function departures(city, routes, fromIds, toIds = null, now = isra
           out.push({
             route, start: start + shift, minute, arrive: off[to] != null ? start + off[to] + shift : null,
             dest: lastStop ? lastStop.name : route.dest, destStop: lastStop || null,
+            // The whole trip, for its map and its timetable along the way (REQ-TRAIN-7).
+            stops: pattern.stops, offsets: off, at, to, fromStop: city.stops.get(pattern.stops[at]) || null,
           });
         }
       }
@@ -52,6 +54,23 @@ export async function departures(city, routes, fromIds, toIds = null, now = isra
   return out.sort((a, b) => a.minute - b.minute);
 }
 
+
+// ---------- One trip, station by station (REQ-TRAIN-7) ----------
+
+// Every station of a departure's trip with the time the train is there, in minutes on the
+// same clock as dep.minute: [{ stop, minute, part }], where part is 'before' (stations it
+// called at before), 'here' (where it is caught), 'on' (on the way), 'end' (where the
+// rider gets off: the search's destination, or the end of the line) or 'after'.
+export function tripStations(city, dep) {
+  if (!dep.stops) return [];
+  const base = dep.minute - (dep.offsets[dep.at] ?? 0);
+  const end = dep.to ?? dep.stops.length - 1;
+  return dep.stops.map((id, i) => ({
+    stop: city.stops.get(id) || { id, name: id },
+    minute: dep.offsets[i] != null ? base + dep.offsets[i] : null,
+    part: i < dep.at ? 'before' : i === dep.at ? 'here' : i < end ? 'on' : i === end ? 'end' : 'after',
+  }));
+}
 
 // ---------- Platforms (REQ-TRAIN-6) ----------
 
@@ -150,7 +169,10 @@ export async function searchTrips(city, routes, fromIds, toIds, { date, minutes,
           const leave = k * 1440 + start + off[at]; // minutes from midnight of `date`
           const arrive = k * 1440 + start + off[to];
           if (mode === 'leave' ? leave < minutes : arrive > minutes) continue;
-          found.push({ route, start, leave, arrive, dest: lastStop ? lastStop.name : route.dest, serviceDate });
+          found.push({
+            route, start, leave, arrive, dest: lastStop ? lastStop.name : route.dest, serviceDate,
+            stops: pattern.stops, offsets: off, at, to, fromStop: city.stops.get(pattern.stops[at]) || null, destStop: lastStop || null,
+          });
         }
       }
     });
@@ -160,6 +182,9 @@ export async function searchTrips(city, routes, fromIds, toIds, { date, minutes,
   if (mode === 'arrive') chosen.reverse();
   return chosen.map((x) => {
     const day = Math.floor(x.leave / 1440);
-    return { route: x.route, start: x.start, minute: x.leave - day * 1440, arrive: x.arrive - day * 1440, dest: x.dest, date: addDays(date, day), serviceDate: x.serviceDate };
+    return {
+      route: x.route, start: x.start, minute: x.leave - day * 1440, arrive: x.arrive - day * 1440, dest: x.dest, date: addDays(date, day), serviceDate: x.serviceDate,
+      stops: x.stops, offsets: x.offsets, at: x.at, to: x.to, fromStop: x.fromStop, destStop: x.destStop,
+    };
   });
 }

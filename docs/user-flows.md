@@ -470,6 +470,12 @@ has. **Nothing is drawn on the map** when it opens.
   the search says where it is, and **👻 Show its ghost** turns on its estimated position
   ([realtime.md](realtime.md#the-ghost-an-estimate-of-where-the-bus-is-now)). A train that is
   not running yet says so. *Back to the timetable* clears the map again.
+- **Its trip** (REQ-TRAIN-7): the map draws that train's own trip, station by station:
+  every station it calls at is a dot, the station you get on at (yellow) and where you get
+  off (green, 🏁: the search's *To*, or the end of the line) are labelled with the train's
+  times. The card lists **the stations along the way with their times**: from where you get
+  on to where you get off, with *Before: …* and *The train goes on: …* folded above and
+  below. Tap a station to move the map to it.
 - **✕ Close** goes back to the plain home map.
 
 Train lines are straight from station to station: the timetable data has no track shapes.

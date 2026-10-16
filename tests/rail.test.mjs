@@ -112,3 +112,15 @@ test('a train a few minutes off in the other timetable still gets its platform',
   addPlatforms(board, trains, (s) => ({ B: 2, C: 3 })[s.code]);
   assert.deepEqual(board.map((d) => [d.platform, d.railTime]), [[1, '11:11'], [3, '11:17']]);
 });
+
+// REQ-TRAIN-7: one train, station by station.
+import { tripStations } from '../src/lib/railTimetable.js';
+
+test('a trip station by station: before, where you get on, on the way, where you get off, after', async () => {
+  const now = { day: 1, minutes: 6 * 60 };
+  const [dep] = await searchTrips(city, [up], ids('B'), ids('C'), { date: '2026-10-19', minutes: 7 * 60, mode: 'leave' }, 1, of);
+  const list = tripStations(city, dep);
+  assert.deepEqual(list.map((x) => `${x.stop.id} ${clock(x.minute)} ${x.part}`), ['A 07:00 before', 'B 07:10 here', 'C 07:25 end', 'D 07:40 after']);
+  const [board] = await departures(city, [up], ids('B'), null, now, of);
+  assert.deepEqual(tripStations(city, board).map((x) => x.part), ['before', 'here', 'on', 'end']); // the end of the line
+});
