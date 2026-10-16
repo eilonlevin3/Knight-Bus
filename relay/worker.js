@@ -180,15 +180,24 @@ async function railBoard(request, url) {
   const kept = railBoards.get(key);
   if (kept && Date.now() - kept.at < RAIL_BOARD_FOR_MS) return json(request, 200, { station, date, trains: kept.trains }, { 'x-relay': 'rail memo' });
   const trains = new Map(); // train number + time -> train
+  const problems = []; // what went wrong, for the error answer
   const answers = await Promise.all(ends.map(async (end) => {
     try {
       const res = await fetch(RAIL_API, {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'ocp-apim-subscription-key': RAIL_KEY },
+        // The headers the website's own page sends.
+        headers: {
+          'content-type': 'application/json',
+          'ocp-apim-subscription-key': RAIL_KEY,
+          accept: 'application/json, text/plain, */*',
+          origin: 'https://www.rail.co.il',
+          referer: 'https://www.rail.co.il/',
+          'user-agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+        },
         body: JSON.stringify({ fromStation: station, toStation: end, date, hour: '00:00', scheduleType: 'ByDeparture', systemType: '2', languageId: 'Hebrew' }),
         signal: AbortSignal.timeout(8000),
       });
-      if (!res.ok) return false;
+      if (!res.ok) { problems.push(`HTTP ${res.status}: ${(await res.text()).slice(0, 120)}`); return false; }
       const travels = (await res.json())?.result?.travels || [];
       for (const travel of travels) {
         for (const train of travel.trains || []) {
@@ -206,11 +215,12 @@ async function railBoard(request, url) {
         }
       }
       return true;
-    } catch {
+    } catch (e) {
+      problems.push(`${e.name}: ${e.message}`);
       return false;
     }
   }));
-  if (!answers.some(Boolean)) return json(request, 502, { error: 'Israel Railways did not answer.' });
+  if (!answers.some(Boolean)) return json(request, 502, { error: 'Israel Railways did not answer.', problems: [...new Set(problems)].slice(0, 3) });
   const list = [...trains.values()].sort((a, b) => a.time.localeCompare(b.time));
   railBoards.set(key, { at: Date.now(), trains: list });
   if (railBoards.size > 300) railBoards.delete(railBoards.keys().next().value);
