@@ -61,6 +61,7 @@ id; the account is never attached.
 | `line_info_opened`, `line_map_opened`, `line_stop_tapped`, `schedule_opened` | that it happened, the number of stop patterns, whether a timetable existed. Not which route or stop |
 | `route_search_opened`, `direction_switched` | that a route was opened from Search routes, or its direction switched. Not which route, and never what was typed in the search |
 | `language_changed` | the language chosen (`en` or `he`) |
+| `rail_station_opened`, `rail_search`, `rail_all_on_map`, `rail_trip_shown` | that a train station or light rail panel was opened or used: train or light rail, whether a search found trains. Not which station or train |
 | `heading_toggled` | that a direction button of a station was used, on which screen, and whether it checked or unchecked |
 | `routes_select_all`, `routes_clear_all` | that the button was used, and on which screen (home, editor or Favorite Commute) |
 | `opening_view_set` | that an opening view was chosen, its zoom level (a number from 1 to 19), the panel height and whether the key was open. Not where the map was |

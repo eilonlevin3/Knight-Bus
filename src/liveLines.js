@@ -21,6 +21,7 @@ export class LiveLines {
   constructor(map, city, { onUpdate = () => {}, autoGhosts = false } = {}) {
     this.autoGhosts = autoGhosts;
     this.ghostsOff = new Set(); // ride ids whose automatic ghost the person removed
+    this.busFilter = null; // (route, bus) -> keep? null shows every bus
     this.rows = [];
     this.map = map;
     this.city = city;
@@ -117,6 +118,17 @@ export class LiveLines {
   }
 
   // Fit the map around everything shown.
+  // Turn a ghost on or off from outside the bus pop-up (the station's train card).
+  setGhost(rideId, on) {
+    if (on) { this.ghosts.add(rideId); this.ghostsOff.delete(rideId); } else { this.ghosts.delete(rideId); this.ghostsOff.add(rideId); }
+    const m = this.shown.get(rideId);
+    const routeId = m?.row.route.id;
+    if (on && routeId && !this.speeds.has(routeId)) {
+      loadSpeeds(routeId).then((speeds) => { this.speeds.set(routeId, speeds); if (!this.destroyed) this.drawGhosts(); });
+    }
+    this.drawGhosts();
+  }
+
   fit() {
     const layers = [...this.lineLayers.values()].flat();
     if (layers.length) this.map.fitBounds(L.featureGroup(layers).getBounds(), { padding: [30, 30] });
@@ -149,7 +161,10 @@ export class LiveLines {
     const rows = this.entries.map(({ stopId, routeId }) => {
       const route = this.city.routes.get(routeId);
       const stop = this.city.stops.get(stopId);
-      const { buses, error, noLive = false } = byRoute.get(routeId);
+      const { buses: allBuses, error, noLive = false } = byRoute.get(routeId);
+      // busFilter: show only some buses, e.g. one train chosen in a station's timetable
+      // (REQ-TRAIN-5). (route, bus) -> true to keep.
+      const buses = this.busFilter && allBuses ? allBuses.filter((b) => this.busFilter(route, b)) : allBuses;
       // Buses are shown where they really are, whichever stop pattern they drive (REQ-RT-8).
       // "Stops away" is counted along the most common pattern that passes this stop.
       const pattern = this.city.patternsAt(route, stopId)[0] || route.patterns[0];

@@ -287,6 +287,14 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   A station lists every route and has a button per direction beside Select all / Clear
   all (`route.heading` north/south, `headingButtons`, REQ-DATA-13). The owner rejected the
   first version, which listed one direction at a time with an "Other direction" button.
+- **Train stations and light rail stops** (owner, 2026-10-16): their own panels, in their
+  own files, with their own requirements (REQ-TRAIN-*, REQ-LIGHT-*): the owner asked for
+  them apart so they can change separately. `trainStation.js` has the panel;
+  `lightRailStation.js` reuses it with light rail settings "for now" (owner's words).
+  Timetable of all trains through the station, From/To search (From = the station), map
+  only on request, one train at a time (live train matched by its trip's scheduled start,
+  `siri_ride__scheduled_start_time`), with ghost. The bus-stop route icons are no longer
+  shown for stations on the home screen (the editor still uses them).
 - **Closing a Favorite Commute** (owner, 2026-10-13): **✕ Close**, not "← Home", and the
   home map stays where the Favorite Commute's map was (`ctx.homeView`), like closing a
   stop (REQ-COMM-10). Do not recenter on the person when coming back.

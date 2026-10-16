@@ -74,17 +74,9 @@ for that bus: an estimate of where it is now (REQ-RT-12,
 [realtime.md](realtime.md#the-ghost-an-estimate-of-where-the-bus-is-now)).
 
 **Stations** (REQ-DATA-11). Train stations (blue ring, 🚆) and light rail stops (red ring,
-🚈) are on the map too, and show from further out than bus stops. Tap one like a bus stop.
-A light rail line is written 🚈1; a train has no number, so its icon reads
-*🚆 first station → last station*.
-
-A train station serves both directions from one place. So beside *Select all* and *Clear
-all* it has **a button per direction** (REQ-DATA-13): **⬆ Heading north (29)** and
-**⬇ Heading south (32)**. A button checks every train or light rail route going that way;
-when they are all checked already, it unchecks them. The two buttons work separately, so
-you can show one direction, both, or neither. "North" and "south" go by where a route ends
-compared with where it starts. A light rail platform usually serves one direction and has
-one button. The editor has the same buttons.
+🚈) are on the map too, and show from further out than bus stops. Tapping one opens a panel
+of its own, not the bus-stop panel: see [Train stations](#train-stations) and
+[Light rail stops](#light-rail-stops).
 
 **Route icons** (REQ-HOME-3). The panel shows the stop first, then its routes as small
 icons, several to a row: `[☑ 62] [☑ 66⚠] [☐ 189]`. Each is a checkbox and the route number
@@ -426,3 +418,60 @@ English in the code, run `npm test`, add the line it asks for.
 
 Code: [i18n.js](../src/i18n.js), [i18n/he.js](../src/i18n/he.js),
 [views/options.js](../src/views/options.js), [tests/i18n.test.mjs](../tests/i18n.test.mjs).
+
+## Train stations
+
+A train station serves trains going both ways from one place, so tapping it on the home map
+opens a **station panel** of its own (REQ-TRAIN-1), not the list of route icons a bus stop
+has. **Nothing is drawn on the map** when it opens.
+
+```
+┌──────────────────────────────────────┐
+│ 🚆 תל אביב מרכז · 17038      (✕ Close)│
+│ [🗺 See all trains through this station on the map]
+│ ┌ Train from… to… ───────────────────┐│
+│ │ From [ תל אביב מרכז           ]    ││  filled in with this station; can be changed
+│ │ To   [ Destination station    ]    ││
+│ │ 10:27  🚆 → נהריה   Arrives 11:04 · 37 min
+│ └────────────────────────────────────┘│
+│ Trains from this station              │
+│ 10:15  🚆 → באר שבע מרכז              │  every train through the station, both ways,
+│ 10:20  🚆 → הרצליה                    │  from now on, by time
+│ … Show more                           │
+└──────────────────────────────────────┘
+```
+
+- **The timetable** (REQ-TRAIN-2): every train leaving this station, in both directions,
+  from now on, by time: when it leaves, where it goes, and between which stations it runs.
+  Trains that end here are not listed. These are timetable times, Israel time; trains that
+  left late yesterday and run past midnight are included.
+- **From… to…** (REQ-TRAIN-3): type in the **To** box and pick a station; *From* starts as
+  this station and can be changed the same way. The list shows the direct trains between
+  the two for the rest of today, with when each arrives and how long it takes.
+- **The map only on request** (REQ-TRAIN-4): **🗺 See all trains through this station on the
+  map** draws every train route through the station, with the live trains on them. Pressed
+  again (*Hide the trains from the map*), the map is cleared.
+- **One train** (REQ-TRAIN-5): tap a train in the timetable or in the search results. The
+  map shows that train's route and, if it is running now, **that train only**, where its
+  last signal put it (it is found by the time its trip was due to start). The card above
+  the search says where it is, and **👻 Show its ghost** turns on its estimated position
+  ([realtime.md](realtime.md#the-ghost-an-estimate-of-where-the-bus-is-now)). A train that is
+  not running yet says so. *Back to the timetable* clears the map again.
+- **✕ Close** goes back to the plain home map.
+
+Train lines are straight from station to station: the timetable data has no track shapes.
+
+Code: [views/trainStation.js](../src/views/trainStation.js),
+[lib/railTimetable.js](../src/lib/railTimetable.js), [lib/israelTime.js](../src/lib/israelTime.js).
+
+## Light rail stops
+
+The light rail has a panel of its own in the code (REQ-LIGHT-1), so it can change apart
+from trains. For now it works like a [train station](#train-stations), with light rail
+words: a timetable of the light rail lines through the stop, a *Light rail from… to…*
+search between light rail stops, the lines on the map only on request, and one tram at a
+time from the timetable. A light rail stop is often one platform, serving one direction;
+its timetable then shows only that direction.
+
+Code: [views/lightRailStation.js](../src/views/lightRailStation.js).
+

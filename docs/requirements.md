@@ -82,7 +82,7 @@ Two places still say "line" for a route, on purpose:
 
 | REQ-DATA-11 | **Trains and light rail are included**, with their stations: Israel Railways, the Tel Aviv and Jerusalem light rail, and Haifa's Carmelit and cable car. A station appears on the map like a bus stop, with its own marker (blue ring for a train station, red ring for light rail) and from further out; tapping it shows its routes, live positions and timetables the same way. A train has no number, so it is shown by its first and last station; entries with the same two ends are one route. | Done |
 | REQ-DATA-12 | The pipeline keeps **a month of real travel times**: for every route and every stretch between two consecutive stops, how long buses actually took, as an average per **half hour of the day** (48 windows), separately for **weekdays** (Sunday to Thursday) and the **weekend** (Friday and Saturday). It is updated every night: the newest day is added and the day that left the 30-day window is dropped. The app downloads a route's numbers **only when a ghost is turned on** for one of its buses. | Done |
-| REQ-DATA-13 | At a train station or light rail stop, beside *Select all* and *Clear all*, there is **one button per direction** (heading north, heading south, by where each route ends relative to where it starts). A button checks every train or light rail route going that way; pressed when they are all checked, it unchecks them. All routes of the station stay listed. This applies on the home screen and in the editor. | Done |
+| REQ-DATA-13 | At a train station or light rail stop, beside *Select all* and *Clear all*, there is **one button per direction** (heading north, heading south, by where each route ends relative to where it starts). A button checks every train or light rail route going that way; pressed when they are all checked, it unchecks them. All routes of the station stay listed. Since train stations and light rail stops have panels of their own on the home screen (REQ-TRAIN-1, REQ-LIGHT-1), these buttons are used in the editor, where a station is picked for a Favorite Commute. | Done |
 | REQ-DATA-10 | The ministry publishes each "alternative" of a route (same operator, number and direction, some stops skipped or added) as a separate entry. The pipeline **merges them into one route** with several stop patterns, so a stop never lists the same route twice for that reason. Entries published as two "directions" that in fact drive the same way (some circular routes) are merged too; only entries that pass each other's stops in the opposite order count as opposite directions (REQ-ROUTE-2). Live buses and Favorite Commutes saved under a merged entry's id keep working. Entries with their own number on the bus (62א beside 62) stay separate. | Done |
 
 ## Home screen
@@ -170,6 +170,22 @@ Two places still say "line" for a route, on purpose:
 | REQ-LINE-2 | A route with more than one stop pattern shows a small **⚠ hazard sign** next to it in every list. Pressing it opens a pop-up about the route: the summary of REQ-LINE-1d first, then each pattern's share of trips, how it differs (stops skipped or added), whether it stops at this stop, and what is drawn. | Done |
 | REQ-LINE-3 | The pop-up links to a **full-route screen**: the route on the map with all its stop patterns (the most common as a solid line, the others as dotted lines, each in its own color) and all their stops. | Done |
 | REQ-LINE-4 | On the full-route screen, pressing a stop shows a link to that stop's **full schedule**: every scheduled time of the route at the stop, by weekday, with trips of the less common patterns marked. Routes without a published timetable say so. | Done |
+
+## Train stations
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| REQ-TRAIN-1 | Tapping a **train station** on the home map opens a train station panel, not the bus-stop list of route icons. Opening it draws **nothing** on the map. | Done |
+| REQ-TRAIN-2 | The panel shows the **timetable of all trains through the station**, both directions, from now on, by time: departure time, where the train goes, and between which stations it runs. | Done |
+| REQ-TRAIN-3 | The panel has a **From / To search for trains only**. *From* is filled in with the station that was tapped and can be changed; both are chosen from the train stations. It lists the direct trains between them for the rest of the day, with arrival times. | Done |
+| REQ-TRAIN-4 | Train routes are drawn on the map **only** when the user presses **See all trains through this station on the map** (all of them, with their live trains), or chooses one train (REQ-TRAIN-5). | Done |
+| REQ-TRAIN-5 | Tapping a train in the timetable or the search results shows **that train** on the map: its route, and the train itself if it is running (matched by the scheduled start of its trip), with the option to turn on its **ghost**. | Done |
+
+## Light rail stops
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| REQ-LIGHT-1 | Tapping a **light rail stop** opens a light rail panel of its own, in its own part of the code. For now it works like the train station panel (REQ-TRAIN-1 to REQ-TRAIN-5), for the light rail. | Done |
 
 ## Searching routes
 

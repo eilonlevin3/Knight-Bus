@@ -18,6 +18,9 @@ import { routeChip, repeatedNumbers, selectAllRow, headingButtons, liveStatusLin
 import { showRouteCard } from './lineInfo.js';
 import { stopSuffix, stopHazard } from './stopInfo.js';
 import { showOptions } from './options.js';
+// Train stations and light rail stops have panels of their own (REQ-TRAIN-1, REQ-LIGHT-1).
+import { openTrainStation } from './trainStation.js';
+import { openLightRailStation } from './lightRailStation.js';
 
 const MAX_ROUTES_SHOWN_AT_FIRST = 16; // busy stops: the rest start unchecked
 const LAST_POSITION_KEY = `${storagePrefix}lastPosition`; // kept on this phone only, for a quick start
@@ -101,7 +104,20 @@ export async function render(root, ctx) {
     .map((r) => ({ stopId: state.stop.id, routeId: r.id }));
 
   function selectStop(stop) {
+    if (state.station) { state.station.destroy(); state.station = null; }
     state.stop = stop;
+    // A train station or light rail stop: its own panel, a timetable, nothing on the map.
+    if (stop.kind !== 'bus') {
+      state.rows = [];
+      const open = stop.kind === 'train' ? openTrainStation : openLightRailStation;
+      state.station = open({ ctx, city, stop, lines, map, onClose: closeStop });
+      stops.refresh();
+      paint();
+      dockButtons(true);
+      sheet.scrollTop = 0;
+      track('stop_explored', { city: city.id, lines: bucket(city.routesAtStop(stop.id).length) });
+      return;
+    }
 
     const routes = listedRoutes();
     state.hidden = new Set(routes.slice(MAX_ROUTES_SHOWN_AT_FIRST).map((r) => r.id));
@@ -119,6 +135,7 @@ export async function render(root, ctx) {
   }
 
   function closeStop() {
+    if (state.station) { state.station.destroy(); state.station = null; }
     state.stop = null;
     state.rows = [];
     lines.set([]);
@@ -216,6 +233,13 @@ export async function render(root, ctx) {
 
   function paint() {
     const scroll = sheet.scrollTop;
+    // A station's panel is put in once and then only updates itself, so its search boxes
+    // keep what is being typed.
+    if (state.station) {
+      if (!sheet.contains(state.station.root)) sheet.replaceChildren(state.station.root, h('div', { class: 'fab-space' }));
+      state.station.update();
+      return;
+    }
     const parts = [
       h('header', { class: 'topbar' },
         h('img', { src: 'icons/icon-192.png', alt: '', width: 28, height: 28 }),

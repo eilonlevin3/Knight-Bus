@@ -389,6 +389,11 @@ details > summary { cursor: pointer; }
   box-shadow: 0 0 0 8px var(--bg); /* covers what scrolls past beside and above it */
 }
 .screen > .sticky-top { top: var(--safe-top); }
+/* Train station and light rail stop panels: a timetable (REQ-TRAIN-2, REQ-LIGHT-1) */
+.rail-station .departure { display: flex; gap: 10px; align-items: center; }
+.dep-time { min-width: 3.2em; font-variant-numeric: tabular-nums; direction: ltr; unicode-bidi: isolate; }
+.rail-search { gap: 8px; }
+.trip-card { border-color: var(--purple-2); }
 /* A station's direction buttons, beside Select all and Clear all (REQ-DATA-13) */
 .heading-button.on { border-color: var(--purple-2); font-weight: 700; }
 /* Select all / Clear all above the route icons */
