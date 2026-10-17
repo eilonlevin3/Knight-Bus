@@ -204,6 +204,12 @@ Two places still say "line" for a route, on purpose:
 | REQ-LANG-1 | Every on-screen text is available in **English and Hebrew**. In Hebrew the screens read right to left; the map stays as it is. Names that come from the transit data (stops, destinations, operators) are Hebrew in both languages. A test fails when a text has no Hebrew translation. | Done |
 | REQ-LANG-2 | The home screen has an **Options** button, bottom right, where the language is changed; the screen changes at once. The choice is remembered on the device. On a first visit the app follows the phone's language. The sign-in screen also offers the other language. | Done |
 
+## Testing on the phone
+
+| ID | Requirement | Status |
+|----|-------------|--------|
+| REQ-DIAG-1 | Options has a **Connection test**: run on the phone itself, it checks every service the live data comes from (the relay for buses and for train platforms, Open Bus Stride, the app's data, the map), the phone's clock and what the browser supports, says for each OK or what went wrong, and copies all of it for pasting into a message. | Done |
+
 ## Usage insights (see privacy.md and ADR-0008)
 
 | ID | Requirement | Status |

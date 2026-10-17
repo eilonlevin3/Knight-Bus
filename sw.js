@@ -56,6 +56,7 @@ const SHELL = [
   'src/views/home.js',
   'src/views/options.js',
   'src/views/routes.js',
+  'src/views/diagnostics.js',
   'src/views/editor.js',
   'src/views/commute.js',
   'src/views/liveInfo.js',

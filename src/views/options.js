@@ -32,6 +32,7 @@ export function showOptions(ctx) {
       h('b', { class: 'small' }, t('City')),
       h('button', { onclick: () => go('#/city') }, `📍 ${cityName(ctx.city.meta)} · ${t('Change city')}`),
       h('button', { class: 'link', onclick: () => go('#/privacy') }, t('Privacy & usage data')),
+      h('button', { class: 'link', onclick: () => go('#/diagnostics') }, t('🔧 Connection test')),
       h('button', { onclick: close }, t('Close'))));
   document.body.append(overlay);
 }

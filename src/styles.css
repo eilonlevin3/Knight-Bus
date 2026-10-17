@@ -396,6 +396,11 @@ details > summary { cursor: pointer; }
 .when-row { flex-wrap: wrap; }
 .when-row input { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); }
 .dep-when { min-width: 3.6em; text-align: center; }
+/* The connection test (REQ-DIAG-1) */
+.diag-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.diag { padding: 8px 10px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); overflow-wrap: anywhere; direction: ltr; text-align: left; }
+.diag.fail { border-color: var(--danger); }
+.diag.ok { border-color: var(--ok); }
 /* One train's stations, with times (REQ-TRAIN-7) */
 .plain-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .trip-stop button.link { text-decoration: none; color: inherit; text-align: start; padding: 4px 0; display: flex; gap: 8px; align-items: baseline; width: 100%; }

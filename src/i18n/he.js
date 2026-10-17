@@ -244,6 +244,12 @@ export const he = {
 
   'Timetable times, from now on. Tap a train to see it on the map.': 'זמנים לפי לוח הזמנים, מעכשיו. הקישו על רכבת כדי לראות אותה על המפה.',
   'Show more': 'עוד',
+  '🔧 Connection test': '🔧 בדיקת חיבור',
+  'Connection test': 'בדיקת חיבור',
+  'Checks, from this phone, every service the live data comes from. It takes about half a minute.': 'בודק, מהטלפון הזה, כל שירות שממנו מגיעים הנתונים בזמן אמת. זה לוקח כחצי דקה.',
+  'Copy the results': 'העתקת התוצאות',
+  'Copied. Paste it into a message.': 'הועתק. הדביקו בהודעה.',
+  'Could not copy.': 'לא ניתן להעתיק.',
   'The next three trains from each platform. Platforms from Israel Railways; times from the timetable. Tap a train to see it on the map.': 'שלוש הרכבות הבאות מכל רציף. הרציפים לפי רכבת ישראל; הזמנים לפי לוח הזמנים. הקישו על רכבת כדי לראות אותה על המפה.',
   'Platform not known': 'רציף לא ידוע',
   'All trains by time': 'כל הרכבות לפי שעה',

@@ -20,6 +20,7 @@ import * as privacy from './views/privacy.js';
 import * as report from './views/report.js';
 import * as line from './views/line.js';
 import * as routes from './views/routes.js';
+import * as diagnostics from './views/diagnostics.js';
 import * as analytics from './analytics.js';
 
 applyLanguage();
@@ -79,6 +80,7 @@ async function route() {
   if (!ctx.user) { analytics.screen('login'); return login.render(root, ctx); }
   if (name === 'city' || !ctx.city) { analytics.screen('city'); return cityView.render(root, ctx); }
   if (name === 'privacy') { analytics.screen('privacy'); return privacy.render(root, ctx); }
+  if (name === 'diagnostics') { analytics.screen('diagnostics'); return diagnostics.render(root, ctx); }
 
   const views = { home, menu: home, edit: editor, commute, line, routes, report: ctx.isAdmin ? report : home };
   const view = views[name] || home;

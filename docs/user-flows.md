@@ -494,3 +494,15 @@ its timetable then shows only that direction.
 
 Code: [views/lightRailStation.js](../src/views/lightRailStation.js).
 
+## Connection test
+
+**⚙ Options → 🔧 Connection test** (REQ-DIAG-1) checks, from the phone itself, every service
+the live data comes from, and says for each ✅ OK or ❌ what went wrong: the app's version
+and whether it runs as an installed app, the phone's clock, the relay (live buses, then
+train platforms) with how long it took and how old the newest position is, Open Bus Stride
+and how far behind it is, the app's data and the map. **Copy the results** puts it all on
+the clipboard, to paste into a message. It is how a problem seen only on one phone (for
+example a network that blocks the relay's address) is found.
+
+Code: [views/diagnostics.js](../src/views/diagnostics.js).
+
