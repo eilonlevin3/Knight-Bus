@@ -158,7 +158,7 @@ when the feed is late. The ghost (REQ-RT-12) shows where the bus has probably go
   on, the app never asks for it. How the numbers are made and kept up to date:
   [data-pipeline.md](data-pipeline.md#travel-times-a-month-of-history).
 - **How it looks.** A see-through marker with a dashed edge and a 👻, in the route's color,
-  with a dotted trail from the real position to it. It moves every 2 seconds. The real
+  with a dotted trail from the real position to it. It moves twice a second. The real
   marker stays where the last signal was.
 - **What it does not know.** Today's traffic: it knows what is usual for this hour, not
   what is happening now. It is an estimate, and the pop-up says so. When a new signal arrives, the ghost
@@ -181,7 +181,7 @@ always moving on the map between signals:
 - A route that is unchecked shows no ghost. A ghost you remove in the bus's pop-up stays
   off for that bus; you can turn it on again there.
 
-The rule is checked every 2 seconds, with the same estimate as a ghost turned on by hand.
+The rule is checked twice a second, with the same estimate as a ghost turned on by hand.
 Code: [lib/ghosts.js](../src/lib/ghosts.js) (`pickAutoGhosts`), [liveLines.js](../src/liveLines.js)
 (`autoGhostIds`).
 

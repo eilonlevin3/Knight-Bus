@@ -305,23 +305,40 @@ export class LiveLines {
   }
 
   // Draws the estimates and keeps them moving while any is on.
+  // Each ghost keeps its marker and trail, and only moves them, so moving twice a second
+  // does not flicker. ghostMarks: ride id -> { trail, marker }
   drawGhosts() {
-    this.ghostLayer.clearLayers();
     clearTimeout(this.ghostTimer);
+    this.ghostMarks ||= new Map();
     let any = this.autoGhosts && this.rows.length > 0; // keep checking which ghosts to show
+    const on = new Set();
     for (const rideId of new Set([...this.ghosts, ...this.autoGhostIds()])) {
       const m = this.shown.get(rideId);
       const g = m && this.ghostOf(m);
       if (!g) continue;
       any = true;
+      on.add(rideId);
+      const trail = slicePath(g.path, g.from, g.to);
+      const mark = this.ghostMarks.get(rideId);
+      if (mark) {
+        mark.trail.setLatLngs(trail);
+        mark.marker.setLatLng(g.point);
+        continue;
+      }
       // A dotted trail from the last signal to the estimate, and the ghost itself.
-      L.polyline(slicePath(g.path, g.from, g.to), { color: m.row.color, weight: 4, opacity: 0.9, dashArray: '2 8', lineCap: 'round', interactive: false }).addTo(this.ghostLayer);
-      L.marker(g.point, {
-        icon: busIcon(m.row.route.label, m.row.color, 'ghost'), zIndexOffset: 1500,
-        title: t('Estimated position of route {n} now', { n: m.row.route.label }),
-      })
-        .on('click', () => this.openBus(rideId))
-        .addTo(this.ghostLayer);
+      this.ghostMarks.set(rideId, {
+        trail: L.polyline(trail, { color: m.row.color, weight: 4, opacity: 0.9, dashArray: '2 8', lineCap: 'round', interactive: false }).addTo(this.ghostLayer),
+        marker: L.marker(g.point, {
+          icon: busIcon(m.row.route.label, m.row.color, 'ghost'), zIndexOffset: 1500,
+          title: t('Estimated position of route {n} now', { n: m.row.route.label }),
+        }).on('click', () => this.openBus(rideId)).addTo(this.ghostLayer),
+      });
+    }
+    for (const [rideId, mark] of this.ghostMarks) {
+      if (on.has(rideId)) continue;
+      mark.trail.remove();
+      mark.marker.remove();
+      this.ghostMarks.delete(rideId);
     }
     if (any && !this.destroyed && !document.hidden) this.ghostTimer = setTimeout(() => this.drawGhosts(), realtime.ghostStepMs);
   }
