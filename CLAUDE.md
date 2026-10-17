@@ -310,6 +310,15 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   stop (REQ-COMM-10). Do not recenter on the person when coming back.
 - **Ghost** (owner, 2026-10-13): an estimated position, only for a bus the person picks in
   its pop-up (REQ-RT-12). Keep it visibly an estimate; do not use it for "stops away".
+- **The 15-minute delay, solved (2026-10-17)**: Cloudflare's metrics for the relay showed
+  ~460 requests in 7 days, all from Claude's own tests: the owner's phone had never asked
+  the relay, so it was running an app version from before the relay (or the main app,
+  which is still 34aad5a and reads Stride). Since then the debug app updates itself
+  (REQ-PWA-4). Cloudflare metrics: dash.cloudflare.com → Workers & Pages →
+  knight-bus-relay → Metrics (the owner's account; read only).
+- **Nightly travel times lost the month** (found 2026-10-17): scheduled runs use main's
+  deploy.yml, which has no `speed-days` cache, so each night rebuilt 6 days. Fixed only by
+  releasing the workflow to main (needs the owner's go-ahead).
 - **Live delay complaints** (owner, 2026-10-13 and 2026-10-15): the relay tested healthy
   each time (120 parallel requests, positions ~1 min old). Found on 2026-10-15: buses that
   stopped sending stayed in the answer up to 30 min and showed as "late" — now dropped when

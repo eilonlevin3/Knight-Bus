@@ -44,6 +44,7 @@ Two places still say "line" for a route, on purpose:
 |----|-------------|--------|
 | REQ-PWA-1 | The app runs in a phone browser and can be added to the home screen with its own icon and name, opening full screen with no browser bar. | Done |
 | REQ-PWA-2 | The app shell (HTML/JS/CSS/icons) works offline after the first visit. | Done |
+| REQ-PWA-4 | The **debug** version takes a new version **by itself** as soon as it has downloaded it (it waits while something is being typed), so a test phone is never left on an old version. The main version keeps asking with the *Update* banner (REQ-PWA-3). | Done |
 | REQ-PWA-3 | When a new version is published, an open app downloads it in the background and offers *Update*. If the user ignores the offer, the new version starts the next time the app is opened from closed. A running app never mixes files from two versions. | Done |
 
 ## Releases: test before users get it
