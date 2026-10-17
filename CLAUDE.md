@@ -310,6 +310,12 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   stop (REQ-COMM-10). Do not recenter on the person when coming back.
 - **Ghost** (owner, 2026-10-13): an estimated position, only for a bus the person picks in
   its pop-up (REQ-RT-12). Keep it visibly an estimate; do not use it for "stops away".
+- **The relay's address** (2026-10-17): `https://relay.knightbusapp.com` (the owner bought
+  `knightbusapp.com` at Cloudflare, $10.46/year, auto-renew; added to the Worker as a
+  custom domain). The old `knight-bus-relay.eilonlevin3.workers.dev` still works. The owner's
+  work-managed iPhone blocks `workers.dev` ("blocked by your organization", a Microsoft
+  Defender-style web filter): do not look for addresses that slip past it; the owner may ask
+  IT. `knightbusapp.com` itself is kept free for the app later.
 - **The 15-minute delay** (2026-10-17): Cloudflare's metrics for the relay (dash.cloudflare.com
   → Workers & Pages → knight-bus-relay → Metrics) showed ~460 requests in 7 days, all from
   Claude's tests, although the owner says they pressed Update every time. So the phone's

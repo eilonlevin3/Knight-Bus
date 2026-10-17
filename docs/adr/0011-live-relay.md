@@ -2,7 +2,10 @@
 
 **Status:** Accepted · 2026-10-13. Deployed the same day at
 `https://knight-bus-relay.eilonlevin3.workers.dev`. In a first three-minute watch: 26
-questions, no failures, newest bus positions 26–100 seconds old.
+questions, no failures, newest bus positions 26–100 seconds old. Since 2026-10-17 its
+address is `https://relay.knightbusapp.com`, a domain of the project's own, because many
+workplace and school filters block every `workers.dev` address (the owner's work phone
+does).
 
 ## The problem
 

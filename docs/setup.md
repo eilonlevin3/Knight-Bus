@@ -108,7 +108,10 @@ It runs on Cloudflare's free plan. The steps are done once, in a browser:
      *Compatibility flags* → add `nodejs_compat` → **Deploy** again.
    - If it says the Worker exceeded its limits (error 1102): see
      [ADR-0011](adr/0011-live-relay.md), "What it costs".
-5. **Tell the app.** Put that address, without `/live…` and without a slash at the end,
+5. **Its own address** (optional, recommended): many workplace and school filters block
+   `workers.dev`. With a domain in the same Cloudflare account: the Worker's **Domains**
+   tab → **Add Domain** → subdomain `relay`. The project's is `relay.knightbusapp.com`.
+6. **Tell the app.** Put that address, without `/live…` and without a slash at the end,
    in `realtime.relayUrl` in [src/config.js](../src/config.js), and push.
 
 After changing `relay/worker.js` in the repo, repeat step 3: the Worker does not update by

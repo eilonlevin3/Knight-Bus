@@ -31,7 +31,7 @@ export const realtime = {
   // Our own relay (relay/worker.js, docs/realtime.md#the-relay): positions about a minute
   // old. Empty = not set up; the app then asks baseUrl (Open Bus Stride) directly. Stride is
   // also the fallback whenever the relay does not answer. No trailing slash.
-  relayUrl: 'https://knight-bus-relay.eilonlevin3.workers.dev',
+  relayUrl: 'https://relay.knightbusapp.com', // the relay's own address; also at knight-bus-relay.eilonlevin3.workers.dev
   ghostStepMs: 2000, // how often an estimated ("ghost") position moves
   ghostMaxMinutes: 30, // an estimate never runs further ahead than this
   relayTimeoutMs: 8000, // no answer from the relay in this time: ask Stride
