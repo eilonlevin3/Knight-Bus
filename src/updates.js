@@ -1,6 +1,6 @@
 // Registers the service worker and offers new versions to the user.
 // Docs: docs/release-process.md#what-users-see-when-you-release
-// @req REQ-PWA-3 @req REQ-PWA-4
+// @req REQ-PWA-3
 //
 // Flow: a new version is published -> the phone notices it (at start, or when the app
 // comes back to the foreground) -> it downloads the whole version in the background ->
@@ -10,7 +10,6 @@
 import { h } from './lib/dom.js';
 import { t } from './i18n.js';
 import { track } from './analytics.js';
-import { isDebug } from './config.js';
 
 let updateRequested = false; // set when the person taps Update
 
@@ -41,20 +40,6 @@ export function registerServiceWorker() {
 }
 
 function offerUpdate(worker) {
-  // The debug version takes a new version by itself (REQ-PWA-4): it is for testing what was
-  // just pushed, and a test phone that stays on an old version tests the wrong thing. It
-  // waits while something is being typed.
-  if (isDebug) {
-    const apply = () => {
-      const typing = document.activeElement && /INPUT|TEXTAREA/.test(document.activeElement.tagName);
-      if (typing) { setTimeout(apply, 5000); return; }
-      track('update_applied', { auto: 1 });
-      updateRequested = true;
-      worker.postMessage('SKIP_WAITING');
-    };
-    apply();
-    return;
-  }
   if (document.querySelector('.update-banner')) return;
   const banner = h('div', { class: 'update-banner', role: 'status' },
     h('span', {}, t('A new version of Knight Bus is ready.')),
