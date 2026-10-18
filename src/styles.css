@@ -369,6 +369,9 @@ details > summary { cursor: pointer; }
    see-through, dashed, with a ghost mark. */
 .bus-ghost { background: color-mix(in srgb, var(--c) 35%, #ffffff); color: #1b0a2e; border: 3px dashed var(--c); opacity: 0.9; position: relative; }
 .ghost-mark { position: absolute; top: -12px; right: -12px; font-size: 16px; }
+/* The countdown to the stop, under the ghost (REQ-RT-14) */
+.ghost-timer { position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%); background: #1b0a2e; color: #fff; border: 2px solid var(--c); border-radius: 8px; padding: 0 5px; font-size: 12px; font-weight: 800; line-height: 1.4; font-variant-numeric: tabular-nums; white-space: nowrap; direction: ltr; }
+.ghost-timer[hidden] { display: none; }
 .ghost-box { border: 2px dashed var(--purple-2); border-radius: 10px; padding: 10px 12px; gap: 8px; }
 
 /* Pop-ups: the Close button stays at the bottom of the pop-up while its content scrolls,

@@ -1,4 +1,4 @@
-// Which ghosts a Favorite Commute shows by itself (REQ-RT-13).
+// Which ghosts a Favorite Commute shows by itself (REQ-RT-13), and the timer under a ghost (REQ-RT-14).
 // Docs: docs/realtime.md#ghosts-in-a-favorite-commute
 //
 // Pure function, so it is unit tested.
@@ -12,6 +12,13 @@ export const NEXT_BEFORE_ARRIVING = 60; // seconds before a ghost reaches the st
 //   - the ghost closest to the stop, as long as it has not passed it more than a minute ago;
 //   - and the one behind it, once that first ghost is a minute or less from the stop (or
 //     past it).
+// The countdown under a ghost (REQ-RT-14): seconds until it reaches the stop, as "m:ss".
+// At or past the stop it reads 0:00.
+export function countdown(seconds) {
+  const s = Math.max(0, Math.round(seconds || 0));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+}
+
 export function pickAutoGhosts(buses) {
   const waiting = buses
     .filter((b) => Number.isFinite(b.seconds) && b.seconds >= -KEEP_AFTER_PASSING)

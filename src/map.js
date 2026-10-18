@@ -94,10 +94,14 @@ export function userMarker(map) {
 }
 
 // kind: 'next' | 'passed' | 'ghost' (an estimated position, REQ-RT-12)
-export function busIcon(label, color, kind) {
+// timer: for a ghost, the countdown to its stop shown under it ("" for none, REQ-RT-14).
+export function busIcon(label, color, kind, timer) {
+  const ghost = kind === 'ghost'
+    ? `<span class="ghost-mark">👻</span><span class="ghost-timer"${timer ? '' : ' hidden'}>${escapeHtml(timer || '')}</span>`
+    : '';
   return L.divIcon({
     className: '',
-    html: `<div class="bus-marker bus-${kind}" style="--c:${color}">${escapeHtml(label)}${kind === 'ghost' ? '<span class="ghost-mark">👻</span>' : ''}</div>`,
+    html: `<div class="bus-marker bus-${kind}" style="--c:${color}">${escapeHtml(label)}${ghost}</div>`,
     iconSize: [34, 34],
     iconAnchor: [17, 17],
   });

@@ -165,6 +165,13 @@ when the feed is late. The ghost (REQ-RT-12) shows where the bus has probably go
   starts again from it.
 - If the bus is more than 250 m from the route as our map has it, no ghost is offered.
 
+- **The timer under it** (REQ-RT-14). Opened from a selected station or a Favorite Commute,
+  the ghost has a small timer under it, in minutes and seconds (`4:07`): the estimated time
+  until the ghost reaches that stop, with the same travel times that move it. It changes
+  every time the ghost moves (twice a second). When the bus is coming to more than one
+  stop on screen, it counts to the first one it reaches. At or past the stop it reads
+  `0:00`; a bus that has passed every stop on screen has no timer.
+
 "Stops away" in the lists still counts from the real signal, not from the ghost.
 
 ## Ghosts in a Favorite Commute

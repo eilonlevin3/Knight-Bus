@@ -241,7 +241,8 @@ the home map does that when you want it.
 **Ghosts** (REQ-RT-13). The bus coming next to each of your stops gets a 👻 ghost by itself:
 an estimate of where it is now, moving between signals. A minute before it reaches your
 stop, the bus behind it gets one too; a minute after it passes, its ghost goes. Tap a bus
-to remove its ghost ([realtime.md](realtime.md#ghosts-in-a-favorite-commute)).
+to remove its ghost ([realtime.md](realtime.md#ghosts-in-a-favorite-commute)). Under each
+ghost a timer (m:ss) counts down to when it reaches your stop (REQ-RT-14).
 
 **Panel** (REQ-COMM-7, REQ-COMM-8). Each stop lists its routes with a checkbox, all checked.
 Uncheck a route to hide it, its buses and its key entry; **☑ Select all** and **☐ Clear

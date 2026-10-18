@@ -255,6 +255,7 @@ export const he = {
   'All trains by time': 'כל הרכבות לפי שעה',
   'By platform': 'לפי רציף',
   'Train {n}': 'רכבת {n}',
+  'Estimated position of route {n} now. The timer counts down to its arrival at {stop}.': 'המיקום המשוער של קו {n} עכשיו. הטיימר סופר לאחור עד הגעתו ל{stop}.',
   ' · you get on here': ' · כאן עולים',
   'Its stations, 1 stop to go': 'התחנות שלה, עוד תחנה אחת',
   'Its stations, {n} stops to go': 'התחנות שלה, עוד {n} תחנות',

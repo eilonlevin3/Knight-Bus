@@ -1,13 +1,13 @@
 // Draws the chosen routes as lines on a map, with their live buses, and keeps the buses fresh.
 // Used by both the editor and the commute screen, so they behave the same (REQ-COMM-1).
-// @req REQ-RT-10 @req REQ-RT-12 @req REQ-RT-13 @req REQ-LINE-1a @req REQ-LINE-1b @req REQ-LINE-1c @req REQ-RT-8 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
+// @req REQ-RT-10 @req REQ-RT-12 @req REQ-RT-13 @req REQ-RT-14 @req REQ-LINE-1a @req REQ-LINE-1b @req REQ-LINE-1c @req REQ-RT-8 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
 
 import { realtime } from './config.js';
 import { t, tn, arrow } from './i18n.js';
 import { fetchLiveMany, classifyBuses, ageLabel, dropFinishedRides } from './realtime.js';
 import { LINE_COLORS, busIcon, lighten } from './map.js';
 import { stopPositions, splitPath, samePath, projectOnPath, advanceOnPath, travelSeconds, pointAt, slicePath } from './lib/routeGeometry.js';
-import { pickAutoGhosts } from './lib/ghosts.js';
+import { pickAutoGhosts, countdown } from './lib/ghosts.js';
 import { makeOffsetPolyline } from './lib/offsetLine.js';
 import { showBusInfo } from './views/busInfo.js';
 import { loadSpeeds, segmentSeconds, cellAt } from './lib/speeds.js';
@@ -205,6 +205,8 @@ export class LiveLines {
           : tn(-bus.stopsAway, 'Passed {stop} 1 stop ago', 'Passed {stop} {n} stops ago', { stop: row.stop.name });
         const m = markers.get(bus.rideId) || { bus, row, kind, lines: [] };
         if (kind === 'next') m.kind = 'next';
+        // The stop this bus reaches first: its ghost counts down to it (REQ-RT-14).
+        if (kind === 'next' && !(m.nextRow && m.nextAway <= bus.stopsAway)) { m.nextRow = row; m.nextAway = bus.stopsAway; }
         m.lines.push(text);
         markers.set(bus.rideId, m);
       };
@@ -274,25 +276,28 @@ export class LiveLines {
     if (!this.autoGhosts) return ids;
     for (const row of this.rows) {
       if (row.noLive || row.error) continue;
-      const pattern = row.pattern;
-      const path = this.city.shapeOf(pattern);
-      const stopPos = stopPositions(pattern.stops, path);
-      const at = stopPos[pattern.stops.findIndex((s) => s.id === row.stop.id)];
-      if (at === undefined) continue;
-      const secondsOf = this.secondsOfFor(row);
       const buses = [...row.passed, ...row.next].map((bus) => {
         const g = this.ghostOf({ bus, row });
-        if (!g) return { id: bus.rideId, seconds: NaN };
-        // When the ghost reaches the stop: from where it is now, or (if it is past the
-        // stop) when it got there, counted from the bus's last signal.
-        const seconds = g.to < at
-          ? travelSeconds(pattern, path, g.to, at, stopPos, secondsOf)
-          : (bus.recordedAt.getTime() + travelSeconds(pattern, path, g.from, at, stopPos, secondsOf) * 1000 - Date.now()) / 1000;
-        return { id: bus.rideId, seconds };
+        return { id: bus.rideId, seconds: g ? this.ghostSecondsTo(row, bus, g) : NaN };
       });
       for (const id of pickAutoGhosts(buses)) if (!this.ghostsOff.has(id)) ids.add(id);
     }
     return ids;
+  }
+
+  // When a bus's ghost g reaches the row's stop: in that many seconds, from where the ghost
+  // is now; or, past the stop, that many seconds ago (negative), counted from the bus's last
+  // signal. NaN when the stop is not on the row's path.
+  ghostSecondsTo(row, bus, g) {
+    const pattern = row.pattern;
+    const path = g.path;
+    const stopPos = stopPositions(pattern.stops, path);
+    const at = stopPos[pattern.stops.findIndex((s) => s.id === row.stop.id)];
+    if (at === undefined) return NaN;
+    const secondsOf = this.secondsOfFor(row);
+    return g.to < at
+      ? travelSeconds(pattern, path, g.to, at, stopPos, secondsOf)
+      : (bus.recordedAt.getTime() + travelSeconds(pattern, path, g.from, at, stopPos, secondsOf) * 1000 - Date.now()) / 1000;
   }
 
   // Real travel times of a row's route for this half hour, or null (then the timetable).
@@ -319,18 +324,25 @@ export class LiveLines {
       any = true;
       on.add(rideId);
       const trail = slicePath(g.path, g.from, g.to);
+      // Under the ghost, the time until it reaches the stop it is coming to (REQ-RT-14).
+      const seconds = m.nextRow ? this.ghostSecondsTo(m.nextRow, m.bus, g) : NaN;
+      const timer = Number.isFinite(seconds) ? countdown(seconds) : '';
       const mark = this.ghostMarks.get(rideId);
       if (mark) {
         mark.trail.setLatLngs(trail);
         mark.marker.setLatLng(g.point);
+        const el = mark.marker.getElement()?.querySelector('.ghost-timer');
+        if (el && el.textContent !== timer) { el.textContent = timer; el.hidden = !timer; }
         continue;
       }
       // A dotted trail from the last signal to the estimate, and the ghost itself.
       this.ghostMarks.set(rideId, {
         trail: L.polyline(trail, { color: m.row.color, weight: 4, opacity: 0.9, dashArray: '2 8', lineCap: 'round', interactive: false }).addTo(this.ghostLayer),
         marker: L.marker(g.point, {
-          icon: busIcon(m.row.route.label, m.row.color, 'ghost'), zIndexOffset: 1500,
-          title: t('Estimated position of route {n} now', { n: m.row.route.label }),
+          icon: busIcon(m.row.route.label, m.row.color, 'ghost', timer), zIndexOffset: 1500,
+          title: m.nextRow
+            ? t('Estimated position of route {n} now. The timer counts down to its arrival at {stop}.', { n: m.row.route.label, stop: m.nextRow.stop.name })
+            : t('Estimated position of route {n} now', { n: m.row.route.label }),
         }).on('click', () => this.openBus(rideId)).addTo(this.ghostLayer),
       });
     }

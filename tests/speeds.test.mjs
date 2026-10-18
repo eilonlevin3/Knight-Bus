@@ -107,7 +107,7 @@ test('a ghost uses the real travel time of a stretch where it is known', () => {
 });
 
 // REQ-RT-13: the ghosts a Favorite Commute shows by itself.
-import { pickAutoGhosts } from '../src/lib/ghosts.js';
+import { pickAutoGhosts, countdown } from '../src/lib/ghosts.js';
 import { travelSeconds } from '../src/lib/routeGeometry.js';
 
 test('the ghost closest to the stop is shown; the one behind it from a minute before it arrives', () => {
@@ -126,4 +126,13 @@ test('travel time between two points of a route', () => {
   assert.equal(travelSeconds(pattern, shape, 2.5, 3), 30);
   assert.equal(travelSeconds(pattern, shape, 4, 2), 0);
   assert.equal(travelSeconds(pattern, shape, 2, 4, undefined, (i) => (i === 3 ? 30 : null)), 90); // a known stretch
+});
+
+// REQ-RT-14: the timer under a ghost, in minutes and seconds.
+test('the ghost timer reads m:ss and stops at 0:00', () => {
+  assert.equal(countdown(247), '4:07');
+  assert.equal(countdown(59.6), '1:00');
+  assert.equal(countdown(5), '0:05');
+  assert.equal(countdown(3725), '62:05');
+  assert.equal(countdown(-30), '0:00');
 });
