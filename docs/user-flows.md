@@ -63,6 +63,8 @@ The first screen after sign-in (REQ-HOME-1). It used to be called the main menu.
 
 **The map** opens around your location. Until the phone has a fix, it uses the last
 position remembered on this phone, or the city center. The **◎** button brings you back.
+The blue dot follows you live, twice a second, from the phone's GPS (REQ-LOC-3), on every
+map (home, Favorite Commute, editor).
 
 **Tap a bus stop** (REQ-HOME-2). Zoom in if no stops show. The stop is highlighted, the map
 zooms to it and to where its buses are in their last ~5 minutes, and **every route through

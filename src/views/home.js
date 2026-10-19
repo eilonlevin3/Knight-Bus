@@ -49,9 +49,11 @@ export async function render(root, ctx) {
   const showMe = userMarker(map);
   showMe(ctx.position);
   let centeredOnMe = !!ctx.position || !!kept; // a kept view is not moved when the phone finds itself
+  let savedAt = 0;
   const stopWatch = watchPosition((p) => {
     ctx.position = p;
-    saveLastPosition(p);
+    // The dot moves twice a second; the phone's memory of it is written twice a minute.
+    if (Date.now() - savedAt > 30000) { savedAt = Date.now(); saveLastPosition(p); }
     showMe(p);
     if (!centeredOnMe && !state.stop) map.setView([p.lat, p.lon], 16);
     centeredOnMe = true;

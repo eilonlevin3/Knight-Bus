@@ -54,6 +54,12 @@ export class LiveLines {
   set(entries) {
     this.entries = entries.filter((e) => this.city.routes.has(e.routeId) && this.city.stops.has(e.stopId));
     this.drawLines();
+    // A route or stop that was closed takes its buses and their ghosts with it at once,
+    // without waiting for the next live answer (REQ-RT-12).
+    const kept = new Set(this.entries.map((e) => `${e.stopId}|${e.routeId}`));
+    this.rows = this.rows.filter((row) => kept.has(`${row.stop.id}|${row.route.id}`));
+    this.drawBuses(this.rows);
+    for (const rideId of this.ghosts) if (!this.shown.has(rideId)) this.ghosts.delete(rideId);
     this.refresh();
   }
 
@@ -142,7 +148,8 @@ export class LiveLines {
     const gen = ++this.generation;
     if (this.destroyed) return;
     if (!this.entries.length) {
-      this.busLayer.clearLayers();
+      this.rows = [];
+      this.drawBuses([]);
       this.onUpdate([]);
       return;
     }

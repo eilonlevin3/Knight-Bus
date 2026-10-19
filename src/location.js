@@ -1,5 +1,5 @@
 // GPS position and choosing the metropolitan area. Docs: docs/user-flows.md#1-first-launch
-// @req REQ-LOC-1 @req REQ-LOC-2
+// @req REQ-LOC-1 @req REQ-LOC-2 @req REQ-LOC-3
 
 import { t } from './i18n.js';
 
@@ -16,15 +16,35 @@ export function getPosition({ timeout = 15000 } = {}) {
   });
 }
 
-// Keeps calling onPosition while the map is open. Returns a stop function.
+export const LIVE_POSITION_MS = 500; // the blue dot follows the phone twice a second (REQ-LOC-3)
+
+// Keeps calling onPosition while the map is open, with fresh GPS fixes only. Returns a stop
+// function. The phone sends a fix when it has one (watchPosition); some phones (iPhone)
+// send only when they think you moved, so every half second without a new fix it is also
+// asked directly, one question at a time. Nothing is asked while the app is in the
+// background.
+// @req REQ-LOC-3
 export function watchPosition(onPosition) {
   if (!('geolocation' in navigator)) return () => {};
-  const id = navigator.geolocation.watchPosition(
-    (p) => onPosition({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy }),
-    () => {},
-    { enableHighAccuracy: true, maximumAge: 15000 },
-  );
-  return () => navigator.geolocation.clearWatch(id);
+  const geo = navigator.geolocation;
+  const fresh = { enableHighAccuracy: true, maximumAge: 0 };
+  let last = 0;
+  let asking = false;
+  const got = (p) => {
+    last = Date.now();
+    onPosition({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy: p.coords.accuracy });
+  };
+  const id = geo.watchPosition(got, () => {}, fresh);
+  const tick = setInterval(() => {
+    if (document.hidden || asking || Date.now() - last < LIVE_POSITION_MS) return;
+    asking = true;
+    geo.getCurrentPosition(
+      (p) => { asking = false; got(p); },
+      () => { asking = false; },
+      { ...fresh, timeout: 5000 },
+    );
+  }, LIVE_POSITION_MS);
+  return () => { geo.clearWatch(id); clearInterval(tick); };
 }
 
 const contains = ([minLon, minLat, maxLon, maxLat], { lat, lon }) =>

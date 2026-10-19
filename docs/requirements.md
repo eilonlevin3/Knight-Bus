@@ -70,6 +70,7 @@ Two places still say "line" for a route, on purpose:
 |----|-------------|--------|
 | REQ-LOC-1 | The app asks for GPS permission and uses the device location. | Done |
 | REQ-LOC-2 | The app picks the user's metropolitan area from the location. If the user is outside every area, or denies GPS, they pick a city from a list. The user can change city from the menu. | Done |
+| REQ-LOC-3 | While a map is open, the blue dot that shows the user follows the phone's GPS **live, twice a second**, with fresh fixes only (no old, remembered positions). Nothing is asked of the GPS while the app is in the background. | Done |
 | REQ-DATA-1 | The app downloads transit data **only for the selected city**, keeps it on the device, and downloads again only when a newer version is published. | Done |
 | REQ-DATA-2 | A pipeline turns the national GTFS feed of the Ministry of Transport into one small file per city. The file holds stops, routes, the stop order of each route, and the shape of its path. The pipeline runs every night. | Done |
 | REQ-DATA-3 | Base map tiles are cached on the device as they are viewed, so areas already seen work with a weak connection. | Done |
