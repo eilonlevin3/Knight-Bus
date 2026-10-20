@@ -1,25 +1,65 @@
 // Draws the chosen routes as lines on a map, with their live buses, and keeps the buses fresh.
 // Used by both the editor and the commute screen, so they behave the same (REQ-COMM-1).
-// @req REQ-RT-10 @req REQ-RT-12 @req REQ-RT-13 @req REQ-RT-14 @req REQ-LINE-1a @req REQ-LINE-1b @req REQ-LINE-1c @req REQ-RT-8 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
+// @req REQ-RT-10 @req REQ-RT-12 @req REQ-RT-13 @req REQ-RT-14 @req REQ-RT-15 @req REQ-LINE-1a @req REQ-LINE-1b @req REQ-LINE-1c @req REQ-RT-8 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
 
 import { realtime } from './config.js';
 import { t, tn, arrow } from './i18n.js';
 import { fetchLiveMany, classifyBuses, ageLabel, dropFinishedRides } from './realtime.js';
 import { LINE_COLORS, busIcon, lighten } from './map.js';
-import { stopPositions, splitPath, samePath, projectOnPath, advanceOnPath, travelSeconds, pointAt, slicePath } from './lib/routeGeometry.js';
+import { stopPositions, splitPath, samePath, projectOnPath, advanceOnPath, travelSeconds, pointAt, slicePath, metersBetween } from './lib/routeGeometry.js';
 import { pickAutoGhosts, countdown } from './lib/ghosts.js';
 import { makeOffsetPolyline } from './lib/offsetLine.js';
 import { showBusInfo } from './views/busInfo.js';
 import { loadSpeeds, segmentSeconds, cellAt } from './lib/speeds.js';
+import { sharedStretches, blend, liveWeight, confidence, READY_SHARE } from './lib/liveStretches.js';
 
 let OffsetPolyline = null; // created on first use, once Leaflet (global L) is loaded
+const LEARN_OFF_PATH_METERS = 120; // a bus further from its route than this teaches nothing
+
+// Meters along a path: at each corner, and at each stop of the pattern ([{ id, m }]).
+const metersCache = new WeakMap();
+function metersOf(pattern, path) {
+  const hit = metersCache.get(pattern);
+  if (hit && hit.path === path) return hit;
+  const cum = new Float64Array(path.length);
+  for (let i = 1; i < path.length; i++) cum[i] = cum[i - 1] + metersBetween(path[i - 1], path[i]);
+  const stops = stopPositions(pattern.stops, path).map((pos, i) => ({ id: pattern.stops[i].id, m: alongMeters(cum, pos) }));
+  const out = { path, cum, stops };
+  metersCache.set(pattern, out);
+  return out;
+}
+function alongMeters(cum, pos) {
+  const i = Math.min(cum.length - 1, Math.floor(pos));
+  return i >= cum.length - 1 ? cum[cum.length - 1] : cum[i] + (cum[i + 1] - cum[i]) * (pos - i);
+}
+
+// The ghost's timer (REQ-RT-14) and, in a Favorite Commute, its live traffic state
+// (REQ-RT-15): ⏳ while live times are still being gathered, ⚡ and a colored ring when the
+// ghost uses them. Changed in place, twice a second.
+function showGhostState(marker, timer, live) {
+  const el = marker.getElement();
+  if (!el) return;
+  const time = el.querySelector('.ghost-timer');
+  if (time && time.textContent !== timer) { time.textContent = timer; time.hidden = !timer; }
+  const badge = el.querySelector('.ghost-live');
+  const icon = live?.enabled ? (live.active ? '⚡' : '⏳') : '';
+  if (badge && badge.textContent !== icon) { badge.textContent = icon; badge.hidden = !icon; }
+  const box = el.querySelector('.bus-marker');
+  if (box) for (const q of ['good', 'fair', 'poor']) box.classList.toggle(`ring-${q}`, live?.quality === q);
+}
 
 export class LiveLines {
   // onUpdate(rows): rows = [{ stop, route, color, next: [bus], passed: [bus], error }]
   // autoGhosts: show by itself the ghost of the bus coming next to each stop (the Favorite
   // Commute view, REQ-RT-13).
-  constructor(map, city, { onUpdate = () => {}, autoGhosts = false } = {}) {
+  // liveTraffic: learn how long buses take between stops right now, from the buses this view
+  // already fetches, and let the ghosts use it (the Favorite Commute view, REQ-RT-15).
+  constructor(map, city, { onUpdate = () => {}, autoGhosts = false, liveTraffic = false } = {}) {
     this.autoGhosts = autoGhosts;
+    this.liveTraffic = liveTraffic;
+    this.learn = sharedStretches;
+    this.learnAt = new Map(); // ride id -> its last position on the path (where to look next)
+    this.liveOff = new Set(); // ride ids whose ghost the person set back to the month's history
     this.ghostsOff = new Set(); // ride ids whose automatic ghost the person removed
     this.busFilter = null; // (route, bus) -> keep? null shows every bus
     this.hideLines = false;
@@ -168,6 +208,7 @@ export class LiveLines {
     });
     if (gen !== this.generation || this.destroyed) return;
     const byRoute = new Map(results);
+    if (this.liveTraffic) this.learnFrom(byRoute);
     const rows = this.entries.map(({ stopId, routeId }) => {
       const route = this.city.routes.get(routeId);
       const stop = this.city.stops.get(stopId);
@@ -233,16 +274,80 @@ export class LiveLines {
     }
   }
 
+  // Every bus of every route on screen, all along its route: where it is now. A bus seen
+  // passing two stops in a row gives that stretch a live time (REQ-RT-15).
+  learnFrom(byRoute) {
+    const now = Date.now();
+    for (const [routeId, { buses }] of byRoute) {
+      if (!buses?.length) continue;
+      const route = this.city.routes.get(routeId);
+      const entry = this.entries.find((e) => e.routeId === routeId);
+      const pattern = (entry && this.city.patternsAt(route, entry.stopId)[0]) || route.patterns[0];
+      const path = this.city.shapeOf(pattern);
+      const { cum, stops } = metersOf(pattern, path);
+      for (const bus of buses) {
+        const before = this.learnAt.get(bus.rideId);
+        const { pos, meters } = projectOnPath(bus, path, before ? Math.max(0, Math.floor(before) - 2) : 0);
+        if (meters > LEARN_OFF_PATH_METERS) continue;
+        this.learnAt.set(bus.rideId, pos);
+        this.learn.observe(bus.rideId, bus.recordedAt.getTime(), alongMeters(cum, pos), stops);
+      }
+    }
+    this.learn.prune(now);
+  }
+
+  // Live traffic for one bus's ghost, on the way from its last signal to the row's stop (or,
+  // past every stop on screen, the next five stretches): how much of the way has live times
+  // and how much they count. active: the ghost uses them (on, and at least half the way
+  // known). quality: the ring around the ghost.
+  liveOf({ bus, row }, pos) {
+    if (!this.liveTraffic) return null;
+    const enabled = !this.liveOff.has(bus.rideId);
+    const pattern = row.pattern;
+    const stops = pattern.stops;
+    const stopPos = stopPositions(stops, this.city.shapeOf(pattern));
+    const start = Math.max(1, stopPos.findIndex((p) => p > pos));
+    if (stopPos.findIndex((p) => p > pos) < 0) return { enabled, active: false, stretches: 0, known: 0, buses: 0, weight: 0 };
+    let end = stops.findIndex((s) => s.id === row.stop.id);
+    if (end < start) end = Math.min(stops.length - 1, start + 4);
+    const hist = this.historyOf(row);
+    const now = Date.now();
+    let total = 0, covered = 0, weighted = 0, known = 0, buses = 0;
+    for (let i = start; i <= end; i++) {
+      const times = pattern.times;
+      const h = hist?.(i) ?? (times && Number.isFinite(times[i] - times[i - 1]) ? (times[i] - times[i - 1]) * 60 : 60);
+      const n = this.learn.samples(stops[i - 1].id, stops[i].id, now).length;
+      total += h;
+      if (n) { covered += h; known++; buses += n; }
+      weighted += h * liveWeight(n);
+    }
+    const share = total ? covered / total : 0;
+    const weight = total ? weighted / total : 0;
+    const active = enabled && share >= READY_SHARE;
+    const age = (now - bus.recordedAt.getTime()) / 1000;
+    return { enabled, active, stretches: end - start + 1, known, buses, weight, quality: active ? confidence(age, weight) : null };
+  }
+
   openBus(rideId) {
     const m = this.shown.get(rideId);
     if (!m) return;
     const auto = this.autoGhostIds().has(rideId);
+    const g = this.ghostOf({ bus: m.bus, row: m.nextRow || m.row });
     showBusInfo({
       bus: m.bus, route: m.row.route, where: m.lines,
       ghost: {
         on: this.ghosts.has(rideId) || auto,
         auto,
-        possible: !!this.ghostOf(m),
+        possible: !!g,
+        // Live traffic in a Favorite Commute (REQ-RT-15): its state, and on / off for this ghost.
+        live: g?.live ? {
+          ...g.live,
+          stop: (m.nextRow || m.row).stop.name,
+          toggle: () => {
+            if (this.liveOff.has(rideId)) this.liveOff.delete(rideId); else this.liveOff.add(rideId);
+            this.drawGhosts();
+          },
+        } : null,
         toggle: () => {
           if (this.ghosts.has(rideId) || auto) {
             this.ghosts.delete(rideId);
@@ -263,16 +368,20 @@ export class LiveLines {
   }
 
   // Where the bus would be now: { from, to, point } as positions on its route's path, or
-  // null when the bus is not on that path (then nothing can be estimated).
+  // null when the bus is not on that path (then nothing can be estimated). live: its live
+  // traffic state in a Favorite Commute (REQ-RT-15); secondsOf: the stretch times it used.
   ghostOf({ bus, row }) {
     const pattern = row.pattern;
     const path = this.city.shapeOf(pattern);
     const { pos, meters } = projectOnPath(bus, path);
     if (meters > realtime.maxOffRouteMeters) return null;
     const seconds = Math.min(realtime.ghostMaxMinutes * 60, (Date.now() - bus.recordedAt.getTime()) / 1000);
-    // Real travel times for this half hour where known; the timetable otherwise.
-    const to = advanceOnPath(pattern, path, pos, seconds, undefined, this.secondsOfFor(row));
-    return { path, from: pos, to, point: pointAt(path, to) };
+    const live = this.liveOf({ bus, row }, pos);
+    // Real travel times for this half hour where known, with today's where the live ghost is
+    // on; the timetable otherwise.
+    const secondsOf = this.secondsOfFor(row, !!live?.active);
+    const to = advanceOnPath(pattern, path, pos, seconds, undefined, secondsOf);
+    return { path, from: pos, to, point: pointAt(path, to), live, secondsOf };
   }
 
   // The ghosts a Favorite Commute shows by itself (REQ-RT-13): for every route at every
@@ -301,19 +410,29 @@ export class LiveLines {
     const stopPos = stopPositions(pattern.stops, path);
     const at = stopPos[pattern.stops.findIndex((s) => s.id === row.stop.id)];
     if (at === undefined) return NaN;
-    const secondsOf = this.secondsOfFor(row);
+    const secondsOf = g.secondsOf;
     return g.to < at
       ? travelSeconds(pattern, path, g.to, at, stopPos, secondsOf)
       : (bus.recordedAt.getTime() + travelSeconds(pattern, path, g.from, at, stopPos, secondsOf) * 1000 - Date.now()) / 1000;
   }
 
   // Real travel times of a row's route for this half hour, or null (then the timetable).
-  secondsOfFor(row) {
+  historyOf(row) {
     const speeds = this.speeds.get(row.route.id);
     if (!speeds) return null;
     const cell = cellAt();
     const stops = row.pattern.stops;
     return (i) => segmentSeconds(speeds, stops[i - 1].id, stops[i].id, cell);
+  }
+
+  // The stretch times a ghost moves by: the history, blended with the last 20 minutes'
+  // live times when live is true (REQ-RT-15). null: the timetable.
+  secondsOfFor(row, live = false) {
+    const hist = this.historyOf(row);
+    if (!live) return hist;
+    const stops = row.pattern.stops;
+    const now = Date.now();
+    return (i) => blend(hist?.(i) ?? null, this.learn.samples(stops[i - 1].id, stops[i].id, now));
   }
 
   // Draws the estimates and keeps them moving while any is on.
@@ -326,7 +445,8 @@ export class LiveLines {
     const on = new Set();
     for (const rideId of new Set([...this.ghosts, ...this.autoGhostIds()])) {
       const m = this.shown.get(rideId);
-      const g = m && this.ghostOf(m);
+      // The ghost runs along the route as seen from the stop it is coming to.
+      const g = m && this.ghostOf({ bus: m.bus, row: m.nextRow || m.row });
       if (!g) continue;
       any = true;
       on.add(rideId);
@@ -334,24 +454,24 @@ export class LiveLines {
       // Under the ghost, the time until it reaches the stop it is coming to (REQ-RT-14).
       const seconds = m.nextRow ? this.ghostSecondsTo(m.nextRow, m.bus, g) : NaN;
       const timer = Number.isFinite(seconds) ? countdown(seconds) : '';
-      const mark = this.ghostMarks.get(rideId);
+      let mark = this.ghostMarks.get(rideId);
       if (mark) {
         mark.trail.setLatLngs(trail);
         mark.marker.setLatLng(g.point);
-        const el = mark.marker.getElement()?.querySelector('.ghost-timer');
-        if (el && el.textContent !== timer) { el.textContent = timer; el.hidden = !timer; }
-        continue;
+      } else {
+        // A dotted trail from the last signal to the estimate, and the ghost itself.
+        mark = {
+          trail: L.polyline(trail, { color: m.row.color, weight: 4, opacity: 0.9, dashArray: '2 8', lineCap: 'round', interactive: false }).addTo(this.ghostLayer),
+          marker: L.marker(g.point, {
+            icon: busIcon(m.row.route.label, m.row.color, 'ghost', timer), zIndexOffset: 1500,
+            title: m.nextRow
+              ? t('Estimated position of route {n} now. The timer counts down to its arrival at {stop}.', { n: m.row.route.label, stop: m.nextRow.stop.name })
+              : t('Estimated position of route {n} now', { n: m.row.route.label }),
+          }).on('click', () => this.openBus(rideId)).addTo(this.ghostLayer),
+        };
+        this.ghostMarks.set(rideId, mark);
       }
-      // A dotted trail from the last signal to the estimate, and the ghost itself.
-      this.ghostMarks.set(rideId, {
-        trail: L.polyline(trail, { color: m.row.color, weight: 4, opacity: 0.9, dashArray: '2 8', lineCap: 'round', interactive: false }).addTo(this.ghostLayer),
-        marker: L.marker(g.point, {
-          icon: busIcon(m.row.route.label, m.row.color, 'ghost', timer), zIndexOffset: 1500,
-          title: m.nextRow
-            ? t('Estimated position of route {n} now. The timer counts down to its arrival at {stop}.', { n: m.row.route.label, stop: m.nextRow.stop.name })
-            : t('Estimated position of route {n} now', { n: m.row.route.label }),
-        }).on('click', () => this.openBus(rideId)).addTo(this.ghostLayer),
-      });
+      showGhostState(mark.marker, timer, g.live);
     }
     for (const [rideId, mark] of this.ghostMarks) {
       if (on.has(rideId)) continue;

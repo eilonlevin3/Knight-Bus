@@ -192,6 +192,41 @@ The rule is checked twice a second, with the same estimate as a ghost turned on 
 Code: [lib/ghosts.js](../src/lib/ghosts.js) (`pickAutoGhosts`), [liveLines.js](../src/liveLines.js)
 (`autoGhostIds`).
 
+## Live traffic in a Favorite Commute
+
+The month's history knows what is usual, not today's traffic: in rush hour the ghost runs
+ahead of the bus. In a Favorite Commute (REQ-RT-15) the phone also learns how long buses
+are taking **right now**, with no server and no cost. The idea and its measurement are in
+the design review [reviews/2026-10-19-ghost-estimation-dr.html](reviews/2026-10-19-ghost-estimation-dr.html)
+("idea 1"), done here on the phone instead of on the relay.
+
+- **What is learned.** Every 15 s the commute already asks for its routes' buses, all along
+  the routes. Each bus's place along its route is noted; a bus seen passing two stops in a
+  row gives that stretch a **live time** (the time between the two stops, shared out by
+  distance between its signals, as the nightly statistics do). Times are kept for **20
+  minutes**, by stop pair, so routes that share a street share what they learn. They stay
+  while the app is open, also when the commute is closed and opened again.
+- **How it is used.** On each stretch the ghost moves by
+  `w × median(live times) + (1 − w) × history`, with `w = n ÷ (n + 4)` for n live times. One
+  bus counts a fifth, four buses half. Without history, two live times or more are used as
+  they are. In the recorded-bus test this was 5–9% better in rush hour and the same at
+  midday.
+- **⏳ Learning / ⚡ On.** A ghost uses live traffic only once **at least half of its way**
+  from the last signal to your stop (counted in time) has live times. Until then it shows ⏳
+  and moves as before, by the month's history; then ⚡. Right after a commute is opened
+  this takes a few minutes: buses have to be seen driving.
+- **The ring** (only while ⚡). How good the estimate is believed to be, from the recorded-bus
+  test: by the age of the last signal, 90% of errors were within 56 s (1 min old), 91 s (2
+  min), 119 s (3 min), 164 s (5 min). **Green**: that is 90 s or less and the live times
+  count at least 40% on the way. **Yellow**: 165 s or less. **Red**: more.
+- **On or off.** In each ghost's pop-up: *Turn off live traffic for this ghost* (then it uses
+  the month's history only) or *Turn on*. It is on by default, and the choice holds while
+  the commute is open.
+- Only in a Favorite Commute: stations and the home map do not learn.
+
+Code: [lib/liveStretches.js](../src/lib/liveStretches.js) (`LiveStretches`, `blend`,
+`confidence`), [liveLines.js](../src/liveLines.js) (`learnFrom`, `liveOf`, `secondsOfFor`).
+
 Code: [liveLines.js](../src/liveLines.js) (`ghostOf`, `drawGhosts`),
 [lib/routeGeometry.js](../src/lib/routeGeometry.js) (`advanceOnPath`),
 [lib/speeds.js](../src/lib/speeds.js),

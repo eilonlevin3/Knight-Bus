@@ -1,6 +1,6 @@
 // The pop-up for one live bus: when its last signal arrived and everything that signal says.
 // Opened by tapping a bus on any map. Docs: docs/realtime.md#what-a-bus-tells-us
-// @req REQ-RT-10 @req REQ-RT-12
+// @req REQ-RT-10 @req REQ-RT-12 @req REQ-RT-15
 
 import { h } from '../lib/dom.js';
 import { t, arrow, locale } from '../i18n.js';
@@ -15,6 +15,26 @@ const has = (v) => v !== null && v !== undefined && v !== '';
 // bus: from fetchLiveBuses + classifyBuses. route: its route. where: sentences such as
 // "2 stops before Dizengoff" (one per chosen stop the bus matters for).
 // ghost: { on, possible, toggle } for the estimated ("ghost") position of this bus.
+// ghost.live, in a Favorite Commute: { enabled, active, stretches, known, buses, quality,
+// stop, toggle } for live traffic (REQ-RT-15).
+// Live traffic for this ghost (REQ-RT-15): what it knows so far, and on / off.
+function liveBox(live, close) {
+  const quality = live.quality === 'good' ? t('good') : live.quality === 'fair' ? t('fair') : t('rough');
+  const state = !live.enabled
+    ? t('Off for this ghost: it moves by the month\'s history only.')
+    : live.active
+      ? t('⚡ On: {k} of {n} stretches to {stop} have times from {b} buses in the last 20 minutes. The estimate is believed to be {q}.', { k: live.known, n: live.stretches, stop: live.stop, b: live.buses, q: quality })
+      : t('⏳ Learning: {k} of {n} stretches to {stop} have live times so far. Until at least half the way is known, the ghost moves by the month\'s history.', { k: live.known, n: live.stretches, stop: live.stop });
+  return h('div', { class: 'live-box stack' },
+    h('b', { class: 'small' }, t('Live traffic (last 20 minutes)')),
+    h('small', {}, state),
+    h('small', { class: 'muted' }, t('Learned on this phone from the buses of this commute: how long they took between stops just now, blended with the month\'s history. The ring around the ghost: green good, yellow fair, red rough. It depends on how old the last signal is and on how many buses the live times come from.')),
+    h('button', {
+      class: live.enabled ? '' : 'primary',
+      onclick: () => { track('ghost_live_toggled', { on: live.enabled ? 0 : 1 }); live.toggle(); close(); },
+    }, live.enabled ? t('Turn off live traffic for this ghost') : t('Turn on live traffic for this ghost')));
+}
+
 export function showBusInfo({ bus, route, where = [], ghost = null }) {
   const raw = bus.raw || {};
   const close = () => overlay.remove();
@@ -62,6 +82,7 @@ export function showBusInfo({ bus, route, where = [], ghost = null }) {
         h('small', { class: 'muted' }, ghost.possible
           ? t('A ghost bus on the map, moved forward from the last signal along the route. It goes as fast as buses really went on each stretch at this time of day over the last month; where that is not known, at timetable speed. It is an estimate, not a signal: today\'s traffic is not known.')
           : t('This bus is not on the route as our map has it, so its position cannot be estimated.')),
+        ghost.on && ghost.live ? liveBox(ghost.live, close) : null,
         ghost.possible || ghost.on ? h('button', {
           class: ghost.on ? '' : 'primary',
           onclick: () => { track('ghost_toggled', { on: ghost.on ? 0 : 1 }); ghost.toggle(); close(); },

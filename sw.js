@@ -48,6 +48,7 @@ const SHELL = [
   'src/lib/israelTime.js',
   'src/lib/railTimetable.js',
   'src/lib/railStations.js',
+  'src/lib/liveStretches.js',
   'src/views/trainStation.js',
   'src/views/lightRailStation.js',
   'src/geocode.js',

@@ -67,6 +67,7 @@ id; the account is never attached.
 | `routes_select_all`, `routes_clear_all` | that the button was used, and on which screen (home, editor or Favorite Commute) |
 | `opening_view_set` | that an opening view was chosen, its zoom level (a number from 1 to 19), the panel height and whether the key was open. Not where the map was |
 | `ghost_toggled` | that a ghost (estimated position) was turned on or off. Not for which bus |
+| `ghost_live_toggled` | that live traffic was turned on or off for a ghost in a Favorite Commute. Not for which bus |
 | `bus_info_opened`, `route_card_opened` | that a bus's or a route's pop-up was opened, whether the bus signal was late, whether the route has several stop patterns. Not which bus or route |
 | `panel_dragged` | small / half / large |
 | `commute_cleared`, `update_applied`, `usage_sharing_on` | that it happened |

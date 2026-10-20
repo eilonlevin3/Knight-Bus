@@ -97,7 +97,7 @@ export function userMarker(map) {
 // timer: for a ghost, the countdown to its stop shown under it ("" for none, REQ-RT-14).
 export function busIcon(label, color, kind, timer) {
   const ghost = kind === 'ghost'
-    ? `<span class="ghost-mark">👻</span><span class="ghost-timer"${timer ? '' : ' hidden'}>${escapeHtml(timer || '')}</span>`
+    ? `<span class="ghost-mark">👻</span><span class="ghost-live" hidden></span><span class="ghost-timer"${timer ? '' : ' hidden'}>${escapeHtml(timer || '')}</span>`
     : '';
   return L.divIcon({
     className: '',
@@ -146,7 +146,8 @@ export function lighten(hex, amount) {
 // The rows of the map key: one per route on the map, the flags, and what the symbols mean.
 // items: [{ route, color }] (LiveLines.legendItems()); places: { origin, destination }.
 // @req REQ-COMM-6
-export function legendHtml(items, places = {}) {
+// liveGhosts: also explain the live traffic marks on ghosts (a Favorite Commute, REQ-RT-15).
+export function legendHtml(items, places = {}, { liveGhosts = false } = {}) {
   const rows = items.map(({ route, color }) =>
     `<div class="legend-row"><span class="legend-swatch${route.source ? ' dashed' : ''}" style="--in:${color};--out:${lighten(color, 0.3)}"></span>` +
     `<b>${escapeHtml(route.label)}</b> <span class="legend-dest">${escapeHtml(route.dest)}</span></div>`);
@@ -155,7 +156,12 @@ export function legendHtml(items, places = {}) {
   const help = rows.length
     ? `<div class="legend-help"><span class="legend-swatch demo"></span> ${t('to stop → from stop')}</div>` +
       `<div class="legend-help"><span class="legend-bus"></span> ${t('next')} <span class="legend-bus passed"></span> ${t('passed')}</div>` +
-      (items.some(({ route }) => route.source) ? `<div class="legend-help"><span class="legend-swatch demo dashed"></span> ${t('weekend route, no live')}</div>` : '')
+      (items.some(({ route }) => route.source) ? `<div class="legend-help"><span class="legend-swatch demo dashed"></span> ${t('weekend route, no live')}</div>` : '') +
+      (liveGhosts
+        ? `<div class="legend-help">👻 ⏳ ${t('ghost: learning live traffic')}</div>` +
+          `<div class="legend-help">👻 ⚡ ${t('ghost: uses live traffic')}</div>` +
+          `<div class="legend-help"><span class="legend-ring" style="--c:#2b9348"></span> <span class="legend-ring" style="--c:#f4c430"></span> <span class="legend-ring" style="--c:#d62828"></span> ${t('good · fair · rough')}</div>`
+        : '')
     : '';
   return rows.join('') + placeRows.join('') + help;
 }

@@ -45,8 +45,10 @@ export async function render(root, ctx, { slot }) {
   let updatedAt = null;
   let reportedLive = false;
   // In a Favorite Commute the ghost of the bus coming next shows by itself (REQ-RT-13).
+  // Live traffic: the ghosts learn from the buses on screen how long stretches take now (REQ-RT-15).
   const lines = new LiveLines(map, city, {
     autoGhosts: true,
+    liveTraffic: true,
     onUpdate: (r) => {
       rows = r;
       updatedAt = new Date();
@@ -74,7 +76,7 @@ export async function render(root, ctx, { slot }) {
   }
 
   function paintLegend() {
-    legend.update(legendHtml(lines.legendItems(), fav));
+    legend.update(legendHtml(lines.legendItems(), fav, { liveGhosts: true }));
   }
 
   // Where the map opens. The view the person chose in the editor, if any (REQ-FAV-6).
