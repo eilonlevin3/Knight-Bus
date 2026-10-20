@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ghost Estimation Review</title>
+<meta name="description" content="Design review DR-RT-12: how the Knight Bus ghost estimates a bus's position now, how accurate it is, three ways to improve it, and a recommendation.">
+<style>
+:root {
+  --bg: #f6f3fa; --panel: #ffffff; --ink: #1b0a2e; --muted: #5d5470; --line: #ddd5e8;
+  --accent: #5a189a; --accent-2: #9d4edd; --good: #2b9348; --bad: #c1121f; --warn: #b26b00;
+  --c-hold: #9aa0a6; --c-tt: #e09f3e; --c-hist: #5a189a; --c-a: #c1121f; --c-b: #0077b6;
+  --shadow: 0 1px 3px rgba(27, 10, 46, .08), 0 8px 24px rgba(27, 10, 46, .06);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #120a1c; --panel: #1d1329; --ink: #f1ebf8; --muted: #b3a8c4; --line: #3a2d4c;
+    --accent: #c77dff; --accent-2: #e0aaff; --good: #52b788; --bad: #ff6b6b; --warn: #f4a261;
+    --c-hold: #8a8f96; --c-tt: #f4a261; --c-hist: #c77dff; --c-a: #ff6b6b; --c-b: #4cc9f0;
+    --shadow: 0 1px 3px rgba(0, 0, 0, .4);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #120a1c; --panel: #1d1329; --ink: #f1ebf8; --muted: #b3a8c4; --line: #3a2d4c;
+  --accent: #c77dff; --accent-2: #e0aaff; --good: #52b788; --bad: #ff6b6b; --warn: #f4a261;
+  --c-hold: #8a8f96; --c-tt: #f4a261; --c-hist: #c77dff; --c-a: #ff6b6b; --c-b: #4cc9f0;
+  --shadow: 0 1px 3px rgba(0, 0, 0, .4);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans Hebrew", sans-serif;
+  overflow: hidden;
+}
+.deck { height: 100%; position: relative; }
+.slide {
+  position: absolute; inset: 0; padding: 48px clamp(16px, 6vw, 88px) 72px;
+  display: none; flex-direction: column; gap: 20px; overflow-y: auto;
+}
+.slide.on { display: flex; }
+.kicker { font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font-size: clamp(30px, 5vw, 52px); line-height: 1.1; margin: 0; letter-spacing: -.02em; }
+h2 { font-size: clamp(24px, 3.4vw, 36px); line-height: 1.15; margin: 0; letter-spacing: -.01em; }
+h3 { font-size: 18px; margin: 0 0 6px; }
+p { margin: 0; max-width: 72ch; }
+.lead { font-size: clamp(17px, 2vw, 21px); color: var(--muted); max-width: 64ch; }
+.muted { color: var(--muted); }
+.small { font-size: 14px; }
+.grid { display: grid; gap: 16px; }
+.g2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.g3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.g4 { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; box-shadow: var(--shadow); }
+.card ul, .slide ul { margin: 6px 0 0; padding-inline-start: 20px; }
+.card li, .slide li { margin: 3px 0; }
+.stat { font-size: clamp(30px, 4vw, 44px); font-weight: 800; letter-spacing: -.02em; line-height: 1; }
+.stat small { font-size: 16px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+.tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 99px; border: 1px solid currentColor; }
+.tag.good { color: var(--good); } .tag.bad { color: var(--bad); } .tag.warn { color: var(--warn); } .tag.acc { color: var(--accent); }
+table { border-collapse: collapse; width: 100%; font-size: 15px; background: var(--panel); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); }
+th, td { padding: 9px 12px; text-align: start; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); background: color-mix(in srgb, var(--panel) 85%, var(--accent) 15%); }
+td.num, th.num { text-align: end; font-variant-numeric: tabular-nums; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+.win { color: var(--good); font-weight: 700; } .lose { color: var(--bad); font-weight: 700; }
+.tablewrap { overflow-x: auto; border-radius: 12px; }
+code, .mono { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: .92em; }
+.formula { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; background: var(--panel); border: 1px dashed var(--accent-2); border-radius: 10px; padding: 12px 16px; font-size: 15px; overflow-x: auto; white-space: pre; }
+.flow { display: flex; flex-wrap: wrap; align-items: stretch; gap: 8px; }
+.flow .box { flex: 1 1 150px; background: var(--panel); border: 2px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.flow .box b { display: block; }
+.flow .arrow { align-self: center; color: var(--accent); font-weight: 800; font-size: 22px; }
+.flow .box.hot { border-color: var(--accent); }
+.chart { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; box-shadow: var(--shadow); }
+.chart svg { width: 100%; height: auto; display: block; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; color: var(--muted); padding: 4px 6px 0; }
+.legend i { display: inline-block; width: 16px; height: 4px; border-radius: 2px; vertical-align: middle; margin-inline-end: 6px; }
+.callout { border-inline-start: 4px solid var(--accent); padding: 10px 16px; background: color-mix(in srgb, var(--panel) 80%, var(--accent) 20%); border-radius: 0 10px 10px 0; }
+.callout.good { border-color: var(--good); background: color-mix(in srgb, var(--panel) 85%, var(--good) 15%); }
+.score { display: inline-flex; gap: 3px; }
+.score i { width: 10px; height: 10px; border-radius: 50%; background: var(--line); display: inline-block; }
+.score i.f { background: var(--accent); }
+.nav {
+  position: fixed; inset-inline: 0; bottom: 0; height: 52px; display: flex; align-items: center; gap: 10px;
+  padding: 0 16px; background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(6px); border-top: 1px solid var(--line);
+}
+.nav button { font: inherit; font-weight: 700; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 8px; padding: 6px 14px; cursor: pointer; }
+.nav button:hover { border-color: var(--accent); }
+.nav .count { font-variant-numeric: tabular-nums; color: var(--muted); font-size: 14px; min-width: 56px; text-align: center; }
+.nav .bar { flex: 1; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.nav .bar i { display: block; height: 100%; background: var(--accent); width: 0; transition: width .2s; }
+.nav .title { font-size: 13px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 30vw; }
+.title-slide { justify-content: center; }
+.meta-row { display: flex; flex-wrap: wrap; gap: 8px 28px; color: var(--muted); font-size: 15px; }
+.meta-row b { color: var(--ink); }
+@media (max-width: 640px) {
+  .slide { padding: 28px 16px 72px; }
+  .nav .title { display: none; }
+  th, td { padding: 7px 8px; font-size: 13px; }
+}
+@media print {
+  body { overflow: visible; }
+  .nav { display: none; }
+  .slide { position: relative; display: flex !important; page-break-after: always; min-height: 100vh; overflow: visible; }
+}
+</style>
+</head>
+<body>
+<div class="deck" id="deck">
+
+<!-- 1 -->
+<section class="slide title-slide" data-title="Title">
+  <div class="kicker">Design review · DR-RT-12 · Knight Bus</div>
+  <h1>The ghost: how good is our estimate of where the bus is now?</h1>
+  <p class="lead">How the estimate works today, what it gets wrong (2 million predictions checked against real buses), three ways to improve it, and a recommendation.</p>
+  <div class="meta-row">
+    <span>Presented by <b>System engineer, live data</b></span>
+    <span>Date <b>2026-10-19</b></span>
+    <span>Covers <b>REQ-RT-12, REQ-RT-13, REQ-RT-14, REQ-DATA-12</b></span>
+  </div>
+  <p class="small muted">← → or swipe to move between slides. Print (Ctrl+P) gives one slide per page.</p>
+</section>
+
+<!-- 2 -->
+<section class="slide" data-title="What we decide today">
+  <div class="kicker">Purpose</div>
+  <h2>What we decide today</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>The problem</h3>
+      <p>The owner reports the ghost "works not as well as expected". The ghost is the dashed 👻 marker that moves a bus forward from its last signal, and its timer counts down to the user's stop. If it is wrong, the timer is wrong, and people miss buses.</p>
+    </div>
+    <div class="card">
+      <h3>Decision requested</h3>
+      <ul>
+        <li>Which improvement to build first.</li>
+        <li>Whether to accept a possible running cost (about US$5 a month) for the option that needs it.</li>
+        <li>Whether to keep the accuracy test as a permanent quality check.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="callout"><b>Bottom line up front:</b> the ghost's model is already 3–4× better than no ghost. Most of what feels wrong is <b>how it behaves on screen</b> (it jumps about once a minute and gives a single exact-looking number). The model's error only matters in rush hour. Fix the behaviour first, then add live traffic.</div>
+</section>
+
+<!-- 3 -->
+<section class="slide" data-title="How it works now: data flow">
+  <div class="kicker">How it works now · 1 of 2</div>
+  <h2>Where the ghost's inputs come from</h2>
+  <div class="flow">
+    <div class="box"><b>🚌 Bus</b><span class="small muted">GPS signal about every 60 s (90% within 95 s)</span></div>
+    <div class="arrow">→</div>
+    <div class="box"><b>Ministry SIRI feed</b><span class="small muted">all buses in Israel</span></div>
+    <div class="arrow">→</div>
+    <div class="box"><b>Open Bus per-minute file</b><span class="small muted">about 40 s after the minute</span></div>
+    <div class="arrow">→</div>
+    <div class="box"><b>Our relay</b><span class="small muted">relay.knightbusapp.com: only the routes asked for</span></div>
+    <div class="arrow">→</div>
+    <div class="box hot"><b>📱 App</b><span class="small muted">asks every 15 s; draws the bus at its last signal</span></div>
+  </div>
+  <div class="flow">
+    <div class="box"><b>Last 30 days of the same files</b><span class="small muted">nightly GitHub Action</span></div>
+    <div class="arrow">→</div>
+    <div class="box"><b>When each bus passed each stop</b><span class="small muted">interpolated between signals</span></div>
+    <div class="arrow">→</div>
+    <div class="box"><b>Stretch times</b><span class="small muted">stop → next stop, per half hour, weekday / weekend; mean of ≥ 3 trips</span></div>
+    <div class="arrow">→</div>
+    <div class="box hot"><b>data/speeds/&lt;route&gt;.json</b><span class="small muted">downloaded only when a ghost is on</span></div>
+  </div>
+  <p class="muted small">So by the time a phone shows a bus, its signal is typically 1–3 minutes old. The ghost exists to cover that gap.</p>
+</section>
+
+<!-- 4 -->
+<section class="slide" data-title="How it works now: the model">
+  <div class="kicker">How it works now · 2 of 2</div>
+  <h2>The model: dead reckoning along the route</h2>
+  <div class="formula">age        = now − time of the bus's last signal        (capped at 30 min)
+position   = last signal, snapped onto the route's path   (no ghost if > 250 m off)
+ghost(now) = walk forward along the path, spending `age` seconds,
+             each stretch taking T(stretch, half-hour, weekday|weekend)
+timer      = time for the ghost to reach the selected stop, by the same T</div>
+  <div class="grid g3">
+    <div class="card"><h3>Stretch time T, in order</h3><ol class="small"><li>Last month's mean for this half hour</li><li>Same stretch, whole day</li><li>Timetable</li><li>18 km/h</li></ol></div>
+    <div class="card"><h3>Redraw</h3><p class="small">Twice a second (500 ms). It moves evenly within a stretch, so it doesn't model the stop dwell itself.</p></div>
+    <div class="card"><h3>New signal</h3><p class="small">The ghost <b>restarts from the new signal</b>, wherever that is. Whatever it got wrong shows up as a sudden jump.</p></div>
+  </div>
+  <p class="muted small">Code: <span class="mono">src/liveLines.js</span> (ghostOf, drawGhosts, ghostSecondsTo), <span class="mono">src/lib/routeGeometry.js</span> (advanceOnPath, travelSeconds), <span class="mono">pipeline/build-speeds.mjs</span>.</p>
+</section>
+
+<!-- 5 -->
+<section class="slide" data-title="How we measured">
+  <div class="kicker">Method</div>
+  <h2>How we measured: a replay of real buses</h2>
+  <div class="grid g2">
+    <div class="card">
+      <h3>The test</h3>
+      <p class="small">For every recorded bus signal, the ghost predicts where the bus will be after <b>1, 2, 3, 5 and 8 minutes</b>. We compare that with where the same bus's later signal really put it. The error is turned into <b>seconds of driving</b>, which is how wrong the timer would be.</p>
+      <ul class="small">
+        <li>The same code as the app (advanceOnPath, the real speeds files).</li>
+        <li>The ideas are run on the same signals, side by side.</li>
+        <li>Terminals left out (buses wait there).</li>
+      </ul>
+    </div>
+    <div class="grid g2" id="method-stats"></div>
+  </div>
+  <p class="muted small">Data: Open Bus per-minute files for Sunday 2026-10-18 (a working day in Israel), all four metro areas. Two windows: <b>rush hour 08:00–09:30</b> and <b>midday 12:00–13:00</b>.</p>
+</section>
+
+<!-- 6 -->
+<section class="slide" data-title="Results today">
+  <div class="kicker">Results · today's ghost</div>
+  <h2>The model already does most of the work</h2>
+  <div class="grid g2">
+    <div class="chart"><div class="small muted">Median timer error (seconds) vs. signal age, rush hour</div><div id="ch-now-med"></div></div>
+    <div class="chart"><div class="small muted">Bad cases: 90th percentile error (seconds), rush hour</div><div id="ch-now-p90"></div></div>
+  </div>
+  <div class="legend" id="lg-now"></div>
+  <div class="callout good" id="now-callout"></div>
+</section>
+
+<!-- 7 -->
+<section class="slide" data-title="Why it feels wrong">
+  <div class="kicker">Diagnosis</div>
+  <h2>Why it still feels wrong: four findings</h2>
+  <div class="grid g2" id="findings"></div>
+</section>
+
+<!-- 8 -->
+<section class="slide" data-title="Idea 1: live stretch times">
+  <div class="kicker">Idea 1 of 3</div>
+  <h2>Live stretch times from all buses</h2>
+  <p class="lead">Use what buses on the same stretch actually took in the <b>last 20 minutes</b>, from any route, blended with the monthly history. The more buses we have, the more weight the live times get (weight = n ÷ (n + 4)).</p>
+  <div class="grid g2">
+    <div class="card"><h3>What it fixes</h3><p class="small">Today's traffic: the rush-hour error where the ghost runs ahead. Where there is no live data, it is the same as today.</p><div id="i1-stats" class="grid" style="margin-top:10px;grid-template-columns:1fr 1fr"></div></div>
+    <div class="card"><h3>What it costs</h3>
+      <ul class="small">
+        <li>The relay has to follow <b>every</b> bus from minute to minute and remember the last 20 minutes. Today it deliberately does not read the whole file, because a free Worker has only 10 ms of CPU per run.</li>
+        <li>Most likely <b>Cloudflare Workers Paid (about US$5 a month)</b> for a scheduled job once a minute, plus a store for state between minutes. To be confirmed.</li>
+        <li>A free variant on the phone itself (only buses of the routes on screen) covers less and needs about 20 minutes to warm up.</li>
+        <li>Effort: 3–5 days. Risk: medium (a new moving part in the backend).</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 9 -->
+<section class="slide" data-title="Idea 2: this bus's own pace">
+  <div class="kicker">Idea 2 of 3</div>
+  <h2>This bus's own pace</h2>
+  <p class="lead">If this bus has driven slower than history over its last 3–10 minutes, assume it keeps doing so: scale its stretch times by its own ratio (clamped to 0.5–2, applied at 60%).</p>
+  <div class="grid g2">
+    <div class="card"><h3>Why it looked attractive</h3><ul class="small"><li>Runs entirely on the phone. No backend, no cost.</li><li>Works for 90% of signals (needs 3+ minutes of history for the bus).</li><li>Effort: 1 day.</li></ul></div>
+    <div class="card"><h3>What we measured</h3><div id="i2-stats" class="grid" style="grid-template-columns:1fr 1fr"></div>
+      <p class="small" style="margin-top:10px">It is <b>worse</b>. A bus's last few minutes say more about the lights and stops it just passed than about the road ahead. The scaling adds noise, and only cancels the bias by chance.</p></div>
+  </div>
+</section>
+
+<!-- 10 -->
+<section class="slide" data-title="Idea 3: glide and show confidence">
+  <div class="kicker">Idea 3 of 3</div>
+  <h2>Glide, and say how sure we are</h2>
+  <p class="lead">Keep the model. Change what the user sees when the model is corrected, and how certain the timer looks.</p>
+  <div class="grid g3">
+    <div class="card"><h3>1 · Glide, don't jump</h3><p class="small">When a new signal arrives, the ghost slides to the corrected place over about 4 s instead of jumping (today the jump is <b id="i3-jump"></b> most of the time). It never moves backwards past the real bus marker.</p></div>
+    <div class="card"><h3>2 · An honest timer</h3><p class="small">The timer shows <b class="mono">≈ 3:40</b> plus a range taken from this test, by signal age. The range is the one that held 90% of cases: <span class="mono" id="i3-r1"></span> in rush hour and <span class="mono" id="i3-r2"></span> at midday when the signal is 2 min old. When the range is wider than the time itself, it shows "due" instead of seconds.</p></div>
+    <div class="card"><h3>3 · Fade with age</h3><p class="small">The ghost fades as its signal gets older and turns into an outline after 8 minutes (90% of errors there are over 3½ minutes). Today it runs on for up to 30.</p></div>
+  </div>
+  <div class="card"><h3>Cost and risk</h3><p class="small">Phone only, no running cost, no new data. Effort: 1–2 days. Risk: low. It doesn't make the estimate more accurate, it makes the error <b>visible and smooth</b>. The jumps are the most visible flaw the owner described ("updating and moving every few seconds" was the redraw rate, now fixed; the jump once a minute remains).</p></div>
+</section>
+
+<!-- 11 -->
+<section class="slide" data-title="Comparison">
+  <div class="kicker">Comparison</div>
+  <h2>The three ideas side by side</h2>
+  <div class="tablewrap"><table id="cmp"></table></div>
+  <p class="small muted">Accuracy: change in the timer's median and 90th-percentile error against today's ghost, at signal age 2 and 5 minutes. Green = better.</p>
+</section>
+
+<!-- 12 -->
+<section class="slide" data-title="Comparison chart">
+  <div class="kicker">Comparison · the data</div>
+  <h2>Accuracy of the ideas, rush hour and midday</h2>
+  <div class="grid g2">
+    <div class="chart"><div class="small muted">Rush hour: median timer error (s)</div><div id="ch-cmp-rush"></div></div>
+    <div class="chart"><div class="small muted">Midday: median timer error (s)</div><div id="ch-cmp-mid"></div></div>
+  </div>
+  <div class="legend" id="lg-cmp"></div>
+  <p class="small muted">Idea 3 doesn't change these numbers. It changes how the remaining error looks on screen.</p>
+</section>
+
+<!-- 13 -->
+<section class="slide" data-title="Recommendation">
+  <div class="kicker">Recommendation</div>
+  <h2>Build idea 3 now, idea 1 next, drop idea 2</h2>
+  <div class="grid g3">
+    <div class="card"><span class="tag good">Phase 1 · now</span><h3 style="margin-top:8px">Idea 3: glide and confidence</h3><p class="small">Cheapest, no risk, and it targets what the user notices: the jump once a minute and a timer that looks exact. 1–2 days.</p></div>
+    <div class="card"><span class="tag acc">Phase 2 · after a cost check</span><h3 style="margin-top:8px">Idea 1: live stretch times</h3><p class="small">The only idea that makes the model itself better, and only where it is weak (rush hour, about 5–9%). First confirm the Workers cost; if it isn't acceptable, ship the free phone-only variant.</p></div>
+    <div class="card"><span class="tag bad">Rejected</span><h3 style="margin-top:8px">Idea 2: own pace</h3><p class="small">Measured worse in both windows. It isn't worth building.</p></div>
+  </div>
+  <div class="card"><h3>Also: keep the measuring stick</h3><p class="small">Add this replay to the repository as <span class="mono">pipeline/backtest-ghost.mjs</span> and run it weekly. It is how we will know if a change helps, and it catches a bad month of history (see the rush-hour bias). <b>Success criteria for phase 1:</b> no visible jump over 30 m on screen; the timer's range holds the real arrival at least 90% of the time.</p></div>
+</section>
+
+<!-- 14 -->
+<section class="slide" data-title="Caveats and open questions">
+  <div class="kicker">Limits of this review</div>
+  <h2>Caveats and open questions</h2>
+  <div class="grid g2">
+    <div class="card"><h3>Caveats</h3><ul class="small">
+      <li>One day, two windows. The rush-hour bias may come from the history window: the last 30 days include the Sukkot holiday weeks, when traffic is light. To check on a normal month.</li>
+      <li>The speeds files used were built with this day inside their 30 days (1 day in 30), which slightly flatters today's ghost.</li>
+      <li>"Truth" is the bus's own later signal, which has GPS noise of its own (tens of metres).</li>
+      <li>Errors are in seconds of driving at usual speed, not measured arrival times at the stop.</li>
+    </ul></div>
+    <div class="card"><h3>Open questions for the review</h3><ul class="small">
+      <li>Is about US$5 a month acceptable for live traffic in the ghost?</li>
+      <li>Should the timer show a range, or a single number that turns into "due"?</li>
+      <li>Should history drop holiday days, or use the median instead of the mean? (Needs a pipeline change to test.)</li>
+      <li>Light rail and trains: the same model, not measured separately here.</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- 15 -->
+<section class="slide" data-title="Appendix: raw numbers">
+  <div class="kicker">Appendix</div>
+  <h2>Raw numbers</h2>
+  <p class="small muted">Timer error in seconds: median / 90th percentile, and the share of predictions within 30 s. Bias &gt; 0 means the ghost is ahead of the bus.</p>
+  <div class="tablewrap"><table id="raw"></table></div>
+</section>
+
+</div>
+
+<nav class="nav" aria-label="Slides">
+  <button id="prev" aria-label="Previous slide">←</button>
+  <span class="count" id="count"></span>
+  <button id="next" aria-label="Next slide">→</button>
+  <div class="bar"><i id="bar"></i></div>
+  <span class="title" id="slide-title"></span>
+  <button id="theme" aria-label="Switch light or dark">◐</button>
+</nav>
+
+<script>
+const DATA = {"rush":{"meta":{"rides":10873,"routes":2268,"samples":1275860,"gap":60,"gap90":95,"jump":125,"jump90":595,"live":55},"r":{"hold":{"60":[52,100,-56,28,304,1081],"120":[106,168,-107,10,584,2004],"180":[160,235,-159,5,873,2920],"300":[268,364,-261,2,1458,4751],"480":[426,552,-413,1,2336,7520]},"timetable":{"60":[37,107,32,42,218,793],"120":[61,176,60,27,362,1317],"180":[84,239,88,20,501,1806],"300":[133,356,142,13,784,2703],"480":[203,518,221,8,1206,4045]},"history":{"60":[24,57,4,59,126,569],"120":[33,96,13,47,175,884],"180":[41,127,21,39,222,1141],"300":[56,179,40,29,309,1595],"480":[78,247,68,21,436,2214]},"A_bus":{"60":[24,58,-1,59,128,572],"120":[35,95,3,44,186,915],"180":[45,126,7,36,241,1208],"300":[63,180,16,26,347,1747],"480":[91,252,28,18,504,2485]},"B_blend":{"60":[23,56,2,60,122,562],"120":[31,91,7,48,167,864],"180":[39,119,13,41,209,1105],"300":[52,164,26,31,284,1515],"480":[70,219,44,24,389,2050]}}},"midday":{"meta":{"rides":7883,"routes":2020,"samples":740611,"gap":60,"gap90":91,"jump":113,"jump90":489,"live":52},"r":{"hold":{"60":[60,105,-64,20,339,1207],"120":[119,178,-121,5,658,2284],"180":[178,250,-180,2,989,3340],"300":[297,389,-296,2,1642,5407],"480":[474,593,-469,1,2635,8540]},"timetable":{"60":[32,92,20,48,186,623],"120":[49,147,40,33,299,977],"180":[66,194,58,25,401,1288],"300":[98,285,95,17,603,1875],"480":[144,407,147,12,902,2692]},"history":{"60":[22,56,-4,64,116,488],"120":[28,84,-1,53,154,711],"180":[34,102,0,45,187,883],"300":[45,134,5,36,250,1170],"480":[59,175,12,28,331,1536]},"A_bus":{"60":[23,59,-5,61,122,508],"120":[31,90,-5,48,171,775],"180":[40,114,-5,39,218,995],"300":[56,159,-3,29,308,1399],"480":[78,220,-2,21,438,1952]},"B_blend":{"60":[22,56,-4,64,115,488],"120":[28,83,-2,53,153,712],"180":[34,101,-1,45,187,880],"300":[45,132,4,36,248,1168],"480":[58,171,9,28,328,1517]}}}};
+const H = [60, 120, 180, 300, 480];
+const NAMES = { hold: 'No ghost (bus stays at its last signal)', timetable: 'Timetable speed', history: "Today's ghost (month history)", A_bus: 'Idea 2: own pace', B_blend: 'Idea 1: live stretch times' };
+const COLORS = { hold: '--c-hold', timetable: '--c-tt', history: '--c-hist', A_bus: '--c-a', B_blend: '--c-b' };
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const R = DATA.rush, M = DATA.midday;
+const v = (set, m, h, k) => set.r[m][h][k]; // k: 0 med, 1 p90, 2 bias, 3 within30, 4 medM, 5 p90M
+const pctChange = (a, b) => Math.round((b - a) / a * 100);
+const fmtPct = (n) => (n > 0 ? '+' : n < 0 ? '−' : '±') + Math.abs(n) + '%';
+const cls = (n) => (n < 0 ? 'win' : n > 0 ? 'lose' : '');
+const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+
+// ---------- Charts (inline SVG) ----------
+function lineChart(el, set, methods, k, maxY) {
+  const W = 560, Hh = 300, L = 46, Rr = 14, T = 14, B = 40;
+  const x = (h) => L + (h - 60) / (480 - 60) * (W - L - Rr);
+  const top = maxY || Math.max(...methods.flatMap((m) => H.map((h) => v(set, m, h, k)))) * 1.08;
+  const step = top > 400 ? 100 : top > 150 ? 50 : 20;
+  const y = (s) => T + (1 - s / top) * (Hh - T - B);
+  let g = '';
+  for (let s = 0; s <= top; s += step) g += `<line x1="${L}" x2="${W - Rr}" y1="${y(s)}" y2="${y(s)}" stroke="var(--line)"/><text x="${L - 8}" y="${y(s) + 4}" text-anchor="end" font-size="12" fill="var(--muted)">${s}</text>`;
+  for (const h of H) g += `<text x="${x(h)}" y="${Hh - B + 18}" text-anchor="middle" font-size="12" fill="var(--muted)">${h / 60} min</text>`;
+  g += `<text x="${(L + W - Rr) / 2}" y="${Hh - 4}" text-anchor="middle" font-size="12" fill="var(--muted)">age of the bus's last signal</text>`;
+  for (const m of methods) {
+    const pts = H.map((h) => `${x(h)},${y(v(set, m, h, k))}`).join(' ');
+    const c = `var(${COLORS[m]})`;
+    g += `<polyline points="${pts}" fill="none" stroke="${c}" stroke-width="${m === 'history' ? 4 : 3}" stroke-linejoin="round" stroke-linecap="round" ${m === 'hold' ? 'stroke-dasharray="6 6"' : ''}/>`;
+    for (const h of H) g += `<circle cx="${x(h)}" cy="${y(v(set, m, h, k))}" r="4" fill="${c}"><title>${NAMES[m]}, ${h / 60} min: ${v(set, m, h, k)} s</title></circle>`;
+    const last = v(set, m, 480, k);
+    g += `<text x="${x(480) - 6}" y="${y(last) - 8}" text-anchor="end" font-size="12" font-weight="700" fill="${c}">${last}</text>`;
+  }
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${Hh}" role="img" aria-label="Line chart">${g}</svg>`;
+}
+const legend = (el, methods) => { el.innerHTML = methods.map((m) => `<span><i style="background:var(${COLORS[m]})"></i>${NAMES[m]}</span>`).join(''); };
+
+// ---------- Slide content from the data ----------
+const statCard = (big, unit, label) => `<div class="card"><div class="stat">${big}<small> ${unit}</small></div><div class="small muted">${label}</div></div>`;
+document.getElementById('method-stats').innerHTML =
+  statCard((R.meta.rides + M.meta.rides).toLocaleString('en'), 'bus trips', 'followed, on ' + Math.max(R.meta.routes, M.meta.routes).toLocaleString('en') + '+ routes') +
+  statCard(((R.meta.samples + M.meta.samples) / 1e6).toFixed(1), 'million', 'predictions checked against the real bus') +
+  statCard(R.meta.gap, 's', 'typical time between two signals of a bus (90%: ' + R.meta.gap90 + ' s)') +
+  statCard('5', 'ways', 'compared on the same signals');
+
+const now = ['hold', 'timetable', 'history'];
+lineChart(document.getElementById('ch-now-med'), R, now, 0);
+lineChart(document.getElementById('ch-now-p90'), R, now, 1);
+legend(document.getElementById('lg-now'), now);
+document.getElementById('now-callout').innerHTML =
+  `With a signal 2 minutes old, today's ghost puts the timer off by a median <b>${v(R, 'history', 120, 0)} s</b>, against <b>${v(R, 'hold', 120, 0)} s</b> with no ghost and <b>${v(R, 'timetable', 120, 0)} s</b> at timetable speed. The month of history halves the timetable's error. At midday it does even better: <b>${v(M, 'history', 120, 0)} s</b>.`;
+
+document.getElementById('findings').innerHTML = [
+  ['1 · It jumps about once a minute', `Every new signal resets the ghost. The jump is <b>${R.meta.jump} m</b> at the median and <b>${R.meta.jump90} m</b> in the worst 10% (rush hour), so the ghost and its timer leap. This is the most visible flaw.`],
+  ['2 · It runs ahead in rush hour', `In rush hour the ghost is ahead of the bus by <b>+${v(R, 'history', 120, 2)} s</b> at 2 min, and by <b>+${v(R, 'history', 300, 2)} s</b> at 5 min. At midday the bias is about zero (${v(M, 'history', 300, 2)} s). The monthly average doesn't know about today's traffic.`],
+  ['3 · Error grows with signal age', `Median error: ${v(R, 'history', 60, 0)} s at 1 min, ${v(R, 'history', 300, 0)} s at 5, ${v(R, 'history', 480, 0)} s at 8. The worst 10% at 5 min: <b>${mmss(v(R, 'history', 300, 1))}</b>. Yet the timer shows one precise m:ss value, however old the signal is.`],
+  ['4 · There is a noise floor', `Even at 1 minute only <b>${v(R, 'history', 60, 3)}%</b> of predictions are within 30 s. Traffic lights and how long a bus waits at each stop vary from trip to trip. No model of averages can remove that; it can only be shown honestly.`],
+].map(([t, d]) => `<div class="card"><h3>${t}</h3><p class="small">${d}</p></div>`).join('');
+
+const deltaCards = (m) => [
+  [120, 'Rush, 2 min'], [300, 'Rush, 5 min'], [120, 'Midday, 2 min', M], [300, 'Midday, 5 min', M],
+].map(([h, label, set = R]) => {
+  const a = v(set, 'history', h, 0), b = v(set, m, h, 0);
+  const n = pctChange(a, b);
+  return `<div><div class="stat ${cls(n)}" style="font-size:28px">${fmtPct(n)}</div><div class="small muted">${label}: ${a} → ${b} s median</div></div>`;
+}).join('');
+document.getElementById('i1-stats').innerHTML = deltaCards('B_blend');
+document.getElementById('i2-stats').innerHTML = deltaCards('A_bus');
+document.getElementById('i3-jump').textContent = `${R.meta.jump} m`;
+document.getElementById('i3-r1').textContent = `±${mmss(v(R, 'history', 120, 1))}`;
+document.getElementById('i3-r2').textContent = `±${mmss(v(M, 'history', 120, 1))}`;
+
+// Comparison table
+const acc = (m) => {
+  if (!m) return '<td class="num">no change</td><td class="num">no change</td>';
+  const cell = (set) => [120, 300].map((h) => {
+    const a = fmtPct(pctChange(v(set, 'history', h, 0), v(set, m, h, 0)));
+    const b = fmtPct(pctChange(v(set, 'history', h, 1), v(set, m, h, 1)));
+    return `<span class="${cls(pctChange(v(set, 'history', h, 0), v(set, m, h, 0)))}">${a}</span> / <span class="${cls(pctChange(v(set, 'history', h, 1), v(set, m, h, 1)))}">${b}</span>`;
+  }).join('<br>');
+  return `<td class="num">${cell(R)}</td><td class="num">${cell(M)}</td>`;
+};
+const dots = (n) => `<span class="score" aria-label="${n} of 5">${[1, 2, 3, 4, 5].map((i) => `<i class="${i <= n ? 'f' : ''}"></i>`).join('')}</span>`;
+document.getElementById('cmp').innerHTML = `
+<thead><tr><th></th><th class="num">Rush hour<br>median / p90</th><th class="num">Midday<br>median / p90</th><th>Fixes the jumps</th><th>Feels better to the user</th><th>Running cost</th><th>Effort</th><th>Risk</th></tr></thead>
+<tbody>
+<tr><td><b>1 · Live stretch times</b></td>${acc('B_blend')}<td>No</td><td>${dots(2)}</td><td>~US$5/month (or a weaker free variant)</td><td>3–5 days</td><td><span class="tag warn">Medium</span></td></tr>
+<tr><td><b>2 · Own pace</b></td>${acc('A_bus')}<td>No</td><td>${dots(1)}</td><td>None</td><td>1 day</td><td><span class="tag bad">Makes it worse</span></td></tr>
+<tr><td><b>3 · Glide + confidence</b></td>${acc(null)}<td><b>Yes</b></td><td>${dots(4)}</td><td>None</td><td>1–2 days</td><td><span class="tag good">Low</span></td></tr>
+</tbody>`;
+
+const cmp = ['history', 'B_blend', 'A_bus'];
+lineChart(document.getElementById('ch-cmp-rush'), R, cmp, 0, 100);
+lineChart(document.getElementById('ch-cmp-mid'), M, cmp, 0, 100);
+legend(document.getElementById('lg-cmp'), cmp);
+
+// Raw table
+const rows = [];
+for (const [label, set] of [['Rush hour', R], ['Midday', M]]) {
+  for (const m of ['hold', 'timetable', 'history', 'B_blend', 'A_bus']) {
+    rows.push(`<tr><td>${label}</td><td>${NAMES[m]}</td>${H.map((h) => `<td class="num">${v(set, m, h, 0)} / ${v(set, m, h, 1)}<br><span class="muted small">${v(set, m, h, 3)}% · bias ${v(set, m, h, 2) > 0 ? '+' : ''}${v(set, m, h, 2)}</span></td>`).join('')}</tr>`);
+  }
+}
+document.getElementById('raw').innerHTML = `<thead><tr><th>Window</th><th>Method</th>${H.map((h) => `<th class="num">${h / 60} min</th>`).join('')}</tr></thead><tbody>${rows.join('')}</tbody>`;
+
+// ---------- Navigation ----------
+const slides = [...document.querySelectorAll('.slide')];
+let at = 0;
+function show(i) {
+  at = Math.max(0, Math.min(slides.length - 1, i));
+  slides.forEach((s, k) => s.classList.toggle('on', k === at));
+  document.getElementById('count').textContent = `${at + 1} / ${slides.length}`;
+  document.getElementById('bar').style.width = `${(at + 1) / slides.length * 100}%`;
+  document.getElementById('slide-title').textContent = slides[at].dataset.title;
+  try { history.replaceState(null, '', `#${at + 1}`); } catch {}
+}
+document.getElementById('prev').onclick = () => show(at - 1);
+document.getElementById('next').onclick = () => show(at + 1);
+document.addEventListener('keydown', (e) => {
+  if (['ArrowRight', 'PageDown', ' '].includes(e.key)) { e.preventDefault(); show(at + 1); }
+  if (['ArrowLeft', 'PageUp'].includes(e.key)) { e.preventDefault(); show(at - 1); }
+  if (e.key === 'Home') show(0);
+  if (e.key === 'End') show(slides.length - 1);
+});
+let sx = null;
+document.addEventListener('touchstart', (e) => { sx = e.touches[0].clientX; }, { passive: true });
+document.addEventListener('touchend', (e) => {
+  if (sx === null) return;
+  const dx = e.changedTouches[0].clientX - sx;
+  if (Math.abs(dx) > 60) show(at + (dx < 0 ? 1 : -1));
+  sx = null;
+});
+document.getElementById('theme').onclick = () => {
+  const root = document.documentElement;
+  const dark = root.dataset.theme ? root.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  root.dataset.theme = dark ? 'light' : 'dark';
+};
+const fromHash = () => show((parseInt(location.hash.slice(1), 10) || 1) - 1);
+addEventListener('hashchange', fromHash);
+fromHash();
+</script>
+</body>
+</html>
