@@ -53,3 +53,15 @@ test('the ring: green for a fresh signal and enough live times, red for an old o
   assert.equal(confidence(240, 0.8), 'fair');
   assert.equal(confidence(400, 0.8), 'poor');
 });
+
+test('live times kept on the phone come back, without the old ones', () => {
+  const s = new LiveStretches();
+  s.add('b', 'c', T0, 80);
+  s.add('c', 'd', T0 - WINDOW_MS - 60000, 50); // too old
+  const text = s.save(T0 + 1000);
+  const back = new LiveStretches();
+  back.load(text, T0 + 2000);
+  assert.deepEqual(back.samples('b', 'c', T0 + 2000), [80]);
+  assert.deepEqual(back.samples('c', 'd', T0 + 2000), []);
+  back.load('not json', T0); // a damaged copy is ignored
+});

@@ -372,7 +372,7 @@ details > summary { cursor: pointer; }
 /* The countdown to the stop, under the ghost (REQ-RT-14) */
 .ghost-timer { position: absolute; top: calc(100% + 3px); left: 50%; transform: translateX(-50%); background: #1b0a2e; color: #fff; border: 2px solid var(--c); border-radius: 8px; padding: 0 5px; font-size: 12px; font-weight: 800; line-height: 1.4; font-variant-numeric: tabular-nums; white-space: nowrap; direction: ltr; }
 .ghost-timer[hidden] { display: none; }
-/* Live traffic in a Favorite Commute (REQ-RT-15): ⏳ gathering, ⚡ on; the ring says how good
+/* Live traffic for ghosts (REQ-RT-15): ⏳ gathering, ⚡ on; the ring says how good
    the estimate is believed to be. */
 .ghost-live { position: absolute; top: -12px; left: -12px; font-size: 14px; line-height: 1; background: #1b0a2e; border-radius: 50%; padding: 2px; }
 .ghost-live[hidden] { display: none; }

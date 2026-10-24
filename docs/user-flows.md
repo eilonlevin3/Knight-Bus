@@ -246,11 +246,12 @@ stop, the bus behind it gets one too; a minute after it passes, its ghost goes. 
 to remove its ghost ([realtime.md](realtime.md#ghosts-in-a-favorite-commute)). Under each
 ghost a timer (m:ss) counts down to when it reaches your stop (REQ-RT-14).
 
-**Live traffic** (REQ-RT-15). The commute's ghosts also learn, on your phone, how long buses
-take between stops right now. A ghost shows ⏳ while it is still learning its way to your
+**Live traffic** (REQ-RT-15). The commute's ghosts also use how long buses take between
+stops right now, learned on your phone (on other maps it is off until you turn it on in a
+ghost's pop-up). A ghost shows ⏳ while it is still learning its way to your
 stop and ⚡ once it uses live traffic, with a ring: green good, yellow fair, red rough. In a
 ghost's pop-up, *Turn off live traffic for this ghost* goes back to the month's history; the
-key on the map explains the marks ([realtime.md](realtime.md#live-traffic-in-a-favorite-commute)).
+key on the map explains the marks ([realtime.md](realtime.md#live-traffic-for-ghosts)).
 
 **Panel** (REQ-COMM-7, REQ-COMM-8). Each stop lists its routes with a checkbox, all checked.
 Uncheck a route to hide it, its buses and its key entry; **☑ Select all** and **☐ Clear

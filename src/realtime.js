@@ -83,6 +83,25 @@ export const liveStatus = { source: null, reason: null };
 // Live buses of several route ids in one go: Map(route id -> { buses } or { error }).
 // Asks our relay when it is set up (positions about a minute old); if it is not, or it
 // does not answer, asks Open Bus Stride for each id as before (REQ-RT-11).
+// Every position of a route's buses in the last `minutes`, oldest first, from Open Bus
+// Stride: [{ rideId, lat, lon, recordedAt: Date }]. Only for learning live traffic at once
+// (REQ-RT-15); the newest positions still come from fetchLiveMany.
+export async function fetchTrail(liveId, minutes = 20, now = Date.now()) {
+  const params = new URLSearchParams({
+    siri_routes__line_ref: liveId,
+    recorded_at_time_from: new Date(now - minutes * 60000).toISOString(),
+    recorded_at_time_to: new Date(now + 2 * 60000).toISOString(),
+    order_by: 'recorded_at_time desc',
+    limit: '1000',
+  });
+  const res = await fetch(`${realtime.baseUrl}/siri_vehicle_locations/list?${params}`, { signal: AbortSignal.timeout(realtime.timeoutMs) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return (await res.json())
+    .map((r) => ({ rideId: `trail|${r.siri_ride__id ?? r.siri_ride__vehicle_ref}`, lat: r.lat, lon: r.lon, recordedAt: new Date(r.recorded_at_time) }))
+    .filter((b) => Number.isFinite(b.lat) && Number.isFinite(b.recordedAt.getTime()))
+    .reverse();
+}
+
 export async function fetchLiveMany(routeIds, now = Date.now()) {
   const ids = [...new Set(routeIds.map(String))];
   if (realtime.relayUrl && ids.length) {

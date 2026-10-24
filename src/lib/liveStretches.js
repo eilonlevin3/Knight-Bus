@@ -1,13 +1,17 @@
 // Live traffic for the ghost: how long buses took between two stops in the last 20 minutes,
 // learned on the phone from the live positions a Favorite Commute already fetches.
-// Docs: docs/realtime.md#live-traffic-in-a-favorite-commute
+// Docs: docs/realtime.md#live-traffic-for-ghosts
 // @req REQ-RT-15
 //
-// No server does this: every time the commute asks for its routes' buses (every 15 s), each
-// bus's place along its route is noted; when a bus is seen passing two stops in a row, the
-// time between them is one "live stretch time". The ghost then blends these with the
-// month's history (REQ-DATA-12): the more buses, the more the live times count. Measured on
-// recorded buses in docs/reviews/2026-10-19-ghost-estimation-dr.html ("idea 1, blended").
+// No server does this: every time a map asks for its routes' buses (every 15 s), each bus's
+// place along its route is noted; when a bus is seen passing two stops in a row, the time
+// between them is one "live stretch time". To start at once instead of after minutes of
+// watching, the last 20 minutes of each route's positions are read from Open Bus Stride
+// (its answer has every position, not only the newest) and learned the same way. What is
+// learned is kept on the phone, so reopening the app does not start again. The ghost then
+// blends these with the month's history (REQ-DATA-12): the more buses, the more the live
+// times count. Measured on recorded buses in docs/reviews/2026-10-19-ghost-estimation-dr.html
+// ("idea 1, blended").
 //
 // Pure (no map, no network), so it is unit tested.
 
@@ -87,6 +91,26 @@ export class LiveStretches {
     return list ? list.filter((x) => x.time >= now - WINDOW_MS && x.time <= now).map((x) => x.seconds) : [];
   }
 
+  // The live times only (not the rides), for keeping on the phone: [[stretch, [[time, seconds], ...]], ...].
+  save(now = Date.now()) {
+    this.prune(now);
+    return JSON.stringify([...this.times].map(([k, list]) => [k, list.map((x) => [Math.round(x.time), Math.round(x.seconds)])]));
+  }
+
+  // Adds the live times kept by save(); those older than the window are left out.
+  load(text, now = Date.now()) {
+    let list;
+    try { list = JSON.parse(text); } catch { return; }
+    if (!Array.isArray(list)) return;
+    for (const [k, items] of list) {
+      if (typeof k !== 'string' || !Array.isArray(items)) continue;
+      const [fromId, toId] = k.split('>');
+      for (const [time, seconds] of items) {
+        if (time >= now - WINDOW_MS && time <= now && seconds >= MIN_SECONDS && seconds <= MAX_SECONDS) this.add(fromId, toId, time, seconds);
+      }
+    }
+  }
+
   // Forget what is older than the window.
   prune(now = Date.now()) {
     for (const [k, list] of this.times) {
@@ -97,8 +121,7 @@ export class LiveStretches {
   }
 }
 
-// Kept for the whole visit: closing a commute and opening it (or another) again within 20
-// minutes does not start from nothing.
+// One for the whole app: every map learns into it and every ghost reads from it.
 export const sharedStretches = new LiveStretches();
 
 // How good a live ghost's estimate is believed to be: 'good' | 'fair' | 'poor', for the ring

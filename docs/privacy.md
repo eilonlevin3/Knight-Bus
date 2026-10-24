@@ -24,6 +24,7 @@ you change what is collected, change this file, the screen text and the code tog
 | Sign-in: email or Google account | Firebase Authentication | The account owner; project admins |
 | Favorite Commutes: stops, routes, start/destination | Firestore `users/{uid}/favorites` | The account owner; project admins |
 | Location | Used on the phone to pick the city, center the home map and draw "you are here". The last position is remembered **on the phone only** (`kb.lastPosition`), for a quick start | Never sent |
+| Live traffic for ghosts | How long buses took between stops in the last 20 minutes (stop pairs and seconds), kept **on the phone only** (`kb.liveStretches`) for 20 minutes. To learn it, the app also asks Open Bus Stride for the last 20 minutes of the routes on screen | Never sent; Stride sees which routes, as for live buses |
 | Opening view | The map view chosen for a Favorite Commute (center, zoom, panel height, key open or folded) is remembered **on the phone only** (`kb.view.…`) | Never sent |
 | Language | The language chosen in Options is remembered **on the phone only** (`kb.language`) | Never sent, except the usage event `language_changed` below, if you agreed |
 

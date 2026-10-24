@@ -15,8 +15,8 @@ const has = (v) => v !== null && v !== undefined && v !== '';
 // bus: from fetchLiveBuses + classifyBuses. route: its route. where: sentences such as
 // "2 stops before Dizengoff" (one per chosen stop the bus matters for).
 // ghost: { on, possible, toggle } for the estimated ("ghost") position of this bus.
-// ghost.live, in a Favorite Commute: { enabled, active, stretches, known, buses, quality,
-// stop, toggle } for live traffic (REQ-RT-15).
+// ghost.live: { enabled, active, stretches, known, buses, quality, stop, toggle } for live
+// traffic (REQ-RT-15): on at first in a Favorite Commute, off elsewhere.
 // Live traffic for this ghost (REQ-RT-15): what it knows so far, and on / off.
 function liveBox(live, close) {
   const quality = live.quality === 'good' ? t('good') : live.quality === 'fair' ? t('fair') : t('rough');
@@ -28,7 +28,7 @@ function liveBox(live, close) {
   return h('div', { class: 'live-box stack' },
     h('b', { class: 'small' }, t('Live traffic (last 20 minutes)')),
     h('small', {}, state),
-    h('small', { class: 'muted' }, t('Learned on this phone from the buses of this commute: how long they took between stops just now, blended with the month\'s history. The ring around the ghost: green good, yellow fair, red rough. It depends on how old the last signal is and on how many buses the live times come from.')),
+    h('small', { class: 'muted' }, t('Learned on this phone from the buses on this map and from their last 20 minutes on Open Bus: how long they took between stops just now, blended with the month\'s history. The ring around the ghost: green good, yellow fair, red rough. It depends on how old the last signal is and on how many buses the live times come from.')),
     h('button', {
       class: live.enabled ? '' : 'primary',
       onclick: () => { track('ghost_live_toggled', { on: live.enabled ? 0 : 1 }); live.toggle(); close(); },

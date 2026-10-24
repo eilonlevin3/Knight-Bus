@@ -2,19 +2,33 @@
 // Used by both the editor and the commute screen, so they behave the same (REQ-COMM-1).
 // @req REQ-RT-10 @req REQ-RT-12 @req REQ-RT-13 @req REQ-RT-14 @req REQ-RT-15 @req REQ-LINE-1a @req REQ-LINE-1b @req REQ-LINE-1c @req REQ-RT-8 @req REQ-EDIT-4 @req REQ-RT-1 @req REQ-RT-2 @req REQ-RT-3 @req REQ-RT-5 @req REQ-RT-6 @req REQ-COMM-1
 
-import { realtime } from './config.js';
+import { realtime, storagePrefix } from './config.js';
 import { t, tn, arrow } from './i18n.js';
-import { fetchLiveMany, classifyBuses, ageLabel, dropFinishedRides } from './realtime.js';
+import { fetchLiveMany, fetchTrail, classifyBuses, ageLabel, dropFinishedRides } from './realtime.js';
 import { LINE_COLORS, busIcon, lighten } from './map.js';
 import { stopPositions, splitPath, samePath, projectOnPath, advanceOnPath, travelSeconds, pointAt, slicePath, metersBetween } from './lib/routeGeometry.js';
 import { pickAutoGhosts, countdown } from './lib/ghosts.js';
 import { makeOffsetPolyline } from './lib/offsetLine.js';
 import { showBusInfo } from './views/busInfo.js';
 import { loadSpeeds, segmentSeconds, cellAt } from './lib/speeds.js';
-import { sharedStretches, blend, liveWeight, confidence, READY_SHARE } from './lib/liveStretches.js';
+import { sharedStretches, blend, liveWeight, confidence, READY_SHARE, WINDOW_MS } from './lib/liveStretches.js';
 
 let OffsetPolyline = null; // created on first use, once Leaflet (global L) is loaded
 const LEARN_OFF_PATH_METERS = 120; // a bus further from its route than this teaches nothing
+
+// Live traffic (REQ-RT-15) is kept on this phone, so reopening the app does not start again.
+// Only stop pairs and seconds, for 20 minutes.
+const LEARNED_KEY = `${storagePrefix}liveStretches`;
+let learnedLoaded = false;
+function loadLearned() {
+  if (learnedLoaded) return;
+  learnedLoaded = true;
+  try { const text = localStorage.getItem(LEARNED_KEY); if (text) sharedStretches.load(text); } catch { /* nothing kept */ }
+}
+function saveLearned() {
+  try { localStorage.setItem(LEARNED_KEY, sharedStretches.save()); } catch { /* storage full or blocked */ }
+}
+const trailReadAt = new Map(); // route id -> when its last 20 minutes were read from Stride
 
 // Meters along a path: at each corner, and at each stop of the pattern ([{ id, m }]).
 const metersCache = new WeakMap();
@@ -33,9 +47,9 @@ function alongMeters(cum, pos) {
   return i >= cum.length - 1 ? cum[cum.length - 1] : cum[i] + (cum[i + 1] - cum[i]) * (pos - i);
 }
 
-// The ghost's timer (REQ-RT-14) and, in a Favorite Commute, its live traffic state
-// (REQ-RT-15): ⏳ while live times are still being gathered, ⚡ and a colored ring when the
-// ghost uses them. Changed in place, twice a second.
+// The ghost's timer (REQ-RT-14) and, when live traffic is on for it, its state (REQ-RT-15):
+// ⏳ while live times are still being gathered, ⚡ and a colored ring when the ghost uses
+// them. Changed in place, twice a second.
 function showGhostState(marker, timer, live) {
   const el = marker.getElement();
   if (!el) return;
@@ -52,14 +66,16 @@ export class LiveLines {
   // onUpdate(rows): rows = [{ stop, route, color, next: [bus], passed: [bus], error }]
   // autoGhosts: show by itself the ghost of the bus coming next to each stop (the Favorite
   // Commute view, REQ-RT-13).
-  // liveTraffic: learn how long buses take between stops right now, from the buses this view
-  // already fetches, and let the ghosts use it (the Favorite Commute view, REQ-RT-15).
+  // Every view learns how long buses take between stops right now, from the buses it
+  // fetches (REQ-RT-15). liveTraffic: its ghosts use that unless the person turns it off
+  // (the Favorite Commute view); elsewhere a ghost uses it once turned on in its pop-up.
   constructor(map, city, { onUpdate = () => {}, autoGhosts = false, liveTraffic = false } = {}) {
     this.autoGhosts = autoGhosts;
-    this.liveTraffic = liveTraffic;
+    this.liveDefault = liveTraffic;
     this.learn = sharedStretches;
+    loadLearned();
     this.learnAt = new Map(); // ride id -> its last position on the path (where to look next)
-    this.liveOff = new Set(); // ride ids whose ghost the person set back to the month's history
+    this.liveChoice = new Map(); // ride id -> live traffic on (true) or off (false), as the person set it
     this.ghostsOff = new Set(); // ride ids whose automatic ghost the person removed
     this.busFilter = null; // (route, bus) -> keep? null shows every bus
     this.hideLines = false;
@@ -208,7 +224,9 @@ export class LiveLines {
     });
     if (gen !== this.generation || this.destroyed) return;
     const byRoute = new Map(results);
-    if (this.liveTraffic) this.learnFrom(byRoute);
+    this.learnFrom(byRoute);
+    // Where ghosts use live traffic from the start, read the last 20 minutes at once.
+    if (this.liveDefault) this.readTrails(routeIds);
     const rows = this.entries.map(({ stopId, routeId }) => {
       const route = this.city.routes.get(routeId);
       const stop = this.city.stops.get(stopId);
@@ -277,23 +295,44 @@ export class LiveLines {
   // Every bus of every route on screen, all along its route: where it is now. A bus seen
   // passing two stops in a row gives that stretch a live time (REQ-RT-15).
   learnFrom(byRoute) {
-    const now = Date.now();
-    for (const [routeId, { buses }] of byRoute) {
-      if (!buses?.length) continue;
-      const route = this.city.routes.get(routeId);
-      const entry = this.entries.find((e) => e.routeId === routeId);
-      const pattern = (entry && this.city.patternsAt(route, entry.stopId)[0]) || route.patterns[0];
-      const path = this.city.shapeOf(pattern);
-      const { cum, stops } = metersOf(pattern, path);
-      for (const bus of buses) {
-        const before = this.learnAt.get(bus.rideId);
-        const { pos, meters } = projectOnPath(bus, path, before ? Math.max(0, Math.floor(before) - 2) : 0);
-        if (meters > LEARN_OFF_PATH_METERS) continue;
-        this.learnAt.set(bus.rideId, pos);
-        this.learn.observe(bus.rideId, bus.recordedAt.getTime(), alongMeters(cum, pos), stops);
-      }
+    for (const [routeId, { buses }] of byRoute) if (buses?.length) this.observeBuses(routeId, buses);
+    saveLearned(); // also forgets what is older than 20 minutes
+  }
+
+  // buses: positions of one route's buses, oldest first.
+  observeBuses(routeId, buses) {
+    const route = this.city.routes.get(routeId);
+    if (!route) return;
+    const entry = this.entries.find((e) => e.routeId === routeId);
+    const pattern = (entry && this.city.patternsAt(route, entry.stopId)[0]) || route.patterns[0];
+    const path = this.city.shapeOf(pattern);
+    const { cum, stops } = metersOf(pattern, path);
+    for (const bus of buses) {
+      const before = this.learnAt.get(bus.rideId);
+      const { pos, meters } = projectOnPath(bus, path, before ? Math.max(0, Math.floor(before) - 2) : 0);
+      if (meters > LEARN_OFF_PATH_METERS) continue;
+      this.learnAt.set(bus.rideId, pos);
+      this.learn.observe(bus.rideId, bus.recordedAt.getTime(), alongMeters(cum, pos), stops);
     }
-    this.learn.prune(now);
+  }
+
+  // The last 20 minutes of these routes, read at once from Open Bus Stride (its answer has
+  // every position, not only the newest), so live traffic is ready without minutes of
+  // watching. At most once every 10 minutes per route.
+  readTrails(routeIds) {
+    const now = Date.now();
+    for (const id of routeIds) {
+      const route = this.city.routes.get(id);
+      if (!route?.live || now - (trailReadAt.get(id) || 0) < WINDOW_MS / 2) continue;
+      trailReadAt.set(id, now);
+      Promise.all(route.liveIds.map((liveId) => fetchTrail(String(liveId), WINDOW_MS / 60000).catch(() => [])))
+        .then((lists) => {
+          if (this.destroyed) return;
+          this.observeBuses(id, lists.flat().sort((a, b) => a.recordedAt - b.recordedAt));
+          saveLearned();
+          this.drawGhosts();
+        });
+    }
   }
 
   // Live traffic for one bus's ghost, on the way from its last signal to the row's stop (or,
@@ -301,8 +340,7 @@ export class LiveLines {
   // and how much they count. active: the ghost uses them (on, and at least half the way
   // known). quality: the ring around the ghost.
   liveOf({ bus, row }, pos) {
-    if (!this.liveTraffic) return null;
-    const enabled = !this.liveOff.has(bus.rideId);
+    const enabled = this.liveChoice.get(bus.rideId) ?? this.liveDefault;
     const pattern = row.pattern;
     const stops = pattern.stops;
     const stopPos = stopPositions(stops, this.city.shapeOf(pattern));
@@ -339,12 +377,14 @@ export class LiveLines {
         on: this.ghosts.has(rideId) || auto,
         auto,
         possible: !!g,
-        // Live traffic in a Favorite Commute (REQ-RT-15): its state, and on / off for this ghost.
+        // Live traffic (REQ-RT-15): its state, and on / off for this ghost.
         live: g?.live ? {
           ...g.live,
           stop: (m.nextRow || m.row).stop.name,
           toggle: () => {
-            if (this.liveOff.has(rideId)) this.liveOff.delete(rideId); else this.liveOff.add(rideId);
+            const on = !g.live.enabled;
+            this.liveChoice.set(rideId, on);
+            if (on) this.readTrails([m.row.route.id]);
             this.drawGhosts();
           },
         } : null,

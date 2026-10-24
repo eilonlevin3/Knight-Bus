@@ -25,7 +25,7 @@ the long session of 2026-10-11 → 2026-10-24 and what is still waiting.
 
 | | |
 |-|-|
-| Branch `debug` | `c93baca` (2026-10-20): live traffic for Favorite Commute ghosts, REQ-RT-15 |
+| Branch `debug` | see `git log -1 origin/debug` (2026-10-24: live traffic for any ghost, ready at once, REQ-RT-15) |
 | Branch `main` | still `34aad5a` (released 2026-10-10). Release **only** when the owner says so |
 | Relay | Cloudflare Worker at `https://relay.knightbusapp.com` (own domain, bought by the owner; `*.workers.dev` is blocked by the owner's work-phone filter). The owner pastes `relay/worker.js` by hand; the Connection test shows whether the live relay answers both `/live` and `/rail-board` |
 | Tests | 86 pass (`node --test tests/*.test.mjs`); `node scripts/check-docs.mjs` green |
@@ -34,6 +34,11 @@ the long session of 2026-10-11 → 2026-10-24 and what is still waiting.
 
 ## What this session built (newest first)
 
+- **Live traffic for any ghost, ready at once** (REQ-RT-15, 2026-10-24): every ghost's
+  pop-up can turn live traffic on or off; it starts on only in Favorite Commutes. Every map
+  learns; when live traffic is needed the last 20 minutes of the route are read from Open
+  Bus Stride (`fetchTrail`, `readTrails`), and what was learned is kept on the phone
+  (`kb.liveStretches`). Tried live from the PC: history in 0.5–1.5 s, most ghosts ⚡ at once.
 - **Live traffic for commute ghosts** (REQ-RT-15, `c93baca`): the phone learns stretch times
   of the last 20 minutes from the buses it already fetches, blends them with the month's
   history (n ÷ (n+4)); ⏳ learning / ⚡ on; ring green / yellow / red; per-ghost on/off in the
@@ -73,7 +78,7 @@ the long session of 2026-10-11 → 2026-10-24 and what is still waiting.
 3. **Try on the iPhone:** the live-traffic marks and rings in a commute; the blue dot moving
    live; ghosts disappearing with their route; the timer under ghosts.
 4. Open questions from the design review: show the timer as a range or a single number that
-   turns into "due"? Build idea 3? Live traffic also outside commutes?
+   turns into "due"? Build idea 3? (Live traffic outside commutes: done, off by default.)
 
 ## Rules from this session (also in CLAUDE.md)
 
