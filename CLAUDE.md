@@ -9,7 +9,9 @@ For what the app does and how it is built, start at [README.md](README.md) (docs
 changed open item, update the matching section and the "Last updated" line. Remove things
 that stop being true. Do not copy what the docs already say; link to them.
 
-Last updated: 2026-10-10 (Favorite Commute wording, REQ-LINE-1a–d, live buses not tied to a pattern; `debug` is ahead of main, which is still `34aad5a`).
+Last updated: 2026-10-24. **Then read [docs/handoff/latest.md](docs/handoff/latest.md):** where
+the last long chat stopped (`debug` at `c93baca`, main still `34aad5a`), what the owner still
+has to answer, and how to reopen that chat or its full backup in `.sessions/` (git-ignored).
 
 ## The owner and how to work with them
 
@@ -31,6 +33,11 @@ Last updated: 2026-10-10 (Favorite Commute wording, REQ-LINE-1a–d, live buses 
   text and file names still say "line" for a route (see Open items).
 - Privacy stance (their words): "play it safe with all users and collect as much safe data
   as possible"; sensitive detail only in the debug version.
+- **Push to debug after finishing each request** (unless they say "do not push yet").
+- **No automatic updates:** they press Update themselves (owner, 2026-10-17; the
+  auto-update was reverted in `3c1054b`).
+- Their iPhone is work-managed and its web filter blocks `*.workers.dev` (hence the relay's
+  own domain). Do not help get around that filter; they can ask their IT.
 
 ## State of things
 
@@ -348,6 +355,9 @@ The owner finds Stride too late (15–25 min that day) and asked for options, no
   🔍 Search routes, ⚙ Options (language, city). It stays on the right in Hebrew too.
 
 ## Open items
+
+The newest open items (statistics choice A/B/C, the relay test on the iPhone, design-review
+questions) are in [docs/handoff/latest.md](docs/handoff/latest.md#waiting-for-the-owner).
 
 - Email to contact@noat.co.il asking for a live-location feed: **sent by the owner on
   2026-10-10**, no answer yet. If they offer a feed, weekend routes can get live buses.

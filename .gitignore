@@ -5,3 +5,6 @@ data/
 .firebase/
 *.log
 .DS_Store
+
+# Full chat backups (private: large, with personal details). Kept on this PC only.
+.sessions/
