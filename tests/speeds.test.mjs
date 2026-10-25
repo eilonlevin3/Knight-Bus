@@ -107,16 +107,16 @@ test('a ghost uses the real travel time of a stretch where it is known', () => {
 });
 
 // REQ-RT-13: the ghosts a Favorite Commute shows by itself.
-import { pickAutoGhosts, countdown } from '../src/lib/ghosts.js';
+import { pickAutoGhosts, countdown, plusMinus, timerStop } from '../src/lib/ghosts.js';
 import { travelSeconds } from '../src/lib/routeGeometry.js';
 
 test('the ghost closest to the stop is shown; the one behind it from a minute before it arrives', () => {
   assert.deepEqual(pickAutoGhosts([{ id: 'far', seconds: 400 }, { id: 'near', seconds: 120 }]), ['near']);
   assert.deepEqual(pickAutoGhosts([{ id: 'far', seconds: 400 }, { id: 'near', seconds: 60 }]), ['near', 'far']);
-  // It passed the stop 30 seconds ago: still shown, with the next one.
-  assert.deepEqual(pickAutoGhosts([{ id: 'far', seconds: 400 }, { id: 'near', seconds: -30 }]), ['near', 'far']);
-  // It passed more than a minute ago: gone; the next one is now the closest.
-  assert.deepEqual(pickAutoGhosts([{ id: 'far', seconds: 400 }, { id: 'near', seconds: -61 }]), ['far']);
+  // It passed the stop 90 seconds ago: still shown, with the next one.
+  assert.deepEqual(pickAutoGhosts([{ id: 'far', seconds: 400 }, { id: 'near', seconds: -90 }]), ['near', 'far']);
+  // It passed more than two minutes ago: gone; the next one is now the closest.
+  assert.deepEqual(pickAutoGhosts([{ id: 'far', seconds: 400 }, { id: 'near', seconds: -121 }]), ['far']);
   assert.deepEqual(pickAutoGhosts([{ id: 'x', seconds: NaN }]), []);
   assert.deepEqual(pickAutoGhosts([]), []);
 });
@@ -134,5 +134,15 @@ test('the ghost timer reads m:ss and stops at 0:00', () => {
   assert.equal(countdown(59.6), '1:00');
   assert.equal(countdown(5), '0:05');
   assert.equal(countdown(3725), '62:05');
-  assert.equal(countdown(-30), '0:00');
+  assert.equal(countdown(-35), '-0:35'); // passed: it counts on below zero
+  assert.equal(countdown(-0.2), '0:00');
+  assert.equal(plusMinus(24.6), '±25s');
+  assert.equal(plusMinus(80), '±1:20');
+});
+
+test('the timer is about a stop passed in the last two minutes, else the next one', () => {
+  assert.equal(timerStop([{ row: 'A', seconds: -50 }, { row: 'B', seconds: 300 }]).row, 'A');
+  assert.equal(timerStop([{ row: 'A', seconds: -130 }, { row: 'B', seconds: 300 }]).row, 'B');
+  assert.equal(timerStop([{ row: 'A', seconds: 400 }, { row: 'B', seconds: 300 }]).row, 'B');
+  assert.equal(timerStop([{ row: 'A', seconds: NaN }]), null);
 });

@@ -242,9 +242,10 @@ the home map does that when you want it.
 
 **Ghosts** (REQ-RT-13). The bus coming next to each of your stops gets a 👻 ghost by itself:
 an estimate of where it is now, moving between signals. A minute before it reaches your
-stop, the bus behind it gets one too; a minute after it passes, its ghost goes. Tap a bus
+stop, the bus behind it gets one too; two minutes after it passes, its ghost goes. Tap a bus
 to remove its ghost ([realtime.md](realtime.md#ghosts-in-a-favorite-commute)). Under each
-ghost a timer (m:ss) counts down to when it reaches your stop (REQ-RT-14).
+ghost a timer (m:ss) counts down to when it reaches your stop, with ± its usual error beside it
+(`4:07 ±48s`); after it passes your stop it counts on below zero (`-0:35`) (REQ-RT-14).
 
 **Live traffic** (REQ-RT-15). The commute's ghosts also use how long buses take between
 stops right now, learned on your phone (on other maps it is off until you turn it on in a

@@ -17,7 +17,6 @@
 
 export const WINDOW_MS = 20 * 60000; // live times older than this are forgotten
 export const PRIOR = 4; // n live times count n / (n + PRIOR) against the month's history
-export const READY_SHARE = 0.5; // live times for at least half the way: the live ghost is on
 const MAX_GAP_SECONDS = 150; // two signals further apart than this are not joined
 const MAX_SPEED = 33; // meters a second: faster is a wrong match, not a bus
 const BACK_METERS = 30; // GPS may step back a little; more is a new start
@@ -152,4 +151,39 @@ export function confidence(ageSeconds, weight) {
   if (e <= 90 && weight >= 0.4) return 'good';
   if (e <= 165) return 'fair';
   return 'poor';
+}
+
+// The ± beside a ghost's timer (REQ-RT-14): the mean error of the timer, in seconds, by how
+// far ahead the estimate reaches (seconds: the age of the bus's last signal plus the time
+// still to go), from the recorded-bus test of 2026-10-18 (docs/reviews/backtest-ghost.mjs):
+// [seconds ahead, mean error with the month's history, mean error with live traffic].
+export const MEAN_ERROR = {
+  rush: [[60, 31, 30], [120, 44, 43], [180, 56, 54], [300, 78, 73], [480, 109, 99], [720, 148, 131], [960, 188, 164], [1200, 228, 197], [1500, 279, 240], [1800, 332, 286]],
+  other: [[60, 30, 30], [120, 40, 40], [180, 49, 48], [300, 64, 64], [480, 84, 82], [720, 107, 105], [960, 130, 127], [1200, 152, 149], [1500, 180, 175], [1800, 206, 200]],
+};
+
+// Weekday rush hours in Israel (Sunday to Thursday, 06:30-09:30 and 15:00-19:00), when the
+// rush-hour table applies.
+const israelClock = typeof Intl !== 'undefined'
+  ? new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Jerusalem', weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  : null;
+export function isRushHour(date = new Date()) {
+  if (!israelClock) return false;
+  const p = Object.fromEntries(israelClock.formatToParts(date).map((x) => [x.type, x.value]));
+  if (p.weekday === 'Fri' || p.weekday === 'Sat') return false;
+  const m = Number(p.hour) * 60 + Number(p.minute);
+  return (m >= 390 && m < 570) || (m >= 900 && m < 1140);
+}
+
+export function expectedMeanError(aheadSeconds, live = false, rush = isRushHour()) {
+  const t = MEAN_ERROR[rush ? 'rush' : 'other'];
+  const k = live ? 2 : 1;
+  const a = Math.max(0, aheadSeconds);
+  if (a <= t[0][0]) return t[0][k];
+  for (let i = 1; i < t.length; i++) {
+    if (a <= t[i][0]) return t[i - 1][k] + (t[i][k] - t[i - 1][k]) * ((a - t[i - 1][0]) / (t[i][0] - t[i - 1][0]));
+  }
+  const [x0, y0] = [t.at(-2)[0], t.at(-2)[k]];
+  const [x1, y1] = [t.at(-1)[0], t.at(-1)[k]];
+  return y1 + (y1 - y0) * ((a - x1) / (x1 - x0));
 }

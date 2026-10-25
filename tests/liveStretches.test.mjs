@@ -1,7 +1,7 @@
 // REQ-RT-15: live traffic for the ghosts of a Favorite Commute.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LiveStretches, blend, liveWeight, confidence, expectedError, WINDOW_MS } from '../src/lib/liveStretches.js';
+import { LiveStretches, blend, liveWeight, confidence, expectedError, expectedMeanError, isRushHour, WINDOW_MS } from '../src/lib/liveStretches.js';
 
 const stops = [{ id: 'a', m: 0 }, { id: 'b', m: 400 }, { id: 'c', m: 1000 }, { id: 'd', m: 1500 }];
 const T0 = Date.parse('2026-10-19T07:00:00Z');
@@ -64,4 +64,18 @@ test('live times kept on the phone come back, without the old ones', () => {
   assert.deepEqual(back.samples('b', 'c', T0 + 2000), [80]);
   assert.deepEqual(back.samples('c', 'd', T0 + 2000), []);
   back.load('not json', T0); // a damaged copy is ignored
+});
+
+test('the ± beside the timer grows with how far ahead the estimate reaches', () => {
+  assert.equal(expectedMeanError(30, false, true), 31); // a fresh signal, the bus about to arrive
+  assert.equal(expectedMeanError(300, false, true), 78);
+  assert.equal(expectedMeanError(300, true, true), 73); // live traffic: a little smaller
+  assert.equal(expectedMeanError(390, false, false), 74); // between 5 and 8 minutes, midday
+  assert.ok(expectedMeanError(2400, false, true) > 332); // beyond the table: it keeps growing
+});
+
+test('rush hour is weekday mornings and afternoons, Israel time', () => {
+  assert.equal(isRushHour(new Date('2026-10-25T06:00:00Z')), true); // Sunday 08:00 in Israel
+  assert.equal(isRushHour(new Date('2026-10-25T10:00:00Z')), false); // Sunday 12:00
+  assert.equal(isRushHour(new Date('2026-10-23T06:00:00Z')), false); // Friday
 });

@@ -34,6 +34,13 @@ the long session of 2026-10-11 → 2026-10-24 and what is still waiting.
 
 ## What this session built (newest first)
 
+- **Ghost timer after the stop, ± error, faster live traffic** (2026-10-25): ghosts stay 2
+  min after passing the stop and the timer counts below zero (REQ-RT-13/14); beside it ±
+  the mean error measured on recorded buses, by seconds ahead and live on/off, rush or not
+  (`MEAN_ERROR`, `expectedMeanError` in `src/lib/liveStretches.js`). Live traffic: ⚡ as soon
+  as any stretch on the way is known (was half the way); in a commute the Stride read starts
+  at once, also for up to 6 routes sharing the street (`streetMates`); failed reads retried
+  after 30 s. Tried live: quiet routes (2 buses) ⚡ at once.
 - **Live traffic for any ghost, ready at once** (REQ-RT-15, 2026-10-24): every ghost's
   pop-up can turn live traffic on or off; it starts on only in Favorite Commutes. Every map
   learns; when live traffic is needed the last 20 minutes of the route are read from Open

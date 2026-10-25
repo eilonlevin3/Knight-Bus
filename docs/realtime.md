@@ -169,10 +169,35 @@ when the feed is late. The ghost (REQ-RT-12) shows where the bus has probably go
   the ghost has a small timer under it, in minutes and seconds (`4:07`): the estimated time
   until the ghost reaches that stop, with the same travel times that move it. It changes
   every time the ghost moves (twice a second). When the bus is coming to more than one
-  stop on screen, it counts to the first one it reaches. At or past the stop it reads
-  `0:00`; a bus that has passed every stop on screen has no timer.
+  stop on screen, it counts to the first one it reaches. **After the ghost passes the
+  stop it counts on below zero** (`-0:35`) for two minutes; then it moves to the next stop
+  on screen, if there is one, or disappears.
+- **± beside the timer** (REQ-RT-14): `4:07 ±48s`. The mean error of such an estimate, from
+  the recorded-bus test ([reviews/backtest-ghost.mjs](reviews/backtest-ghost.mjs)): it
+  depends on how far ahead the estimate reaches, which is the age of the bus's last
+  signal plus the time still to go. So it shrinks as the bus comes near, and is smaller
+  with live traffic (⚡) on. See [the table](#how-big-the--is).
 
 "Stops away" in the lists still counts from the real signal, not from the ghost.
+
+### How big the ± is
+
+The mean error of the timer, measured on recorded buses on 2026-10-18 (all four areas,
+08:00–09:30 for rush hour, 12:00–13:00 for the rest), by how far ahead the estimate reaches:
+the age of the bus's last signal plus the time still to go. Rush hour is Sunday to Thursday
+06:30–09:30 and 15:00–19:00, Israel time. Between the rows it is interpolated.
+
+| Ahead | Rush, history | Rush, live traffic | Other times, history | Other times, live traffic |
+|-|-|-|-|-|
+| 1 min | 31 s | 30 s | 30 s | 30 s |
+| 3 min | 56 s | 54 s | 49 s | 48 s |
+| 5 min | 78 s | 73 s | 64 s | 64 s |
+| 8 min | 1:49 | 1:39 | 1:24 | 1:22 |
+| 12 min | 2:28 | 2:11 | 1:47 | 1:45 |
+| 20 min | 3:48 | 3:17 | 2:32 | 2:29 |
+| 30 min | 5:32 | 4:46 | 3:26 | 3:20 |
+
+Code: [lib/liveStretches.js](../src/lib/liveStretches.js) (`MEAN_ERROR`, `expectedMeanError`).
 
 ## Ghosts in a Favorite Commute
 
@@ -183,8 +208,8 @@ always moving on the map between signals:
   stop next is on.
 - When that ghost is **one minute or less from the stop**, the ghost of the bus behind it
   comes on as well.
-- **One minute after a ghost passes the stop**, it goes off; the one behind it is then the
-  closest.
+- **Two minutes after a ghost passes the stop**, it goes off (its timer runs below zero
+  meanwhile); the one behind it is then the closest.
 - A route that is unchecked shows no ghost. A ghost you remove in the bus's pop-up stays
   off for that bus; you can turn it on again there.
 
@@ -218,6 +243,13 @@ design review [reviews/2026-10-19-ghost-estimation-dr.html](reviews/2026-10-19-g
   2026-10-24 on three busy Tel Aviv routes: the history arrived in 0.5–1.5 s, and on two of
   them almost every ghost was ⚡ right away. When Stride is behind (on busy weekdays it can
   be 15 minutes), less of the 20 minutes is in it and the rest is learned by watching.
+  In a commute the read starts as the commute opens, together with the first live answer,
+  not after it; a read that fails is tried again after 30 s.
+- **Routes on the same street.** A route with a bus every 20 minutes may have no bus of its
+  own on the way in the last 20 minutes. So a commute also reads the last 20 minutes of up
+  to **6 other routes** that drive the most of the 20 stretches before each chosen stop
+  (two shared stretches at least). Live times are kept by stop pair, so what those buses
+  took counts for every route there.
 - **Kept on the phone.** What was learned (stop pairs and seconds only, nothing about the
   person) is kept on the phone for 20 minutes (`kb.liveStretches`), so reopening the app,
   which an iPhone often closes in the background, does not start again.
@@ -226,9 +258,12 @@ design review [reviews/2026-10-19-ghost-estimation-dr.html](reviews/2026-10-19-g
   bus counts a fifth, four buses half. Without history, two live times or more are used as
   they are. In the recorded-bus test this was 5–9% better in rush hour and the same at
   midday.
-- **⏳ Learning / ⚡ On.** A ghost uses live traffic only once **at least half of its way**
-  from the last signal to the stop (counted in time) has live times. Until then it shows ⏳
-  and moves by the month's history; then ⚡. A ghost with live traffic off shows neither.
+- **⏳ Learning / ⚡ On.** A ghost uses live traffic as soon as **any stretch** on its way
+  from the last signal to the stop has a live time; stretches without one use the month's
+  history. Until then it shows ⏳; then ⚡. How much of the way is known shows in the ring
+  (little known: yellow at best). A ghost with live traffic off shows neither. (Until
+  2026-10-25 half the way had to be known first; on routes with few buses that took too
+  long.)
 - **The ring** (only while ⚡). How good the estimate is believed to be, from the recorded-bus
   test: by the age of the last signal, 90% of errors were within 56 s (1 min old), 91 s (2
   min), 119 s (3 min), 164 s (5 min). **Green**: that is 90 s or less and the live times

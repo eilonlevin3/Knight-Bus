@@ -7,11 +7,11 @@ import { t, tn, arrow } from './i18n.js';
 import { fetchLiveMany, fetchTrail, classifyBuses, ageLabel, dropFinishedRides } from './realtime.js';
 import { LINE_COLORS, busIcon, lighten } from './map.js';
 import { stopPositions, splitPath, samePath, projectOnPath, advanceOnPath, travelSeconds, pointAt, slicePath, metersBetween } from './lib/routeGeometry.js';
-import { pickAutoGhosts, countdown } from './lib/ghosts.js';
+import { pickAutoGhosts, countdown, plusMinus, timerStop } from './lib/ghosts.js';
 import { makeOffsetPolyline } from './lib/offsetLine.js';
 import { showBusInfo } from './views/busInfo.js';
 import { loadSpeeds, segmentSeconds, cellAt } from './lib/speeds.js';
-import { sharedStretches, blend, liveWeight, confidence, READY_SHARE, WINDOW_MS } from './lib/liveStretches.js';
+import { sharedStretches, blend, liveWeight, confidence, expectedMeanError, WINDOW_MS } from './lib/liveStretches.js';
 
 let OffsetPolyline = null; // created on first use, once Leaflet (global L) is loaded
 const LEARN_OFF_PATH_METERS = 120; // a bus further from its route than this teaches nothing
@@ -29,6 +29,29 @@ function saveLearned() {
   try { localStorage.setItem(LEARNED_KEY, sharedStretches.save()); } catch { /* storage full or blocked */ }
 }
 const trailReadAt = new Map(); // route id -> when its last 20 minutes were read from Stride
+const TRAIL_RETRY_MS = 30000; // a read that failed is tried again this soon
+const STREET_MATES = 6; // other routes read for the stretches they share with the routes on screen
+const STRETCH_BACK = 20; // stretches before a chosen stop whose live times matter
+
+// Which routes drive each stretch between two stops: "from>to" -> [{ route, pattern }].
+// Built once per city, on first use.
+const stretchIndex = new WeakMap();
+function routesByStretch(city) {
+  if (stretchIndex.has(city)) return stretchIndex.get(city);
+  const index = new Map();
+  for (const route of city.routes.values()) {
+    if (!route.live) continue;
+    for (const pattern of route.patterns) {
+      for (let i = 1; i < pattern.stops.length; i++) {
+        const k = `${pattern.stops[i - 1].id}>${pattern.stops[i].id}`;
+        if (!index.has(k)) index.set(k, []);
+        index.get(k).push({ route, pattern });
+      }
+    }
+  }
+  stretchIndex.set(city, index);
+  return index;
+}
 
 // Meters along a path: at each corner, and at each stop of the pattern ([{ id, m }]).
 const metersCache = new WeakMap();
@@ -116,6 +139,9 @@ export class LiveLines {
     this.rows = this.rows.filter((row) => kept.has(`${row.stop.id}|${row.route.id}`));
     this.drawBuses(this.rows);
     for (const rideId of this.ghosts) if (!this.shown.has(rideId)) this.ghosts.delete(rideId);
+    // Where ghosts use live traffic from the start, read the last 20 minutes now, together
+    // with the first live answer rather than after it (REQ-RT-15).
+    if (this.liveDefault) this.readTrails(this.entries.map((e) => e.routeId), true);
     this.refresh();
   }
 
@@ -225,8 +251,7 @@ export class LiveLines {
     if (gen !== this.generation || this.destroyed) return;
     const byRoute = new Map(results);
     this.learnFrom(byRoute);
-    // Where ghosts use live traffic from the start, read the last 20 minutes at once.
-    if (this.liveDefault) this.readTrails(routeIds);
+
     const rows = this.entries.map(({ stopId, routeId }) => {
       const route = this.city.routes.get(routeId);
       const stop = this.city.stops.get(stopId);
@@ -269,8 +294,9 @@ export class LiveLines {
             ? t('Next stop: {stop}', { stop: row.stop.name })
             : tn(bus.stopsAway, '1 stop before {stop}', '{n} stops before {stop}', { stop: row.stop.name }))
           : tn(-bus.stopsAway, 'Passed {stop} 1 stop ago', 'Passed {stop} {n} stops ago', { stop: row.stop.name });
-        const m = markers.get(bus.rideId) || { bus, row, kind, lines: [] };
+        const m = markers.get(bus.rideId) || { bus, row, kind, lines: [], rows: [] };
         if (kind === 'next') m.kind = 'next';
+        m.rows.push(row); // every stop on screen this bus matters for: its timer picks one
         // The stop this bus reaches first: its ghost counts down to it (REQ-RT-14).
         if (kind === 'next' && !(m.nextRow && m.nextAway <= bus.stopsAway)) { m.nextRow = row; m.nextAway = bus.stopsAway; }
         m.lines.push(text);
@@ -299,12 +325,13 @@ export class LiveLines {
     saveLearned(); // also forgets what is older than 20 minutes
   }
 
-  // buses: positions of one route's buses, oldest first.
-  observeBuses(routeId, buses) {
+  // buses: positions of one route's buses, oldest first. pattern: the stop pattern to place
+  // them on (by default the one through the chosen stop).
+  observeBuses(routeId, buses, pattern = null) {
     const route = this.city.routes.get(routeId);
     if (!route) return;
     const entry = this.entries.find((e) => e.routeId === routeId);
-    const pattern = (entry && this.city.patternsAt(route, entry.stopId)[0]) || route.patterns[0];
+    pattern ||= (entry && this.city.patternsAt(route, entry.stopId)[0]) || route.patterns[0];
     const path = this.city.shapeOf(pattern);
     const { cum, stops } = metersOf(pattern, path);
     for (const bus of buses) {
@@ -318,27 +345,63 @@ export class LiveLines {
 
   // The last 20 minutes of these routes, read at once from Open Bus Stride (its answer has
   // every position, not only the newest), so live traffic is ready without minutes of
-  // watching. At most once every 10 minutes per route.
-  readTrails(routeIds) {
+  // watching. At most once every 10 minutes per route; a read that failed is tried again
+  // after 30 s. withMates: also the routes that share the most stretches before the chosen
+  // stops, so a route with a bus every 20 minutes learns from the others on its street.
+  readTrails(routeIds, withMates = false) {
     const now = Date.now();
-    for (const id of routeIds) {
+    const jobs = routeIds.map((id) => [id, null]);
+    if (withMates) jobs.push(...this.streetMates(routeIds));
+    for (const [id, pattern] of jobs) {
       const route = this.city.routes.get(id);
       if (!route?.live || now - (trailReadAt.get(id) || 0) < WINDOW_MS / 2) continue;
       trailReadAt.set(id, now);
-      Promise.all(route.liveIds.map((liveId) => fetchTrail(String(liveId), WINDOW_MS / 60000).catch(() => [])))
+      Promise.all(route.liveIds.map((liveId) => fetchTrail(String(liveId), WINDOW_MS / 60000).catch(() => null)))
         .then((lists) => {
+          if (lists.every((x) => x === null)) trailReadAt.set(id, Date.now() - WINDOW_MS / 2 + TRAIL_RETRY_MS);
           if (this.destroyed) return;
-          this.observeBuses(id, lists.flat().sort((a, b) => a.recordedAt - b.recordedAt));
+          this.observeBuses(id, lists.filter(Boolean).flat().sort((a, b) => a.recordedAt - b.recordedAt), pattern);
           saveLearned();
           this.drawGhosts();
         });
     }
   }
 
+  // Other routes on the same street: for the stretches before each chosen stop, the routes
+  // (not on screen) that drive the most of them, with the stop pattern that does.
+  // Returns [[route id, pattern], ...], at most STREET_MATES.
+  streetMates(routeIds) {
+    const index = routesByStretch(this.city);
+    const mine = new Set(routeIds);
+    const shared = new Map(); // route id -> { pattern, n }
+    for (const { stopId, routeId } of this.entries) {
+      if (!mine.has(routeId)) continue;
+      const route = this.city.routes.get(routeId);
+      const pattern = this.city.patternsAt(route, stopId)[0] || route.patterns[0];
+      const at = pattern.stops.findIndex((s) => s.id === stopId);
+      for (let i = Math.max(1, at - STRETCH_BACK); i <= at; i++) {
+        for (const other of index.get(`${pattern.stops[i - 1].id}>${pattern.stops[i].id}`) || []) {
+          if (mine.has(other.route.id)) continue;
+          const key = `${other.route.id}`;
+          const x = shared.get(key) || { n: 0, byPattern: new Map() };
+          x.byPattern.set(other.pattern, (x.byPattern.get(other.pattern) || 0) + 1);
+          x.n++;
+          shared.set(key, x);
+        }
+      }
+    }
+    return [...shared.entries()]
+      .filter(([, x]) => x.n >= 2)
+      .sort((a, b) => b[1].n - a[1].n)
+      .slice(0, STREET_MATES)
+      .map(([id, x]) => [id, [...x.byPattern.entries()].sort((a, b) => b[1] - a[1])[0][0]]);
+  }
+
   // Live traffic for one bus's ghost, on the way from its last signal to the row's stop (or,
   // past every stop on screen, the next five stretches): how much of the way has live times
-  // and how much they count. active: the ghost uses them (on, and at least half the way
-  // known). quality: the ring around the ghost.
+  // and how much they count. active: the ghost uses them (on, and any live time on the way;
+  // where none is known the history is used, and the ring says how much is known).
+  // quality: the ring around the ghost.
   liveOf({ bus, row }, pos) {
     const enabled = this.liveChoice.get(bus.rideId) ?? this.liveDefault;
     const pattern = row.pattern;
@@ -361,7 +424,7 @@ export class LiveLines {
     }
     const share = total ? covered / total : 0;
     const weight = total ? weighted / total : 0;
-    const active = enabled && share >= READY_SHARE;
+    const active = enabled && share > 0;
     const age = (now - bus.recordedAt.getTime()) / 1000;
     return { enabled, active, stretches: end - start + 1, known, buses, weight, quality: active ? confidence(age, weight) : null };
   }
@@ -491,9 +554,16 @@ export class LiveLines {
       any = true;
       on.add(rideId);
       const trail = slicePath(g.path, g.from, g.to);
-      // Under the ghost, the time until it reaches the stop it is coming to (REQ-RT-14).
-      const seconds = m.nextRow ? this.ghostSecondsTo(m.nextRow, m.bus, g) : NaN;
-      const timer = Number.isFinite(seconds) ? countdown(seconds) : '';
+      // Under the ghost, the time until it reaches the stop it is coming to, or, for two
+      // minutes after it passed a stop, the time since, below zero (REQ-RT-14). Beside it,
+      // ± the mean error of such an estimate, from the recorded-bus test: it shrinks as the
+      // bus gets near and its signal is fresh.
+      const pick = timerStop(m.rows.map((row) => ({ row, seconds: this.ghostSecondsTo(row, m.bus, g) })));
+      let timer = '';
+      if (pick) {
+        const ahead = (Date.now() - m.bus.recordedAt.getTime()) / 1000 + Math.max(0, pick.seconds);
+        timer = `${countdown(pick.seconds)} ${plusMinus(expectedMeanError(ahead, !!g.live?.active))}`;
+      }
       let mark = this.ghostMarks.get(rideId);
       if (mark) {
         mark.trail.setLatLngs(trail);
